@@ -80,17 +80,16 @@ def prototype(p, win, stims):
             cregg.wait_check_quit(np.random.uniform(*p.iti_params))
 
 
-def psychophys(p, win, stims):
+def nrsa_pilot(p, win, stims):
 
     stim_event = EventEngine(win, p, stims)
 
     stims["instruct"].draw()
 
-    design = psychophys_design(p)
+    design = nrsa_pilot_design(p)
 
     log_cols = list(design.columns)
-    log_cols += ["left_pulses", "right_pulses",
-                 "key", "response", "correct"]
+    log_cols += ["key", "response", "correct"]
 
     log = cregg.DataLog(p, log_cols)
 
@@ -121,8 +120,40 @@ def psychophys(p, win, stims):
             # This helps us relate pre-stim delay to behavior later
             cregg.wait_check_quit(t_info["iti"])
 
+            # Build the pulse schedule for this trial
+            stim_flips = np.round(win.refresh_hz) * t_info["stim_dur"]
+
+            left_pulses = pulse_schedule(t_info["left_pulses"],
+                                         stim_flips,
+                                         p.min_interval)
+
+            right_pulses = pulse_schedule(t_info["left_pulses"],
+                                          stim_flips,
+                                          p.min_interval)
+
+            # TODO abstract this out
+            if t_info["pause"]:
+                left_pulse_parts = np.split(left_pulses, 2)
+                right_pulse_parts = np.split(right_pulses, 2)
+
+                pause_flips = np.round(win.refresh_hz) * t_info["pause_dur"]
+                pause = np.zeros(pause_flips)
+
+                left_pulse_parts.insert(1, pause)
+                right_pulse_parts.insert(1, pause)
+
+                active = np.concatenate([np.ones(stim_flips / 2),
+                                         np.zeros(pause_flips),
+                                         np.ones(stim_flips / 2)])
+
+                left_pulses = np.concatenate(left_pulse_parts)
+                right_pulses = np.concatenate(right_pulse_parts)
+
+            else:
+                 active = np.ones_like(left_pulses)
+
             # Execute this trial
-            res = stim_event(t_info[["left_p", "right_p"]])
+            res = stim_event(left_pulses, right_pulses, active)
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
@@ -133,6 +164,20 @@ def psychophys(p, win, stims):
 
 # =========================================================================== #
 # =========================================================================== #
+
+
+def pulse_schedule(n_p, n_t, min_interval):
+
+    good_schedule = False
+    while not good_schedule:
+        x = np.concatenate([np.ones(n_p), np.zeros(n_t - n_p)])
+        x = pd.Series(np.random.permutation(x))
+        if interval_lengths(x).min() >= min_interval:
+            good_schedule = True
+    return x
+
+def interval_lengths(x):
+    return x.cumsum().value_counts().sort_index()
 
 
 class EventEngine(object):
@@ -149,22 +194,13 @@ class EventEngine(object):
         self.resp_keys = p.resp_keys
         self.quit_keys = p.quit_keys
 
-        # TODO need a better name for this
-        self.trial_frames = (self.p.pulse_on_frames +
-                             self.p.pulse_refract_frames)
-
-    def __call__(self, ps):
+    def __call__(self, left_pulses, right_pulses, active):
         """Execute a stimulus event."""
 
         # Initialize trial data
         correct = False
         used_key = np.nan
         response = np.nan
-        left_pulses = 0
-        right_pulses = 0
-
-        # Define correct response by rates
-        pl, pr = ps
 
         # Pre stimulus orienting cue
         self.fix.color = self.p.fix_stim_color
@@ -173,18 +209,20 @@ class EventEngine(object):
         cregg.wait_check_quit(self.p.orient_dur)
 
         # Frames where the lights can pulse
-        for _ in xrange(self.p.stim_frames):
+        for left_flash, right_flash, is_active in zip(left_pulses,
+                                                      right_pulses,
+                                                      active):
 
-            activate = np.random.rand(2) < ps
-            self.lights.activate(*activate)
+            self.lights.activate(left_flash, right_flash)
 
-            left_pulses += activate[0]
-            right_pulses += activate[1]
+            if is_active:
+                self.fix.color = self.p.fix_stim_color
+            else:
+                self.fix.color = self.p.fix_pause_color
 
-            for _ in xrange(self.trial_frames):
-                self.lights.draw()
-                self.fix.draw()
-                self.win.flip()
+            self.lights.draw()
+            self.fix.draw()
+            self.win.flip()
 
         # Post stimulus delay
         self.fix.draw()
@@ -192,7 +230,7 @@ class EventEngine(object):
         cregg.wait_check_quit(self.p.post_stim_dur)
 
         # Response period
-        if left_pulses == right_pulses:
+        if left_pulses.sum() == right_pulses.sum():
             correct_response = np.random.choice([0, 1])
         else:
             correct_response = int(right_pulses > left_pulses)
@@ -230,9 +268,7 @@ class EventEngine(object):
 
         result = dict(key=used_key,
                       correct=correct,
-                      response=response,
-                      left_pulses=left_pulses,
-                      right_pulses=right_pulses)
+                      response=response)
 
         return result
 
@@ -266,44 +302,22 @@ class Lights(object):
             ]
 
         self.lights_on = [False, False]
-        self.lights_refract = [False, False]
 
         self.on_frames = [0, 0]
         self.refract_frames = [0, 0]
 
     def activate(self, left=False, right=False):
 
-        for i, activate in enumerate([left, right]):
-            if activate:
+        for i, activate_side in enumerate([left, right]):
+            if activate_side:
                 self.lights_on[i] = True
-                self.lights_refract[i] = False
-                self.on_frames[i] = self.p.pulse_on_frames
-                self.refract_frames[i] = self.p.pulse_refract_frames
 
     def draw(self):
 
-        data = zip(self.lights, self.lights_on, self.lights_refract)
-        for i, (light, on, refract) in enumerate(data):
-            if on:
-                # Show the light and deduct a frame from the counter
+        for i, light in enumerate(self.lights):
+            if self.lights_on[i]:
                 light.draw()
-                self.on_frames[i] -= 1
-
-                if not self.on_frames[i]:
-                    # Turn the light to refract mode and reset counter
-                    # This logic should probably get extracted out
-                    self.lights_on[i] = False
-                    self.lights_refract[i] = True
-                    self.on_frames[i] = self.p.pulse_on_frames
-
-            elif refract:
-
-                self.refract_frames[i] -= 1
-
-                if not self.refract_frames[i]:
-                    # Reset the light back to null mode
-                    self.lights_refract[i] = False
-                    self.refract_frames[i] = self.p.pulse_refract_frames
+                self.lights_on[i] = False
 
 
 class Fixation(object):
@@ -403,6 +417,7 @@ def nrsa_pilot_design(p):
     trials = np.arange(len(conditions))
     for _ in xrange(p.cycles):
         df = pd.DataFrame(conditions, columns=cols, index=trials)
+        df["pulse_difference"] = (df.left_pulses - df.right_pulses).abs()
         df["pause"] = df["pause_dur"] > 0
         df["trial_dur"] = df["stim_dur"] + df["pause_dur"]
         df["iti"] = np.random.uniform(*p.iti_params, size=trials.size)

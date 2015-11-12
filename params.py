@@ -24,6 +24,7 @@ base = dict(
     fix_size=.2,
     fix_iti_color=-1,
     fix_stim_color=1,
+    fix_pause_color=.25,
     fix_resp_color=(1, 1, -1),
     fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
 
@@ -45,11 +46,10 @@ base = dict(
     light_pos=[(-5, 0), (5, 0)],
 
     # Pulse parameters
-    pulse_refract_frames=3,
+    min_interval=2,
 
     # Timing parameters
     orient_dur=.5,
-    stim_frames=96, # Should define in seconds, and "frames" is wrong
     post_stim_dur=1,
     resp_dur=2,
     feedback_dur=1,
@@ -94,7 +94,7 @@ nrsa_pilot.update(
 
     stim_durations=[1.5, 3],
     pause_durations=[0, 1.5],
-    pulse_counts=[5, 10, 15, 20, 25, 30],
+    pulse_counts=[5, 10, 15, 20],
     cycles=1,
     trials_per_break=20,
 
