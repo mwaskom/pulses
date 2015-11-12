@@ -81,7 +81,7 @@ def prototype(p, win, stims):
 
 
 def psychophys(p, win, stims):
-    
+
     stim_event = EventEngine(win, p, stims)
 
     stims["instruct"].draw()
@@ -259,6 +259,8 @@ class Lights(object):
                                tex=p.light_tex,
                                mask=p.light_mask,
                                size=p.light_size,
+                               color=p.light_color,
+                               contrast=p.light_contrast,
                                pos=pos)
             for pos in p.light_pos
             ]
@@ -385,21 +387,27 @@ class ProgressBar(object):
 # =========================================================================== #
 
 
-def psychophys_design(p):
+def nrsa_pilot_design(p):
 
     cols = [
-            "left_p", "right_p",
-            "iti", "break",
+            "stim_dur", "pause_dur",
+            "left_pulses", "right_pulses",
             ]
 
+    conditions = list(itertools.product(
+        p.stim_durations, p.pause_durations,
+        p.pulse_counts, p.pulse_counts,
+        ))
+
     dfs = []
-    trials = np.arange(len(p.ps) ** 2)
+    trials = np.arange(len(conditions))
     for _ in xrange(p.cycles):
-        df = pd.DataFrame(columns=cols, index=trials)
-        ps = list(itertools.product(p.ps, p.ps))
-        df[["left_p", "right_p"]] = np.random.permutation(ps)
+        df = pd.DataFrame(conditions, columns=cols, index=trials)
+        df["pause"] = df["pause_dur"] > 0
+        df["trial_dur"] = df["stim_dur"] + df["pause_dur"]
         df["iti"] = np.random.uniform(*p.iti_params, size=trials.size)
         df["break"] = ~(trials % p.trials_per_break).astype(bool)
+        df = df.reindex(np.random.permutation(df.index))
         dfs.append(df)
 
     design = pd.concat(dfs, ignore_index=True)

@@ -40,13 +40,12 @@ base = dict(
     light_color=1,
     light_tex=None,
     light_sf=2,
-    light_contrast=1,
+    light_contrast=.5,
     light_mask="gauss",
     light_pos=[(-5, 0), (5, 0)],
 
     # Pulse parameters
-    pulse_on_frames=3,
-    pulse_refract_frames=2,
+    pulse_refract_frames=3,
 
     # Timing parameters
     orient_dur=.5,
@@ -88,13 +87,15 @@ base = dict(
 
 prototype = deepcopy(base)
 
-psychophys = deepcopy(base)
-psychophys.update(
+nrsa_pilot = deepcopy(base)
+nrsa_pilot.update(
 
-    log_base="data/{subject}_psychophys_run{run:02d}",
+    log_base="data/{subject}_nrsa_run{run:02d}",
 
-    ps=[.05, .1, .2],
-    cycles=10,
+    stim_durations=[1.5, 3],
+    pause_durations=[0, 1.5],
+    pulse_counts=[5, 10, 15, 20, 25, 30],
+    cycles=1,
     trials_per_break=20,
 
     )
