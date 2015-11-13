@@ -421,11 +421,11 @@ def nrsa_pilot_design(p):
         df["pause"] = df["pause_dur"] > 0
         df["trial_dur"] = df["stim_dur"] + df["pause_dur"]
         df["iti"] = np.random.uniform(*p.iti_params, size=trials.size)
-        df["break"] = ~(trials % p.trials_per_break).astype(bool)
         df = df.reindex(np.random.permutation(df.index))
         dfs.append(df)
 
     design = pd.concat(dfs, ignore_index=True)
+    df["break"] = ~(df.index.values % p.trials_per_break).astype(bool)
     design.loc[0, "break"] = False
     return design
 
