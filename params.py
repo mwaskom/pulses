@@ -50,7 +50,7 @@ base = dict(
 
     # Timing parameters
     orient_dur=.5,
-    post_stim_dur=1,
+    post_stim_dur=.5,
     resp_dur=2,
     feedback_dur=1,
     iti_params=(2, 4),
@@ -92,7 +92,7 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    stim_durations=[1.5, 3],
+    stim_durations=[2, 4],
     pause_durations=[0, 1.5],
     pulse_counts=[5, 10, 15, 20],
     cycles=1,
