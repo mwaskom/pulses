@@ -428,7 +428,8 @@ def nrsa_pilot_design(p):
         dfs.append(df)
 
     design = pd.concat(dfs).reset_index(drop=True)
-    design["break"] = ~(df.index.values % p.trials_per_break).astype(bool)
+    trial = design.index.values
+    design["break"] = ~(trial % p.trials_per_break).astype(bool)
     design.loc[0, "break"] = False
     return design
 
