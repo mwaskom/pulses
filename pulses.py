@@ -127,7 +127,7 @@ def nrsa_pilot(p, win, stims):
                                          stim_flips,
                                          p.min_interval)
 
-            right_pulses = pulse_schedule(t_info["left_pulses"],
+            right_pulses = pulse_schedule(t_info["right_pulses"],
                                           stim_flips,
                                           p.min_interval)
 
@@ -230,10 +230,13 @@ class EventEngine(object):
         cregg.wait_check_quit(self.p.post_stim_dur)
 
         # Response period
-        if left_pulses.sum() == right_pulses.sum():
+        pulse_difference = right_pulses.sum() - left_pulses.sum()
+        if pulse_difference == 0:
             correct_response = np.random.choice([0, 1])
         else:
-            correct_response = int(right_pulses.sum() > left_pulses.sum())
+            # 1 here will map to right button press below
+            # Probably a safer way to do this...
+            correct_response = int(pulse_difference > 0)
 
         self.fix.color = self.p.fix_resp_color
         self.fix.draw()
@@ -250,7 +253,7 @@ class EventEngine(object):
                 core.quit()
 
             if key in self.resp_keys:
-                used_key = keys[0]
+                used_key = key
                 response = self.resp_keys.index(key)
                 correct = response == correct_response
 
