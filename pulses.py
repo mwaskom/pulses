@@ -233,7 +233,7 @@ class EventEngine(object):
         if left_pulses.sum() == right_pulses.sum():
             correct_response = np.random.choice([0, 1])
         else:
-            correct_response = int(right_pulses > left_pulses)
+            correct_response = int(right_pulses.sum() > left_pulses.sum())
 
         self.fix.color = self.p.fix_resp_color
         self.fix.draw()
