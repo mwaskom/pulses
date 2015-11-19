@@ -92,10 +92,10 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    stim_durations=[2, 4],
+    stim_durations=[1.5, 3],
     pause_durations=[0, 1.5],
-    pulse_counts=[5, 10, 15, 20],
+    pulse_counts=[10, 12, 14, 16, 18, 20],
     cycles=1,
-    trials_per_break=20,
+    trials_per_break=10,
 
     )
