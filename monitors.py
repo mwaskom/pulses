@@ -43,3 +43,10 @@ waglab_mbpro = dict(name='waglab-mbpro',
                     size=[1440, 900],
                     distance=63,
                     notes="This should be true of both Curtis and Ari")
+
+
+kiani_psychophys = dict(name="kiani_psychophys",
+                        width=42,
+                        distance=52,
+                        size=[1600, 1200],
+                        nots="Kiani lab psychophysics rig")

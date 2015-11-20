@@ -24,7 +24,9 @@ base = dict(
     fix_size=.2,
     fix_iti_color=-1,
     fix_stim_color=1,
+    fix_orient_color=.25,
     fix_pause_color=.25,
+    fix_delay_color=.25,
     fix_resp_color=(1, 1, -1),
     fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
 
@@ -64,9 +66,7 @@ base = dict(
     ),
 
     break_text=(
-        "Take a quick break, if you'd like!",
-        "",
-        "Press space to start the next block",
+        "Press space to start the next trial",
     ),
 
    finish_text=(
@@ -92,10 +92,11 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    stim_durations=[1.5, 3],
-    pause_durations=[0, 1.5],
     pulse_counts=[10, 12, 14, 16, 18, 20],
+    stim_durations=[4],
+    pause_durations=[0, 4],
+    pause_pulses=2,
     cycles=1,
-    trials_per_break=10,
+    trials_per_break=4,
 
     )

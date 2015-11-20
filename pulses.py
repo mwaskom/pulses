@@ -123,37 +123,29 @@ def nrsa_pilot(p, win, stims):
             # Build the pulse schedule for this trial
             stim_flips = np.round(win.refresh_hz) * t_info["stim_dur"]
 
-            left_pulses = pulse_schedule(t_info["left_pulses"],
-                                         stim_flips,
-                                         p.min_interval)
+            l_pulses = pulse_train(t_info["left_pulses"],
+                                   stim_flips,
+                                   p.min_interval)
 
-            right_pulses = pulse_schedule(t_info["right_pulses"],
-                                          stim_flips,
-                                          p.min_interval)
+            r_pulses = pulse_train(t_info["right_pulses"],
+                                   stim_flips,
+                                   p.min_interval)
 
-            # TODO abstract this out
-            if t_info["pause"]:
-                left_pulse_parts = np.split(left_pulses, 2)
-                right_pulse_parts = np.split(right_pulses, 2)
-
+            # Add in a gap
+            if t_info["pause_dur"]:
                 pause_flips = np.round(win.refresh_hz) * t_info["pause_dur"]
-                pause = np.zeros(pause_flips)
-
-                left_pulse_parts.insert(1, pause)
-                right_pulse_parts.insert(1, pause)
-
-                active = np.concatenate([np.ones(stim_flips / 2),
-                                         np.zeros(pause_flips),
-                                         np.ones(stim_flips / 2)])
-
-                left_pulses = np.concatenate(left_pulse_parts)
-                right_pulses = np.concatenate(right_pulse_parts)
-
-            else:
-                 active = np.ones_like(left_pulses)
+                if p.pause_pulses:
+                    l_pulses, r_pulses = insert_uninformative_gaps(
+                        l_pulses, r_pulses, 1, p.pause_pulses, pause_flips)
+                    active = np.ones_like(l_pulses)
+                else:
+                    active = np.ones_like(l_pulses)
+                    l_pulses = insert_empty_gaps(l_pulses, 1, pause_flips)
+                    r_pulses = insert_empty_gaps(r_pulses, 1, pause_flips)
+                    active = insert_empty_gaps(active, 1, pause_flips)
 
             # Execute this trial
-            res = stim_event(left_pulses, right_pulses, active)
+            res = stim_event(l_pulses, r_pulses, active)
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
@@ -166,18 +158,112 @@ def nrsa_pilot(p, win, stims):
 # =========================================================================== #
 
 
-def pulse_schedule(n_p, n_t, min_interval):
+def pulse_train(n_p, n_t, min_interval=3, max_attempts=100000):
+    """Return a series with 0/1 values indicating pulses."""
+    if n_p == 0:
+        return pd.Series(np.zeros(n_t), dtype=np.int)
 
+    # Seek for an order of events that satisfies the min_interval
+    x_seed = np.zeros(n_t, np.int)
+    x_seed[:n_p] = 1
     good_schedule = False
-    while not good_schedule:
-        x = np.concatenate([np.ones(n_p), np.zeros(n_t - n_p)])
-        x = pd.Series(np.random.permutation(x))
-        if interval_lengths(x).min() >= min_interval:
+    for _ in xrange(max_attempts):
+
+        # Shuffle the timepoints and check the interval lengths
+        x = pd.Series(np.random.permutation(x_seed), dtype=np.int)
+        if interval_lengths(x).iloc[:-1].min() >= min_interval:
             good_schedule = True
+            break
+
+    # Fail here if nothing worked
+    if not good_schedule:
+        raise ValueError("Could not satisfy min_interval")
+
     return x
 
+
 def interval_lengths(x):
+    """Return the number of null events between each pulse."""
     return x.cumsum().value_counts().sort_index()
+
+
+def insert_empty_gaps(train, n_gaps, gap_t=None):
+    """Insert evenly sized and spaced null time into a pulse train."""
+    # Default gap length is same as each of the active parts
+    if gap_t is None:
+        gap_t = train.size / (n_gaps + 1)
+
+    # Evenly split the pulse trains
+    train_parts = iter(np.split(train, n_gaps + 1))
+
+    # Put the pulse train back together, separated by gaps
+    full_train = []
+    for i in range(2 * n_gaps + 1):
+        if i % 2:
+            full_train.append(pulse_train(0, gap_t))
+        else:
+            full_train.append(next(train_parts))
+    full_train = pd.concat(full_train, ignore_index=True)
+
+    return full_train
+
+
+def uninformative_pulse_trains(n_p, n_t, min_interval, max_spacing):
+    """Return a pair of pulse trains with reasonably matched pulses."""
+    assert not n_p % 2
+    seed = pulse_train(n_p, n_t, min_interval)
+    seed_pulses = np.argwhere(seed).ravel()
+
+    # Initialize an empty paired train and get valid entries for it
+    pair = pd.Series(np.zeros(n_t), index=seed.index, dtype=np.int)
+    while True:
+        jitter = np.random.randint(0, max_spacing + 1, seed_pulses.size // 2)
+        # Ensure that precedence is balanced
+        jitter = np.random.permutation(np.concatenate([jitter, -jitter]))
+        pair_pulses = seed_pulses + jitter
+        if (pair_pulses < 0).any() or (pair_pulses > (pair.size - 1)).any():
+            continue
+        break
+    pair.ix[pair_pulses] = 1
+    return seed, pair
+
+
+def insert_uninformative_gaps(train_a, train_b, n_gaps, n_p,
+                              n_t=None, min_interval=20, max_spacing=6):
+    """Insert evenly sized and space uninformative pulse trains."""
+    assert not n_p % n_gaps
+    assert train_a.size == train_b.size
+    if n_t is None:
+        n_t = train_a.size / (n_gaps + 1)
+    assert not n_t % n_gaps
+
+    # Evenly split the pulse trains
+    train_a_parts = iter(np.split(train_a, n_gaps + 1))
+    train_b_parts = iter(np.split(train_b, n_gaps + 1))
+
+    # Put the pulse train back together, separated by gaps
+    full_train_a = []
+    full_train_b = []
+    for i in range(2 * n_gaps + 1):
+        if i % 2:
+            gap_a, gap_b = uninformative_pulse_trains(n_p // n_gaps,
+                                                      n_t // n_gaps,
+                                                      min_interval,
+                                                      max_spacing)
+            full_train_a.append(gap_a)
+            full_train_b.append(gap_b)
+        else:
+            full_train_a.append(next(train_a_parts))
+            full_train_b.append(next(train_b_parts))
+
+    full_train_a = pd.concat(full_train_a, ignore_index=True)
+    full_train_b = pd.concat(full_train_b, ignore_index=True)
+
+    return full_train_a, full_train_b
+
+
+# =========================================================================== #
+# =========================================================================== #
 
 
 class EventEngine(object):
@@ -203,7 +289,7 @@ class EventEngine(object):
         response = np.nan
 
         # Pre stimulus orienting cue
-        self.fix.color = self.p.fix_stim_color
+        self.fix.color = self.p.fix_orient_color
         self.fix.draw()
         self.win.flip()
         cregg.wait_check_quit(self.p.orient_dur)
@@ -225,6 +311,7 @@ class EventEngine(object):
             self.win.flip()
 
         # Post stimulus delay
+        self.fix.color = self.p.fix_delay_color
         self.fix.draw()
         self.win.flip()
         cregg.wait_check_quit(self.p.post_stim_dur)
@@ -398,6 +485,14 @@ class ProgressBar(object):
 
         self.bar.draw()
         self.frame.draw()
+
+
+class PulseLog(object):
+
+    def __init__(self):
+
+        pass
+        # TODO make this!
 
 
 # =========================================================================== #
