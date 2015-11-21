@@ -143,6 +143,8 @@ def nrsa_pilot(p, win, stims):
                     l_pulses = insert_empty_gaps(l_pulses, 1, pause_flips)
                     r_pulses = insert_empty_gaps(r_pulses, 1, pause_flips)
                     active = insert_empty_gaps(active, 1, pause_flips)
+            else:
+                active = np.ones_like(l_pulses)
 
             # Execute this trial
             res = stim_event(l_pulses, r_pulses, active)
