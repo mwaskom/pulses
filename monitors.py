@@ -46,7 +46,7 @@ waglab_mbpro = dict(name='waglab-mbpro',
 
 
 kiani_psychophys = dict(name="kiani_psychophys",
-                        width=42,
+                        width=40,
                         distance=52,
                         size=[1600, 1200],
                         nots="Kiani lab psychophysics rig")
