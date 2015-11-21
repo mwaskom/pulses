@@ -12,7 +12,7 @@ base = dict(
     experiment_name="sticks",
 
     # Display setup
-    monitor_name="kiani_psychophys",
+    monitor_name="mlw-mbair",
     fmri_monitor_name="cni_47",
     screen_number=0,
     fmri_screen_number=0,

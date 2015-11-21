@@ -27,9 +27,9 @@ cni_projector = dict(name='cni_projector',
                      notes=dedent('Calibration info from Dan Birman'))
 
 mlw_mbair = dict(name='mlw-mbair',
-                 width=30.5,
+                 width=28.65,
                  size=[1440, 900],
-                 distance=63,
+                 distance=45,
                  notes="")
 
 mwmp = dict(name='mwmp',
