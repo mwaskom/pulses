@@ -181,7 +181,7 @@ def pulse_train(n_p, n_t, min_interval=2):
     x_full[::min_interval] = x
     x_full = pd.Series(x_full)
 
-    assert interval_lengths_numpy(x_full).min() <= min_interval
+    assert interval_lengths_numpy(x_full).min() >= min_interval
 
     return x_full
 

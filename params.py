@@ -93,7 +93,7 @@ nrsa_pilot.update(
     stim_duration=[4, 8, 12, 16],  # In seconds
     packet_length=.2,  # In seconds
     packet_rate=.1,  # Proportion active packets
-    pulse_rate=[3, 3.5, 4, 4.5, 5],  # Expected pulses per packet
+    pulse_rate=[1, 2, 3],  # Expected pulses per packet
     min_interval=2,
 
     cycles=1,
