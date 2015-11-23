@@ -24,13 +24,13 @@ def main(arglist):
     p.win_refresh_hz = win.refresh_hz
 
     # Fixation point
-    fix = Fixation(win, p)
+    fix = cregg.Fixation(win, p)
 
     # The main stimulus arrays
     lights = Lights(win, p)
 
     # Progress bar to show during behavioral breaks
-    progress = ProgressBar(win, p)
+    progress = cregg.ProgressBar(win, p)
 
     stims = dict(
 
@@ -63,21 +63,6 @@ def main(arglist):
 
     # Execute the experiment function
     globals()[mode](p, win, stims)
-
-
-def prototype(p, win, stims):
-
-    stim_event = EventEngine(win, p, stims)
-
-    stims["instruct"].draw()
-
-    with cregg.PresentationLoop(win, p, fix=stims["fix"]):
-
-        while True:
-
-            ps = np.random.choice([.05, .1, .2], 2)
-            stim_event(ps)
-            cregg.wait_check_quit(np.random.uniform(*p.iti_params))
 
 
 def nrsa_pilot(p, win, stims):

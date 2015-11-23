@@ -82,8 +82,6 @@ base = dict(
  )
 
 
-prototype = deepcopy(base)
-
 nrsa_pilot = deepcopy(base)
 nrsa_pilot.update(
 
