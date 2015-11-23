@@ -93,10 +93,11 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    pulse_counts=[10, 12, 14, 16, 18, 20],
-    stim_durations=[4],
-    pause_durations=[0, 4],
-    pause_pulses=2,
+    stim_durations=[4, 8, 12, 16],  # In seconds
+    packet_length=.2,  # In seconds
+    packet_rate=.1,  # Proportion active packets
+    pulse_rate=[3, 3.5, 4, 4.5, 5],  # Expected pulses per packet
+
     cycles=1,
     trials_per_break=1000,
 
