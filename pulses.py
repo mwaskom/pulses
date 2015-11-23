@@ -183,12 +183,17 @@ def pulse_train(n_p, n_t, min_interval=3):
     x_full[::min_interval] = x
     x_full = pd.Series(x_full)
 
-    assert interval_lengths(x_full).min() <= min_interval
+    assert interval_lengths_numpy(x_full).min() <= min_interval
 
     return x_full
 
 
-def interval_lengths(x):
+def interval_lengths_pandas(x):
+    """Return the number of null events between each pulse."""
+    return x.cumsum().value_counts().sort_index()
+
+
+def interval_lengths_numpy(x):
     """Return the number of null events between each pulse."""
     return np.diff(np.argwhere(x), axis=0)
 
