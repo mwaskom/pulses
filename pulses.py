@@ -160,33 +160,37 @@ def nrsa_pilot(p, win, stims):
 # =========================================================================== #
 
 
-def pulse_train(n_p, n_t, min_interval=3, max_attempts=100000):
+def packet_train(n_packets, n_active, flips_per_packet):
+
+    packets = np.zeros(n_packets, np.bool)
+    packets[:n_active] = True
+    packets = np.random.permutation(packets)
+    return np.repeat(packets, flips_per_packet)
+
+
+def pulse_train(n_p, n_t, min_interval=3):
     """Return a series with 0/1 values indicating pulses."""
     if n_p == 0:
         return pd.Series(np.zeros(n_t), dtype=np.int)
 
-    # Seek for an order of events that satisfies the min_interval
-    x_seed = np.zeros(n_t, np.int)
-    x_seed[:n_p] = 1
-    good_schedule = False
-    for _ in xrange(max_attempts):
+    assert not n_t % min_interval
 
-        # Shuffle the timepoints and check the interval lengths
-        x = pd.Series(np.random.permutation(x_seed), dtype=np.int)
-        if interval_lengths(x).iloc[:-1].min() >= min_interval:
-            good_schedule = True
-            break
+    x = np.zeros(n_t / min_interval, np.int)
+    x[:n_p] = 1
+    x = np.random.permutation(x)
 
-    # Fail here if nothing worked
-    if not good_schedule:
-        raise ValueError("Could not satisfy min_interval")
+    x_full = np.zeros(n_t, np.int)
+    x_full[::min_interval] = x
+    x_full = pd.Series(x_full)
 
-    return x
+    assert interval_lengths(x_full).min() <= min_interval
+
+    return x_full
 
 
 def interval_lengths(x):
     """Return the number of null events between each pulse."""
-    return x.cumsum().value_counts().sort_index()
+    return np.diff(np.argwhere(x), axis=0)
 
 
 def insert_empty_gaps(train, n_gaps, gap_t=None):
