@@ -372,14 +372,9 @@ class EventEngine(object):
 
         return result
 
-    def show_feedback(self, correct):
-        """Indicate feedback by blinking the fixation point."""
-        flip_every = self.feedback_flip_every[int(correct)]
-        for frame in xrange(self.feedback_frames):
-            if not frame % flip_every:
-                self.fix.color = -1 * self.fix.color
-            self.fix.draw()
-            self.win.flip()
+
+# =========================================================================== #
+# =========================================================================== #
 
 
 class Lights(object):
