@@ -21,18 +21,18 @@ base = dict(
     window_color=-1,
 
     # Fixation
-    fix_size=.2,
+    fix_size=.3,
     fix_iti_color=-1,
     fix_stim_color=(1, 1, -1),
     fix_ready_color=(1, 1, -1),
     fix_pause_color=(1, 1, -1),
     fix_delay_color=(1, 1, -1),
     fix_resp_color=-1,
-    fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
+    fix_fb_colors=[(1, -.5, -.5), (-.5, .75, -.5)],
 
     # Response settings
     quit_keys=["escape", "q"],
-    ready_keys=["space"],
+    ready_keys=["space", "return"],
     wait_keys=["space"],
     finish_keys=["return"],
     trigger_keys=["t", "5", "quoteleft"],
@@ -47,9 +47,6 @@ base = dict(
     light_contrast=.5,
     light_mask="gauss",
     light_pos=[(-5, 0), (5, 0)],
-
-    # Pulse parameters
-    min_interval=2,
 
     # Timing parameters
     orient_dur=0,
@@ -93,12 +90,13 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    stim_durations=[4, 8, 12, 16],  # In seconds
+    stim_duration=[4, 8, 12, 16],  # In seconds
     packet_length=.2,  # In seconds
     packet_rate=.1,  # Proportion active packets
     pulse_rate=[3, 3.5, 4, 4.5, 5],  # Expected pulses per packet
+    min_interval=2,
 
     cycles=1,
-    trials_per_break=1000,
+    trials_per_break=10,
 
     )

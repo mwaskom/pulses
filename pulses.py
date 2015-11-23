@@ -121,33 +121,31 @@ def nrsa_pilot(p, win, stims):
             cregg.wait_check_quit(t_info["iti"])
 
             # Build the pulse schedule for this trial
-            stim_flips = np.round(win.refresh_hz) * t_info["stim_dur"]
+            n_packets = t_info["trial_dur"] / p.packet_length
+            n_active = n_packets * p.packet_rate
+            flips_per_packet = p.packet_length * win.refresh_hz
+            packets = packet_train(n_packets, n_active, flips_per_packet)
 
-            l_pulses = pulse_train(t_info["left_pulses"],
-                                   stim_flips,
+            # TODO abstract this out so it's not repeated for left/right
+            # Also change the stimulus event to take a general rectangular
+            # schedule with sources in the columns so that it scales better
+            # to n-source paradigms
+            l_pulse_count = t_info["left_rate"] * n_active
+            l_pulses = pulse_train(l_pulse_count,
+                                   packets.sum(),
                                    p.min_interval)
+            l_schedule = np.zeros_like(packets, np.int)
+            l_schedule[packets] = l_pulses
 
-            r_pulses = pulse_train(t_info["right_pulses"],
-                                   stim_flips,
+            r_pulse_count = t_info["left_rate"] * n_active
+            r_pulses = pulse_train(r_pulse_count,
+                                   packets.sum(),
                                    p.min_interval)
-
-            # Add in a gap
-            if t_info["pause_dur"]:
-                pause_flips = np.round(win.refresh_hz) * t_info["pause_dur"]
-                if p.pause_pulses:
-                    l_pulses, r_pulses = insert_uninformative_gaps(
-                        l_pulses, r_pulses, 1, p.pause_pulses, pause_flips)
-                    active = np.ones_like(l_pulses)
-                else:
-                    active = np.ones_like(l_pulses)
-                    l_pulses = insert_empty_gaps(l_pulses, 1, pause_flips)
-                    r_pulses = insert_empty_gaps(r_pulses, 1, pause_flips)
-                    active = insert_empty_gaps(active, 1, pause_flips)
-            else:
-                active = np.ones_like(l_pulses)
+            r_schedule = np.zeros_like(packets, np.int)
+            r_schedule[packets] = r_pulses
 
             # Execute this trial
-            res = stim_event(l_pulses, r_pulses, active)
+            res = stim_event(l_schedule, r_schedule)
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
@@ -161,14 +159,14 @@ def nrsa_pilot(p, win, stims):
 
 
 def packet_train(n_packets, n_active, flips_per_packet):
-
+    """Return an array specifying which screen flips are an active."""
     packets = np.zeros(n_packets, np.bool)
     packets[:n_active] = True
     packets = np.random.permutation(packets)
     return np.repeat(packets, flips_per_packet)
 
 
-def pulse_train(n_p, n_t, min_interval=3):
+def pulse_train(n_p, n_t, min_interval=2):
     """Return a series with 0/1 values indicating pulses."""
     if n_p == 0:
         return pd.Series(np.zeros(n_t), dtype=np.int)
@@ -291,13 +289,17 @@ class EventEngine(object):
         self.resp_keys = p.resp_keys
         self.quit_keys = p.quit_keys
 
-    def __call__(self, left_pulses, right_pulses, active):
+    def __call__(self, left_pulses, right_pulses, active=None):
         """Execute a stimulus event."""
 
         # Initialize trial data
         correct = False
         used_key = np.nan
         response = np.nan
+
+        # We don't need to have explicit pauses
+        if active is None:
+            active = np.ones_like(left_pulses, np.bool)
 
         # Show the fixation point and wait to start the trial
         self.fix.color = self.p.fix_ready_color
@@ -513,22 +515,17 @@ class PulseLog(object):
 def nrsa_pilot_design(p):
 
     cols = [
-            "stim_dur", "pause_dur",
-            "left_pulses", "right_pulses",
+            "trial_dur", "left_rate", "right_rate",
             ]
 
     conditions = list(itertools.product(
-        p.stim_durations, p.pause_durations,
-        p.pulse_counts, p.pulse_counts,
+        p.stim_duration, p.pulse_rate, p.pulse_rate
         ))
 
     dfs = []
     trials = np.arange(len(conditions))
     for _ in xrange(p.cycles):
         df = pd.DataFrame(conditions, columns=cols, index=trials)
-        df["pulse_difference"] = (df.left_pulses - df.right_pulses).abs()
-        df["pause"] = df["pause_dur"] > 0
-        df["trial_dur"] = df["stim_dur"] + df["pause_dur"]
         df["iti"] = np.random.uniform(*p.iti_params, size=trials.size)
         df = df.reindex(np.random.permutation(df.index))
         dfs.append(df)
