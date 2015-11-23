@@ -290,11 +290,11 @@ class EventEngine(object):
         used_key = np.nan
         response = np.nan
 
-        # Pre stimulus orienting cue
-        self.fix.color = self.p.fix_orient_color
+        # Show the fixation point and wait to start the trial
+        self.fix.color = self.p.fix_ready_color
         self.fix.draw()
         self.win.flip()
-        cregg.wait_check_quit(self.p.orient_dur)
+        event.waitKeys(np.inf, self.p.ready_keys)
 
         # Frames where the lights can pulse
         for left_flash, right_flash, is_active in zip(left_pulses,

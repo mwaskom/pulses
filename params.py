@@ -9,7 +9,7 @@ from copy import deepcopy
 
 base = dict(
 
-    experiment_name="sticks",
+    experiment_name="pulses",
 
     # Display setup
     monitor_name="mlw-mbair",
@@ -18,20 +18,21 @@ base = dict(
     fmri_screen_number=0,
     monitor_units="deg",
     full_screen=True,
-    window_color=-.33,
+    window_color=-1,
 
     # Fixation
     fix_size=.2,
     fix_iti_color=-1,
-    fix_stim_color=1,
-    fix_orient_color=.25,
-    fix_pause_color=.25,
-    fix_delay_color=.25,
-    fix_resp_color=(1, 1, -1),
+    fix_stim_color=(1, 1, -1),
+    fix_ready_color=(1, 1, -1),
+    fix_pause_color=(1, 1, -1),
+    fix_delay_color=(1, 1, -1),
+    fix_resp_color=-1,
     fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
 
     # Response settings
     quit_keys=["escape", "q"],
+    ready_keys=["space"],
     wait_keys=["space"],
     finish_keys=["return"],
     trigger_keys=["t", "5", "quoteleft"],
@@ -39,7 +40,7 @@ base = dict(
     fmri_resp_keys=["4", "9"],
 
     # Lights
-    light_size=3,
+    light_size=5,
     light_color=1,
     light_tex=None,
     light_sf=2,
@@ -51,11 +52,11 @@ base = dict(
     min_interval=2,
 
     # Timing parameters
-    orient_dur=.5,
+    orient_dur=0,
     post_stim_dur=.5,
-    resp_dur=2,
+    resp_dur=5,
     feedback_dur=1,
-    iti_params=(2, 4),
+    iti_params=(1, 2),
     after_break_dur=2,
 
     # Communication
@@ -97,6 +98,6 @@ nrsa_pilot.update(
     pause_durations=[0, 4],
     pause_pulses=2,
     cycles=1,
-    trials_per_break=4,
+    trials_per_break=1000,
 
     )
