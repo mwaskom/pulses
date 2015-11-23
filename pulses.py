@@ -285,6 +285,10 @@ class EventEngine(object):
         left_val_iter = iter(left_values)
         right_val_iter = iter(right_values)
 
+        # Initialize the light orienttions randomly
+        for light in self.lights.lights:
+            light.ori = np.random.randint(0, 360)
+
         # Frames where the lights can pulse
         # TODO rework the logic here to change things by epoch, not by frame
         for i, is_pulse in enumerate(pulses):
@@ -294,7 +298,7 @@ class EventEngine(object):
             else:
                 self.fix.color = self.p.fix_pause_color
 
-            self.lights.activate(is_pulse, is_pulse)
+            self.lights.activate([is_pulse, is_pulse])
 
             for light in self.lights.lights:
                 light.ori += 360 / self.win.refresh_hz * self.p.rotation_rate
@@ -378,7 +382,7 @@ class EventEngine(object):
 
 
 class Lights(object):
-
+    """Main sources of information in the task."""
     def __init__(self, win, p):
 
         self.win = win
