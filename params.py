@@ -18,17 +18,17 @@ base = dict(
     fmri_screen_number=0,
     monitor_units="deg",
     full_screen=True,
-    window_color=-1,
+    window_color=0,
 
     # Fixation
     fix_size=.3,
-    fix_iti_color=-1,
+    fix_iti_color=0,
     fix_stim_color=(1, 1, -1),
     fix_ready_color=(1, 1, -1),
     fix_pause_color=(1, 1, -1),
     fix_delay_color=(1, 1, -1),
-    fix_resp_color=-1,
-    fix_fb_colors=[(1, -.5, -.5), (-.5, .75, -.5)],
+    fix_resp_color=0,
+    fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
 
     # Response settings
     quit_keys=["escape", "q"],
@@ -42,9 +42,8 @@ base = dict(
     # Lights
     light_size=5,
     light_color=1,
-    light_tex=None,
-    light_sf=2,
-    light_contrast=.5,
+    light_tex="sin",
+    light_sf=1,
     light_mask="gauss",
     light_pos=[(-5, 0), (5, 0)],
 
@@ -90,11 +89,13 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    stim_duration=[4, 8, 12, 16],  # In seconds
-    packet_length=.2,  # In seconds
-    packet_rate=.1,  # Proportion active packets
-    pulse_rate=[1, 2, 3],  # Expected pulses per packet
-    min_interval=2,
+    trial_duration=[4, 8, 12, 16],  # In seconds
+    pulse_duration=.2,  # In seconds
+    pulse_rate=.1,
+    contrast_means=[.35, .45, .55, .65],
+    contrast_sd=.1,
+    min_interval=2,  # In epoch units
+    rotation_rate=.25,  # Full rotations per second
 
     cycles=1,
     trials_per_break=10,

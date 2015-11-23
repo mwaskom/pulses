@@ -121,31 +121,25 @@ def nrsa_pilot(p, win, stims):
             cregg.wait_check_quit(t_info["iti"])
 
             # Build the pulse schedule for this trial
-            n_packets = t_info["trial_dur"] / p.packet_length
-            n_active = n_packets * p.packet_rate
-            flips_per_packet = p.packet_length * win.refresh_hz
-            packets = packet_train(n_packets, n_active, flips_per_packet)
+            flips_per_pulse = win.refresh_hz * p.pulse_duration
+            n_epochs = t_info["trial_dur"] / p.pulse_duration
+            n_pulses = n_epochs * p.pulse_rate
 
-            # TODO abstract this out so it's not repeated for left/right
-            # Also change the stimulus event to take a general rectangular
-            # schedule with sources in the columns so that it scales better
-            # to n-source paradigms
-            l_pulse_count = t_info["left_rate"] * n_active
-            l_pulses = pulse_train(l_pulse_count,
-                                   packets.sum(),
-                                   p.min_interval)
-            l_schedule = np.zeros_like(packets, np.int)
-            l_schedule[packets] = l_pulses
+            # TODO Specifying trial with exact number of pulses, but
+            # find out if it is better to have stochastic quantity of info
+            pulses = pulse_train(n_pulses, n_epochs, p.min_interval)
+            pulses = np.repeat(pulses.values, flips_per_pulse)
 
-            r_pulse_count = t_info["left_rate"] * n_active
-            r_pulses = pulse_train(r_pulse_count,
-                                   packets.sum(),
-                                   p.min_interval)
-            r_schedule = np.zeros_like(packets, np.int)
-            r_schedule[packets] = r_pulses
+            # Generate left and right contrast values here
+            left_values = np.random.normal(t_info["left_mean"],
+                                           p.contrast_sd,
+                                           n_pulses)
+            right_values = np.random.normal(t_info["right_mean"],
+                                            p.contrast_sd,
+                                            n_pulses)
 
             # Execute this trial
-            res = stim_event(l_schedule, r_schedule)
+            res = stim_event(pulses, left_values, right_values)
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
@@ -289,7 +283,7 @@ class EventEngine(object):
         self.resp_keys = p.resp_keys
         self.quit_keys = p.quit_keys
 
-    def __call__(self, left_pulses, right_pulses, active=None):
+    def __call__(self, pulses, left_values, right_values):
         """Execute a stimulus event."""
 
         # Initialize trial data
@@ -297,27 +291,45 @@ class EventEngine(object):
         used_key = np.nan
         response = np.nan
 
-        # We don't need to have explicit pauses
-        if active is None:
-            active = np.ones_like(left_pulses, np.bool)
-
         # Show the fixation point and wait to start the trial
         self.fix.color = self.p.fix_ready_color
         self.fix.draw()
         self.win.flip()
         event.waitKeys(np.inf, self.p.ready_keys)
 
+        left_val_iter = iter(left_values)
+        right_val_iter = iter(right_values)
+
         # Frames where the lights can pulse
-        for left_flash, right_flash, is_active in zip(left_pulses,
-                                                      right_pulses,
-                                                      active):
+        # TODO rework the logic here to change things by epoch, not by frame
+        for i, is_pulse in enumerate(pulses):
 
-            self.lights.activate(left_flash, right_flash)
-
-            if is_active:
+            if is_pulse:
                 self.fix.color = self.p.fix_stim_color
             else:
                 self.fix.color = self.p.fix_pause_color
+
+            self.lights.activate(is_pulse, is_pulse)
+
+            for light in self.lights.lights:
+                light.ori += 360 / self.win.refresh_hz * self.p.rotation_rate
+
+            # TODO This is a hack, rework the logic of this method
+            # Basically this tests whether this is the first flip of a pulse
+            if (not i and is_pulse) or (i and is_pulse and not pulses[i - 1]):
+
+                left_val = next(left_val_iter)
+                right_val = next(right_val_iter)
+
+            elif not is_pulse:
+                left_val = 0
+                right_val = 0
+
+            # TODO Make a method on the light object
+            for light, contrast in zip(self.lights.lights,
+                                       [left_val,
+                                        right_val]):
+                light.contrast = contrast
 
             self.lights.draw()
             self.fix.draw()
@@ -330,13 +342,13 @@ class EventEngine(object):
         cregg.wait_check_quit(self.p.post_stim_dur)
 
         # Response period
-        pulse_difference = right_pulses.sum() - left_pulses.sum()
-        if pulse_difference == 0:
+        contrast_difference = np.mean(right_values) - np.mean(left_values)
+        if contrast_difference == 0:
             correct_response = np.random.choice([0, 1])
         else:
             # 1 here will map to right button press below
             # Probably a safer way to do this...
-            correct_response = int(pulse_difference > 0)
+            correct_response = int(contrast_difference > 0)
 
         self.fix.color = self.p.fix_resp_color
         self.fix.draw()
@@ -399,7 +411,6 @@ class Lights(object):
                                mask=p.light_mask,
                                size=p.light_size,
                                color=p.light_color,
-                               contrast=p.light_contrast,
                                pos=pos)
             for pos in p.light_pos
             ]
@@ -515,11 +526,11 @@ class PulseLog(object):
 def nrsa_pilot_design(p):
 
     cols = [
-            "trial_dur", "left_rate", "right_rate",
+            "trial_dur", "left_mean", "right_mean",
             ]
 
     conditions = list(itertools.product(
-        p.stim_duration, p.pulse_rate, p.pulse_rate
+        p.trial_duration, p.contrast_means, p.contrast_means,
         ))
 
     dfs = []
