@@ -50,7 +50,7 @@ base = dict(
     # Timing parameters
     orient_dur=0,
     post_stim_dur=.5,
-    resp_dur=5,
+    resp_dur=10,
     feedback_dur=1,
     iti_params=(1, 2),
     after_break_dur=2,
@@ -87,12 +87,14 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    trial_duration=[4, 8, 12, 16],  # In seconds
-    pulse_duration=.2,  # In seconds
-    pulse_rate=.1,
     contrast_means=[.35, .45, .55, .65],
     contrast_sd=.1,
-    min_interval=2,  # In epoch units
+
+    trial_duration=[4, 8, 12, 16],  # In seconds
+    pulse_duration=.2,  # In seconds
+    min_refractory=.6,  # In seconds
+    pulse_hazard=.5,  # Roughly equivalent to exponential hazard over seconds
+
     rotation_rate=.25,  # Full rotations per second
 
     cycles=1,

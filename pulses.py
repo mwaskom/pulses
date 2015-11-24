@@ -99,25 +99,24 @@ def nrsa_pilot(p, win, stims):
             cregg.wait_check_quit(t_info["iti"])
 
             # Build the pulse schedule for this trial
-            flips_per_pulse = win.refresh_hz * p.pulse_duration
-            n_epochs = t_info["trial_dur"] / p.pulse_duration
-            n_pulses = n_epochs * p.pulse_rate
+            trial_flips = win.refresh_hz * t_info["trial_dur"]
+            pulse_flips = win.refresh_hz * p.pulse_duration
 
-            # TODO Specifying trial with exact number of pulses, but
-            # find out if it is better to have stochastic quantity of info
-            pulses = pulse_train(n_pulses, n_epochs, p.min_interval)
-            pulses = np.repeat(pulses.values, flips_per_pulse)
+            trial_onsets = pulse_onsets(p, win.refresh_hz, trial_flips)
+            trial_contrast = np.zeros((trial_flips, 2))
 
-            # Generate left and right contrast values here
-            left_values = np.random.normal(t_info["left_mean"],
-                                           p.contrast_sd,
-                                           n_pulses)
-            right_values = np.random.normal(t_info["right_mean"],
-                                            p.contrast_sd,
-                                            n_pulses)
+            for i, mean in enumerate(t_info[["mean_l", "mean_r"]]):
+                trial_contrast[:, i] = contrast_schedule(trial_onsets,
+                                                         mean,
+                                                         p.contrast_sd,
+                                                         trial_flips,
+                                                         pulse_flips)
+
+            # Compute the difference in the generating means
+            contrast_difference = t_info["mean_r"] - t_info["mean_l"]
 
             # Execute this trial
-            res = stim_event(pulses, left_values, right_values)
+            res = stim_event(trial_contrast, contrast_difference)
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
@@ -128,6 +127,55 @@ def nrsa_pilot(p, win, stims):
 
 # =========================================================================== #
 # =========================================================================== #
+
+
+def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
+    """Return indices for frames where the each pulse will start."""
+    if rs is None:
+        rs = np.random.RandomState()
+
+    # Convert seconds to screen refresh units
+    pulse_flips = refresh_hz * p.pulse_duration
+    refract_flips = refresh_hz * p.min_refractory
+    geom_p = p.pulse_hazard / refresh_hz
+
+    # Schedule the first pulse
+    pulse_times = []
+    while not pulse_times:
+        first_pulse = rs.geometric(geom_p) - 1
+        if first_pulse < trial_flips:
+            pulse_times.append(first_pulse)
+
+    # Schedule additional pulses
+    while True:
+
+        last_pulse = pulse_times[-1]
+        next_pulse = (last_pulse +
+                      pulse_flips +
+                      refract_flips +
+                      rs.geometric(geom_p) - 1)
+        if (next_pulse + pulse_flips) > trial_flips:
+            break
+        else:
+            pulse_times.append(int(next_pulse))
+
+    pulse_times = np.array(pulse_times, np.int)
+
+    return pulse_times
+
+
+def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
+    """Return a vector with the contrast on each flip."""
+    if rs is None:
+        rs = np.random.RandomState()
+
+    contrast_vector = np.zeros(trial_flips)
+    for onset in onsets:
+        offset = onset + pulse_flips
+        pulse_contrast = np.random.normal(mean, sd)
+        contrast_vector[onset:offset] = pulse_contrast
+
+    return contrast_vector
 
 
 def packet_train(n_packets, n_active, flips_per_packet):
@@ -275,7 +323,7 @@ class EventEngine(object):
                 return
 
     def collect_response(self, correct_response):
-        """Wait for a button press and determine accuracy."""
+        """Wait for a button press and determine result."""
         # Initialize trial data
         correct = False
         used_key = np.nan
@@ -305,50 +353,21 @@ class EventEngine(object):
 
         return dict(key=used_key, response=response, correct=correct)
 
-    def __call__(self, pulses, left_values, right_values):
+    def __call__(self, contrast_values, contrast_difference):
         """Execute a stimulus event."""
-
-        # Show the fixation point and wait to start the trial
-        self.wait_for_ready()
-
-        # TODO
-        left_val_iter = iter(left_values)
-        right_val_iter = iter(right_values)
 
         # Initialize the light orientations randomly
         for light in self.lights.lights:
             light.ori = np.random.randint(0, 360)
 
+        # Show the fixation point and wait to start the trial
+        self.wait_for_ready()
+
         # Frames where the lights can pulse
-        # TODO rework the logic here to change things by epoch, not by frame
-        for i, is_pulse in enumerate(pulses):
+        for i, frame_contrast in enumerate(contrast_values):
 
-            if is_pulse:
-                self.fix.color = self.p.fix_stim_color
-            else:
-                self.fix.color = self.p.fix_pause_color
-
-            self.lights.activate([is_pulse, is_pulse])
-
-            for light in self.lights.lights:
-                light.ori += 360 / self.win.refresh_hz * self.p.rotation_rate
-
-            # TODO This is a hack, rework the logic of this method
-            # Basically this tests whether this is the first flip of a pulse
-            if (not i and is_pulse) or (i and is_pulse and not pulses[i - 1]):
-
-                left_val = next(left_val_iter)
-                right_val = next(right_val_iter)
-
-            elif not is_pulse:
-                left_val = 0
-                right_val = 0
-
-            # TODO Make a method on the light object
-            for light, contrast in zip(self.lights.lights,
-                                       [left_val,
-                                        right_val]):
-                light.contrast = contrast
+            for j, light_contrast in enumerate(frame_contrast):
+                self.lights.lights[j].contrast = light_contrast
 
             self.lights.draw()
             self.fix.draw()
@@ -361,7 +380,6 @@ class EventEngine(object):
         cregg.wait_check_quit(self.p.post_stim_dur)
 
         # Response period
-        contrast_difference = np.mean(right_values) - np.mean(left_values)
         if contrast_difference == 0:
             correct_response = np.random.choice([0, 1])
         else:
@@ -408,18 +426,10 @@ class Lights(object):
             for pos in p.light_pos
             ]
 
-        self.lights_on = [False, False]
-
-    def activate(self, which):
-
-        self.lights_on = which
-
     def draw(self):
 
-        for i, light in enumerate(self.lights):
-            if self.lights_on[i]:
-                light.draw()
-                self.lights_on[i] = False
+        for light in self.lights:
+            light.draw()
 
 
 class PulseLog(object):
@@ -437,7 +447,7 @@ class PulseLog(object):
 def nrsa_pilot_design(p):
 
     cols = [
-            "trial_dur", "left_mean", "right_mean",
+            "trial_dur", "mean_l", "mean_r",
             ]
 
     conditions = list(itertools.product(
