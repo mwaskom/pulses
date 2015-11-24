@@ -133,8 +133,8 @@ def nrsa_pilot(p, win, stims):
             res = stim_event(trial_contrast, contrast_difference)
 
             # Log whether the response agreed with what was actually shown
-            res["act_correct"] = (res["response"] == 1 and
-                                  t_info["act_mean_diff"] > 0)
+            res["act_correct"] = (res["response"] ==
+                                  (t_info["act_mean_diff"] > 0))
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
