@@ -92,10 +92,9 @@ def nrsa_pilot(p, win, stims):
                 stims["progress"].draw()
                 stims["break"].draw()
 
-            else:
-
-                stims["fix"].draw()
-                win.flip()
+            # Start the trial
+            stims["fix"].draw()
+            win.flip()
 
             # Wait for the ITI before the stimulus
             cregg.wait_check_quit(t_info["iti"])

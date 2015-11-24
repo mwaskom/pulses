@@ -63,7 +63,7 @@ base = dict(
     ),
 
     break_text=(
-        "Press space to start the next trial",
+        "Press space to start the next block",
     ),
 
    finish_text=(
