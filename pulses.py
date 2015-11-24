@@ -172,7 +172,10 @@ def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
     contrast_vector = np.zeros(trial_flips)
     for onset in onsets:
         offset = onset + pulse_flips
-        pulse_contrast = np.random.normal(mean, sd)
+        while True:
+            pulse_contrast = rs.normal(mean, sd)
+            if 0 <= pulse_contrast <= 1:
+                break
         contrast_vector[onset:offset] = pulse_contrast
 
     return contrast_vector
