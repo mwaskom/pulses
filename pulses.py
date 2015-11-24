@@ -27,6 +27,7 @@ def main(arglist):
     fix = cregg.Fixation(win, p)
 
     # The main stimulus arrays
+    # TODO Change to use ElementArrayStim?
     lights = Lights(win, p)
 
     # Progress bar to show during behavioral breaks
@@ -84,17 +85,10 @@ def nrsa_pilot(p, win, stims):
 
             if t_info["break"]:
 
-                # Show a progress bar
+                # Show a progress bar and break message
                 stims["progress"].update_bar(t / len(design))
                 stims["progress"].draw()
-
-                # Show the break message
                 stims["break"].draw()
-
-                # Add a little delay after the break
-                stims["fix"].draw()
-                win.flip()
-                cregg.wait_check_quit(p.after_break_dur)
 
             else:
 
@@ -102,7 +96,6 @@ def nrsa_pilot(p, win, stims):
                 win.flip()
 
             # Wait for the ITI before the stimulus
-            # This helps us relate pre-stim delay to behavior later
             cregg.wait_check_quit(t_info["iti"])
 
             # Build the pulse schedule for this trial
@@ -265,27 +258,64 @@ class EventEngine(object):
         self.lights = stims.get("lights", None)
 
         self.break_keys = p.resp_keys + p.quit_keys
+        self.ready_keys = p.ready_keys
         self.resp_keys = p.resp_keys
         self.quit_keys = p.quit_keys
 
-    def __call__(self, pulses, left_values, right_values):
-        """Execute a stimulus event."""
+    def wait_for_ready(self):
+        """Allow the subject to control the start of the trial."""
+        self.fix.color = self.p.fix_ready_color
+        self.fix.draw()
+        self.win.flip()
+        keys = event.waitKeys(np.inf, self.p.ready_keys + self.p.quit_keys)
+        for key in keys:
+            if key in self.quit_keys:
+                core.quit()
+            elif key in self.ready_keys:
+                return
 
+    def collect_response(self, correct_response):
+        """Wait for a button press and determine accuracy."""
         # Initialize trial data
         correct = False
         used_key = np.nan
         response = np.nan
 
-        # Show the fixation point and wait to start the trial
-        self.fix.color = self.p.fix_ready_color
+        # Put the screen into response mode
+        self.fix.color = self.p.fix_resp_color
         self.fix.draw()
         self.win.flip()
-        event.waitKeys(np.inf, self.p.ready_keys)
 
+        # Wait for the key press
+        event.clearEvents()
+        keys = event.waitKeys(self.p.resp_dur,
+                              self.break_keys)
+
+        # Determine what was pressed
+        keys = [] if keys is None else keys
+        for key in keys:
+
+            if key in self.quit_keys:
+                core.quit()
+
+            if key in self.resp_keys:
+                used_key = key
+                response = self.resp_keys.index(key)
+                correct = response == correct_response
+
+        return dict(key=used_key, response=response, correct=correct)
+
+    def __call__(self, pulses, left_values, right_values):
+        """Execute a stimulus event."""
+
+        # Show the fixation point and wait to start the trial
+        self.wait_for_ready()
+
+        # TODO
         left_val_iter = iter(left_values)
         right_val_iter = iter(right_values)
 
-        # Initialize the light orienttions randomly
+        # Initialize the light orientations randomly
         for light in self.lights.lights:
             light.ori = np.random.randint(0, 360)
 
@@ -339,27 +369,10 @@ class EventEngine(object):
             # Probably a safer way to do this...
             correct_response = int(contrast_difference > 0)
 
-        self.fix.color = self.p.fix_resp_color
-        self.fix.draw()
-        self.win.flip()
-        event.clearEvents()
-
-        keys = event.waitKeys(self.p.resp_dur,
-                              self.break_keys)
-
-        keys = [] if keys is None else keys
-        for key in keys:
-
-            if key in self.quit_keys:
-                core.quit()
-
-            if key in self.resp_keys:
-                used_key = key
-                response = self.resp_keys.index(key)
-                correct = response == correct_response
+        result = self.collect_response(correct_response)
 
         # Feedback
-        self.fix.color = self.p.fix_fb_colors[int(correct)]
+        self.fix.color = self.p.fix_fb_colors[int(result["correct"])]
         self.fix.draw()
         self.win.flip()
 
@@ -369,10 +382,6 @@ class EventEngine(object):
         self.fix.color = self.p.fix_iti_color
         self.fix.draw()
         self.win.flip()
-
-        result = dict(key=used_key,
-                      correct=correct,
-                      response=response)
 
         return result
 
@@ -401,9 +410,6 @@ class Lights(object):
 
         self.lights_on = [False, False]
 
-        self.on_frames = [0, 0]
-        self.refract_frames = [0, 0]
-
     def activate(self, which):
 
         self.lights_on = which
@@ -414,7 +420,6 @@ class Lights(object):
             if self.lights_on[i]:
                 light.draw()
                 self.lights_on[i] = False
-
 
 
 class PulseLog(object):
