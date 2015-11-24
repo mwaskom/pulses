@@ -75,7 +75,7 @@ def nrsa_pilot(p, win, stims):
     design = nrsa_pilot_design(p)
 
     log_cols = list(design.columns)
-    log_cols += ["act_mean_l", "act_mean_r", "act_mean_diff",
+    log_cols += ["start_time", "act_mean_l", "act_mean_r", "act_mean_diff",
                  "pulse_count",
                  "key", "response", "gen_correct", "act_correct", "rt"]
 
@@ -236,6 +236,7 @@ class EventEngine(object):
         self.resp_keys = p.resp_keys
         self.quit_keys = p.quit_keys
 
+        self.clock = core.Clock()
         self.resp_clock = core.Clock()
 
     def wait_for_ready(self):
@@ -248,7 +249,7 @@ class EventEngine(object):
             if key in self.quit_keys:
                 core.quit()
             elif key in self.ready_keys:
-                return
+                return self.clock.getTime()
 
     def collect_response(self, correct_response):
         """Wait for a button press and determine result."""
@@ -296,7 +297,7 @@ class EventEngine(object):
             light.ori = np.random.randint(0, 360)
 
         # Show the fixation point and wait to start the trial
-        self.wait_for_ready()
+        start_time = self.wait_for_ready()
 
         # Frames where the lights can pulse
         for i, frame_contrast in enumerate(contrast_values):
@@ -329,6 +330,7 @@ class EventEngine(object):
             correct_response = int(contrast_difference > 0)
 
         result = self.collect_response(correct_response)
+        result["start_time"] = start_time
 
         # Feedback
         self.fix.color = self.p.fix_fb_colors[int(result["gen_correct"])]
