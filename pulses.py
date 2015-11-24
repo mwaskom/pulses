@@ -80,8 +80,11 @@ def nrsa_pilot(p, win, stims):
                  "key", "response", "gen_correct", "act_correct", "rt"]
 
     log = cregg.DataLog(p, log_cols)
+    if not p.nolog:
+        log.pulses = PulseLog()
 
-    with cregg.PresentationLoop(win, p, fix=stims["fix"]):
+    with cregg.PresentationLoop(win, p, log, fix=stims["fix"],
+                                exit_func=save_pulse_log):
 
         for t, t_info in design.iterrows():
 
@@ -120,11 +123,14 @@ def nrsa_pilot(p, win, stims):
                 trial_contrast[:, i] = vector
                 trial_contrast_values.append(np.mean(values))
 
-            # Log some information about the actual
+            # Log some information about the actual values
             act_mean_l, act_mean_r = trial_contrast_values
             t_info.ix["act_mean_l"] = act_mean_l
             t_info.ix["act_mean_r"] = act_mean_r
             t_info.ix["act_mean_diff"] = act_mean_r - act_mean_l
+
+            # Log the pulse-wise information
+            log.pulses.update(trial_onsets, trial_contrast_values)
 
             # Compute the difference in the generating means
             contrast_difference = t_info["gen_mean_r"] - t_info["gen_mean_l"]
@@ -141,6 +147,14 @@ def nrsa_pilot(p, win, stims):
             log.add_data(t_info)
 
         stims["finish"].draw()
+
+
+def save_pulse_log(log):
+
+    if hasattr(log, "pulses"):
+        fname = log.p.log_base.format(subject=log.p.subject,
+                                      run=log.p.run)
+        log.pulses.save(fname)
 
 
 # =========================================================================== #
@@ -363,8 +377,19 @@ class PulseLog(object):
 
     def __init__(self):
 
-        pass
-        # TODO make this!
+        self.pulse_times = []
+        self.contrast_values = []
+
+    def update(self, pulse_times, contrast_values):
+
+        self.pulse_times.append(pulse_times)
+        self.contrast_values.append(contrast_values)
+
+    def save(self, fname):
+
+        np.savez(fname,
+                 pulse_onsets=self.pulse_times,
+                 contrast_values=self.contrast_values)
 
 
 # =========================================================================== #
