@@ -140,11 +140,12 @@ def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
     geom_p = p.pulse_hazard / refresh_hz
 
     # Schedule the first pulse
-    pulse_times = []
-    while not pulse_times:
-        first_pulse = rs.geometric(geom_p) - 1
-        if first_pulse < trial_flips:
-            pulse_times.append(first_pulse)
+    #pulse_times = []
+    #while not pulse_times:
+    #    first_pulse = rs.geometric(geom_p) - 1
+    #    if first_pulse < trial_flips:
+    #        pulse_times.append(first_pulse)
+    pulse_times = [0]
 
     # Schedule additional pulses
     while True:
@@ -258,6 +259,9 @@ class EventEngine(object):
 
             for j, light_contrast in enumerate(frame_contrast):
                 self.lights.lights[j].contrast = light_contrast
+
+            for light in self.lights.lights:
+                light.ori += 360 / self.win.refresh_hz * self.p.rotation_rate
 
             self.lights.draw()
             self.fix.draw()
