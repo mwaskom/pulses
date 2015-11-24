@@ -75,7 +75,9 @@ def nrsa_pilot(p, win, stims):
     design = nrsa_pilot_design(p)
 
     log_cols = list(design.columns)
-    log_cols += ["key", "response", "correct"]
+    log_cols += ["act_mean_l", "act_mean_r", "act_mean_diff",
+                 "pulse_count",
+                 "key", "response", "gen_correct", "act_correct", "rt"]
 
     log = cregg.DataLog(p, log_cols)
 
@@ -102,21 +104,38 @@ def nrsa_pilot(p, win, stims):
             trial_flips = win.refresh_hz * t_info["trial_dur"]
             pulse_flips = win.refresh_hz * p.pulse_duration
 
+            # Schedule pulse onsets
             trial_onsets = pulse_onsets(p, win.refresh_hz, trial_flips)
-            trial_contrast = np.zeros((trial_flips, 2))
+            t_info.ix["pulse_count"] = len(trial_onsets)
 
-            for i, mean in enumerate(t_info[["mean_l", "mean_r"]]):
-                trial_contrast[:, i] = contrast_schedule(trial_onsets,
-                                                         mean,
-                                                         p.contrast_sd,
-                                                         trial_flips,
-                                                         pulse_flips)
+            # Determine the sequence of stimulus contrast values
+            # TODO Improve this by using semantic indexing and not position
+            trial_contrast = np.zeros((trial_flips, 2))
+            trial_contrast_values = []
+            for i, mean in enumerate(t_info[["gen_mean_l", "gen_mean_r"]]):
+                vector, values = contrast_schedule(trial_onsets,
+                                                   mean,
+                                                   p.contrast_sd,
+                                                   trial_flips,
+                                                   pulse_flips)
+                trial_contrast[:, i] = vector
+                trial_contrast_values.append(np.mean(values))
+
+            # Log some information about the actual
+            act_mean_l, act_mean_r = trial_contrast_values
+            t_info.ix["act_mean_l"] = act_mean_l
+            t_info.ix["act_mean_r"] = act_mean_r
+            t_info.ix["act_mean_diff"] = act_mean_r - act_mean_l
 
             # Compute the difference in the generating means
-            contrast_difference = t_info["mean_r"] - t_info["mean_l"]
+            contrast_difference = t_info["gen_mean_r"] - t_info["gen_mean_l"]
 
             # Execute this trial
             res = stim_event(trial_contrast, contrast_difference)
+
+            # Log whether the response agreed with what was actually shown
+            res["act_correct"] = (res["response"] == 1 and
+                                  t_info["act_mean_diff"] > 0)
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
@@ -139,13 +158,14 @@ def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
     refract_flips = refresh_hz * p.min_refractory
     geom_p = p.pulse_hazard / refresh_hz
 
-    # Schedule the first pulse
+    # Schedule the first pulse for the trial onset
+    pulse_times = [0]
+    # Schedule the first pulse for a random time
     #pulse_times = []
     #while not pulse_times:
     #    first_pulse = rs.geometric(geom_p) - 1
     #    if first_pulse < trial_flips:
     #        pulse_times.append(first_pulse)
-    pulse_times = [0]
 
     # Schedule additional pulses
     while True:
@@ -171,6 +191,7 @@ def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
         rs = np.random.RandomState()
 
     contrast_vector = np.zeros(trial_flips)
+    contrast_values = []
     for onset in onsets:
         offset = onset + pulse_flips
         while True:
@@ -178,8 +199,9 @@ def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
             if 0 <= pulse_contrast <= 1:
                 break
         contrast_vector[onset:offset] = pulse_contrast
+        contrast_values.append(pulse_contrast)
 
-    return contrast_vector
+    return contrast_vector, contrast_values
 
 
 # =========================================================================== #
@@ -201,6 +223,8 @@ class EventEngine(object):
         self.resp_keys = p.resp_keys
         self.quit_keys = p.quit_keys
 
+        self.resp_clock = core.Clock()
+
     def wait_for_ready(self):
         """Allow the subject to control the start of the trial."""
         self.fix.color = self.p.fix_ready_color
@@ -219,6 +243,7 @@ class EventEngine(object):
         correct = False
         used_key = np.nan
         response = np.nan
+        rt = np.nan
 
         # Put the screen into response mode
         self.fix.color = self.p.fix_resp_color
@@ -227,22 +252,28 @@ class EventEngine(object):
 
         # Wait for the key press
         event.clearEvents()
+        self.resp_clock.reset()
         keys = event.waitKeys(self.p.resp_dur,
-                              self.break_keys)
+                              self.break_keys,
+                              self.resp_clock)
 
         # Determine what was pressed
         keys = [] if keys is None else keys
-        for key in keys:
+        for key, timestamp in keys:
 
             if key in self.quit_keys:
                 core.quit()
 
             if key in self.resp_keys:
                 used_key = key
+                rt = timestamp
                 response = self.resp_keys.index(key)
                 correct = response == correct_response
 
-        return dict(key=used_key, response=response, correct=correct)
+        return dict(key=used_key,
+                    response=response,
+                    gen_correct=correct,
+                    rt=rt)
 
     def __call__(self, contrast_values, contrast_difference):
         """Execute a stimulus event."""
@@ -274,6 +305,9 @@ class EventEngine(object):
         cregg.wait_check_quit(self.p.post_stim_dur)
 
         # Response period
+        # TODO Given that we are showing feedback based on the generating
+        # means and not what actually happens, the concept of "correct" is
+        # a little confusing. Rework to specify in terms of feedback valnece
         if contrast_difference == 0:
             correct_response = np.random.choice([0, 1])
         else:
@@ -284,7 +318,7 @@ class EventEngine(object):
         result = self.collect_response(correct_response)
 
         # Feedback
-        self.fix.color = self.p.fix_fb_colors[int(result["correct"])]
+        self.fix.color = self.p.fix_fb_colors[int(result["gen_correct"])]
         self.fix.draw()
         self.win.flip()
 
@@ -341,7 +375,7 @@ class PulseLog(object):
 def nrsa_pilot_design(p):
 
     cols = [
-            "trial_dur", "mean_l", "mean_r",
+            "trial_dur", "gen_mean_l", "gen_mean_r",
             ]
 
     conditions = list(itertools.product(
@@ -357,6 +391,7 @@ def nrsa_pilot_design(p):
         dfs.append(df)
 
     design = pd.concat(dfs).reset_index(drop=True)
+    design["gen_mean_diff"] = design.gen_mean_r - design.gen_mean_l
     trial = design.index.values
     design["break"] = ~(trial % p.trials_per_break).astype(bool)
     design.loc[0, "break"] = False

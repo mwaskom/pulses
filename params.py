@@ -87,7 +87,7 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    contrast_means=[.35, .45, .55, .65],
+    contrast_means=[.2, .3, .4, .5],
     contrast_sd=.1,
 
     trial_duration=[4, 8, 12, 16],  # In seconds
