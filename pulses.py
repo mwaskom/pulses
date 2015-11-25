@@ -113,6 +113,7 @@ def nrsa_pilot(p, win, stims):
             # Determine the sequence of stimulus contrast values
             # TODO Improve this by using semantic indexing and not position
             trial_contrast = np.zeros((trial_flips, 2))
+            trial_contrast_means = []
             trial_contrast_values = []
             for i, mean in enumerate(t_info[["gen_mean_l", "gen_mean_r"]]):
                 vector, values = contrast_schedule(trial_onsets,
@@ -121,10 +122,11 @@ def nrsa_pilot(p, win, stims):
                                                    trial_flips,
                                                    pulse_flips)
                 trial_contrast[:, i] = vector
-                trial_contrast_values.append(np.mean(values))
+                trial_contrast_means.append(np.mean(values))
+                trial_contrast_values.append(values)
 
             # Log some information about the actual values
-            act_mean_l, act_mean_r = trial_contrast_values
+            act_mean_l, act_mean_r = trial_contrast_means
             t_info.ix["act_mean_l"] = act_mean_l
             t_info.ix["act_mean_r"] = act_mean_r
             t_info.ix["act_mean_diff"] = act_mean_r - act_mean_l
