@@ -80,8 +80,7 @@ def nrsa_pilot(p, win, stims):
                  "key", "response", "gen_correct", "act_correct", "rt"]
 
     log = cregg.DataLog(p, log_cols)
-    if not p.nolog:
-        log.pulses = PulseLog()
+    log.pulses = PulseLog()
 
     with cregg.PresentationLoop(win, p, log, fix=stims["fix"],
                                 exit_func=save_pulse_log):
@@ -153,7 +152,7 @@ def nrsa_pilot(p, win, stims):
 
 def save_pulse_log(log):
 
-    if hasattr(log, "pulses"):
+    if not log.p.nolog:
         fname = log.p.log_base.format(subject=log.p.subject,
                                       run=log.p.run)
         log.pulses.save(fname)
