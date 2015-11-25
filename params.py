@@ -32,7 +32,7 @@ base = dict(
 
     # Response settings
     quit_keys=["escape", "q"],
-    ready_keys=["space", "return"],
+    ready_keys=["lshift", "rshift"],
     wait_keys=["space"],
     finish_keys=["return"],
     trigger_keys=["t", "5", "quoteleft"],

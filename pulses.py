@@ -243,12 +243,18 @@ class EventEngine(object):
         self.fix.color = self.p.fix_ready_color
         self.fix.draw()
         self.win.flip()
-        keys = event.waitKeys(np.inf, self.p.ready_keys + self.p.quit_keys)
-        for key in keys:
-            if key in self.quit_keys:
-                core.quit()
-            elif key in self.ready_keys:
-                return self.clock.getTime()
+        while True:
+            keys = event.waitKeys(np.inf, self.p.ready_keys + self.p.quit_keys)
+            for key in keys:
+                if key in self.quit_keys:
+                    core.quit()
+                elif key in self.ready_keys:
+                    listen_for = [k for k in self.ready_keys if k != key]
+                    next_key = event.waitKeys(.1, listen_for)
+                    if next_key is not None:
+                        return self.clock.getTime()
+                    else:
+                        continue
 
     def collect_response(self, correct_response):
         """Wait for a button press and determine result."""
