@@ -301,6 +301,9 @@ class EventEngine(object):
         for light in self.lights.lights:
             light.ori = np.random.randint(0, 360)
 
+        # Initialize the rotation direction randomly
+        d = np.random.choice([-1, 1])
+
         # Show the fixation point and wait to start the trial
         start_time = self.wait_for_ready()
 
@@ -311,7 +314,8 @@ class EventEngine(object):
                 self.lights.lights[j].contrast = light_contrast
 
             for light in self.lights.lights:
-                light.ori += 360 / self.win.refresh_hz * self.p.rotation_rate
+                delta = d * 360 / self.win.refresh_hz * self.p.rotation_rate
+                light.ori += delta
 
             self.lights.draw()
             self.fix.draw()
