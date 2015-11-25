@@ -97,7 +97,7 @@ nrsa_pilot.update(
 
     rotation_rate=.25,  # Full rotations per second
 
-    cycles=1,
-    trials_per_break=10,
+    cycles=4,
+    trials_per_break=20,
 
     )
