@@ -49,10 +49,10 @@ base = dict(
 
     # Timing parameters
     orient_dur=0,
-    post_stim_dur=.5,
+    post_stim_dur=.4,
     resp_dur=10,
-    feedback_dur=1,
-    iti_params=(1, 2),
+    feedback_dur=.4,
+    iti_params=(.2, .6),
     after_break_dur=2,
 
     # Communication
@@ -98,7 +98,7 @@ nrsa_pilot.update(
 
     rotation_rate=.25,  # Full rotations per second
 
-    cycles=4,
+    cycles=10,
     trials_per_break=20,
 
     )
