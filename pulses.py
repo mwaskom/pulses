@@ -168,17 +168,15 @@ def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
 
     # Convert seconds to screen refresh units
     pulse_flips = refresh_hz * p.pulse_duration
-    refract_flips = refresh_hz * p.min_refractory
-    geom_p = p.pulse_hazard / refresh_hz
+    if p.discrete_pulses:
+        geom_p = p.pulse_hazard / refresh_hz
+        refract_flips = refresh_hz * p.min_refractory
+    else:
+        geom_p = 1
+        refract_flips = 0
 
     # Schedule the first pulse for the trial onset
     pulse_times = [0]
-    # Schedule the first pulse for a random time
-    #pulse_times = []
-    #while not pulse_times:
-    #    first_pulse = rs.geometric(geom_p) - 1
-    #    if first_pulse < trial_flips:
-    #        pulse_times.append(first_pulse)
 
     # Schedule additional pulses
     while True:

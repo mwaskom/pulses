@@ -90,8 +90,9 @@ nrsa_pilot.update(
     contrast_means=[.25, .3, .35, .4],
     contrast_sd=.05,
 
-    trial_duration=[4, 8, 12, 16],  # In seconds
+    trial_duration=[.6, 1, 1.4],  # In seconds
     pulse_duration=.2,  # In seconds
+    discrete_pulses=False,
     min_refractory=.6,  # In seconds
     pulse_hazard=.5,  # Roughly equivalent to exponential hazard over seconds
 
