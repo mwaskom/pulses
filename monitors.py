@@ -1,5 +1,6 @@
 """Hold information about different monitors."""
 from textwrap import dedent
+from numpy import array, float32
 
 cni_30 = dict(name='cni_30',
               calib_file='calib/cni_lums_20110718.csv',
@@ -56,4 +57,9 @@ kiani_psychophys = dict(name="kiani_psychophys",
                         distance=52,
                         size=[1600, 1200],
                         refresh_hz=75,
-                        nots="Kiani lab psychophysics rig")
+                        gamma=2.2,
+                        gamma_grid=array([[.001, 92.9, 2.21],
+                                          [.007, 18.5, 2.24],
+                                          [-.016, 64.3, 2.22],
+                                          [-.019, 10.5, 2.22]], float32),
+                        notes="Kiani lab psychophysics rig")
