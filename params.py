@@ -22,12 +22,12 @@ base = dict(
 
     # Fixation
     fix_size=.3,
-    fix_iti_color=0,
+    fix_iti_color=(0, 0, 0),
     fix_stim_color=(1, 1, -1),
     fix_ready_color=(1, 1, -1),
     fix_pause_color=(1, 1, -1),
     fix_delay_color=(1, 1, -1),
-    fix_resp_color=(.5, .5, .5),
+    fix_resp_color=(0, 0, 0),
     fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
 
     # Response settings
@@ -87,10 +87,10 @@ base = dict(
     )
 
 
-training = deepcopy(base)
-training.update(
+training_no_gaps = deepcopy(base)
+training_no_gaps.update(
 
-    log_base="data/{subject}_training_run{run:02d}",
+    log_base="data/{subject}_training_no_gaps_run{run:02d}",
 
     trial_dur=("expon", .2, .6),  # In seconds
     pulse_duration=.2,  # In seconds
@@ -98,7 +98,24 @@ training.update(
 
     self_paced=True,
 
-    trials_per_run=200,
+    trials_per_run=600,
+    trials_per_break=700,
+
+)
+
+
+training_with_gaps = deepcopy(base)
+training_with_gaps.update(
+
+    log_base="data/{subject}_training_with_gaps_run{run:02d}",
+
+    trial_dur=("truncexpon", 3, 4, 4),  # In seconds
+    pulse_duration=.2,  # In seconds
+    pulse_gap=("expon", .6, 2),  # In seconds; can be 0
+
+    self_paced=True,
+
+    trials_per_run=60,
     trials_per_break=100,
 
 )

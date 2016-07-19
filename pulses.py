@@ -134,7 +134,13 @@ def generate_contrast_pair(p):
 # =========================================================================== #
 
 
-def training(p, win, stims):
+def training_no_gaps(p, win, stims):
+
+    design = behavior_design(p)
+    behavior(p, win, stims, design)
+
+
+def training_with_gaps(p, win, stims):
 
     design = behavior_design(p)
     behavior(p, win, stims, design)
@@ -407,6 +413,7 @@ def behavior_design(p):
         df.loc[i, ["gen_mean_l", "gen_mean_r"]] = generate_contrast_pair(p)
 
     df["gen_mean_delta"] = df["gen_mean_r"] - df["gen_mean_l"]
+
     trial = df.index.values
     df["break"] = ~(trial % p.trials_per_break).astype(bool)
     df.loc[0, "break"] = False
