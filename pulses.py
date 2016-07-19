@@ -45,7 +45,7 @@ def main(arglist):
 
 
 def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
-    """Return indices for frames where the each pulse will start."""
+    """Return indices for frames where each pulse will start."""
     if rs is None:
         rs = np.random.RandomState()
 
@@ -106,7 +106,7 @@ def generate_contrast_pair(p):
     while need_contrasts:
 
         # Determine the "pedestal" contrast
-        # Note that this is misleading as it varies from trial to trial
+        # Note that this is misleading as it may vary from trial to trial
         # But it makes sense give that our main IV is the delta
         pedestal = np.round(cregg.flexible_values(p.contrast_pedestal), 2)
 
