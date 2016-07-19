@@ -27,7 +27,7 @@ base = dict(
     fix_ready_color=(1, 1, -1),
     fix_pause_color=(1, 1, -1),
     fix_delay_color=(1, 1, -1),
-    fix_resp_color=0,
+    fix_resp_color=(.5, .5, .5),
     fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
 
     # Response settings

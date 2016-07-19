@@ -116,7 +116,7 @@ def nrsa_pilot(p, win, stims):
     design = nrsa_pilot_design(p)
 
     log_cols = list(design.columns)
-    log_cols += ["start_time", "act_mean_l", "act_mean_r", "act_mean_diff",
+    log_cols += ["stim_time", "act_mean_l", "act_mean_r", "act_mean_diff",
                  "pulse_count",
                  "key", "response", "gen_correct", "act_correct", "rt"]
 
@@ -175,10 +175,10 @@ def nrsa_pilot(p, win, stims):
             log.pulses.update(trial_onsets, trial_contrast_values)
 
             # Compute the difference in the generating means
-            contrast_difference = t_info["gen_mean_r"] - t_info["gen_mean_l"]
+            contrast_delta = t_info["gen_mean_r"] - t_info["gen_mean_l"]
 
             # Execute this trial
-            res = stim_event(trial_contrast, contrast_difference)
+            res = stim_event(trial_contrast, contrast_delta)
 
             # Log whether the response agreed with what was actually shown
             res["act_correct"] = (res["response"] ==
@@ -278,11 +278,15 @@ class EventEngine(object):
                     gen_correct=correct,
                     rt=rt)
 
-    def __call__(self, contrast_values, contrast_difference):
+    def __call__(self, contrast_values, contrast_delta, stim_time=None):
         """Execute a stimulus event."""
 
         # Show the fixation point and wait to start the trial
-        start_time = self.wait_for_ready()
+        if self.p.self_paced:
+            stim_time = self.wait_for_ready()
+        else:
+            self.fix.color = self.p.fix_ready_color
+            cregg.precise_wait(self.wi, self.clock, stim_time, self.fix)
 
         # Frames where the lights can pulse
         for i, frame_contrast in enumerate(contrast_values):
@@ -302,15 +306,15 @@ class EventEngine(object):
         # TODO Given that we are showing feedback based on the generating
         # means and not what actually happens, the concept of "correct" is
         # a little confusing. Rework to specify in terms of feedback valnece
-        if contrast_difference == 0:
+        if contrast_delta == 0:
             correct_response = np.random.choice([0, 1])
         else:
             # 1 here will map to right button press below
             # Probably a safer way to do this...
-            correct_response = int(contrast_difference > 0)
+            correct_response = int(contrast_delta > 0)
 
         result = self.collect_response(correct_response)
-        result["start_time"] = start_time
+        result["stim_time"] = stim_time
 
         # Feedback
         self.fix.color = self.p.fix_fb_colors[int(result["gen_correct"])]
