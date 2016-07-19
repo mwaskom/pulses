@@ -12,7 +12,7 @@ base = dict(
     experiment_name="pulses",
 
     # Display setup
-    monitor_name="kiani_psychophys",
+    monitor_name="mlw-mbair",
     fmri_monitor_name="cni_47",
     screen_number=0,
     fmri_screen_number=0,
@@ -91,7 +91,7 @@ nrsa_pilot.update(
 
     log_base="data/{subject}_nrsa_run{run:02d}",
 
-    contrast_means=[.25, .3, .35, .4],
+    contrast_means=[.1, .12, .14, .16],
     contrast_sd=.075,
 
     trial_duration=[6, 10, 14],  # In seconds

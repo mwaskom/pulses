@@ -212,7 +212,7 @@ class EventEngine(object):
         self.p = p
 
         self.fix = stims.get("fix", None)
-        self.lights = stims.get("lights", None)
+        self.lights = stims.get("patches", None)
 
         self.break_keys = p.resp_keys + p.quit_keys
         self.ready_keys = p.ready_keys
@@ -281,26 +281,13 @@ class EventEngine(object):
     def __call__(self, contrast_values, contrast_difference):
         """Execute a stimulus event."""
 
-        # Initialize the light orientations randomly
-        for light in self.lights.lights:
-            light.ori = np.random.randint(0, 360)
-
-        # Initialize the rotation direction randomly
-        d = np.random.choice([-1, 1])
-
         # Show the fixation point and wait to start the trial
         start_time = self.wait_for_ready()
 
         # Frames where the lights can pulse
         for i, frame_contrast in enumerate(contrast_values):
 
-            for j, light_contrast in enumerate(frame_contrast):
-                self.lights.lights[j].contrast = light_contrast
-
-            for light in self.lights.lights:
-                delta = d * 360 / self.win.refresh_hz * self.p.rotation_rate
-                light.ori += delta
-
+            self.lights.contrast = frame_contrast
             self.lights.draw()
             self.fix.draw()
             self.win.flip()
