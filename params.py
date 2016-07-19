@@ -49,16 +49,17 @@ base = dict(
     stim_positions=[(-5, 0), (5, 0)],
 
     # Stimulus contrast parameters
-    contrast_pedestal=("norm", .2, .05),
+    contrast_pedestal=.2,
     contrast_limits=(.1, .3),
     contrast_deltas=[0, .005, .01, .02, .04, .08],
+    contrast_sd=.02,
 
     # Timing parameters
     orient_dur=0,
-    post_stim_dur=.4,
+    post_stim_dur=0,
     resp_dur=10,
     feedback_dur=.4,
-    iti_params=(.2, .6),
+    iti_dur=("uniform", .2, .4),
     after_break_dur=2,
 
     # Communication
@@ -72,7 +73,7 @@ base = dict(
         "Press space to start the next block",
     ),
 
-   finish_text=(
+    finish_text=(
         "Run Finished!",
     ),
 
@@ -83,23 +84,21 @@ base = dict(
     prog_bar_linewidth=2,
     prog_bar_color="white",
 
- )
-
-
-nrsa_pilot = deepcopy(base)
-nrsa_pilot.update(
-
-    log_base="data/{subject}_nrsa_run{run:02d}",
-
-    contrast_means=[.1, .12, .14, .16],
-    contrast_sd=.075,
-
-    trial_duration=[6, 10, 14],  # In seconds
-    pulse_duration=.2,  # In seconds
-    min_refractory=.6,  # In seconds
-    mean_gap=2,  # In seconds; can be 0
-
-    cycles=10,
-    trials_per_break=20,
-
     )
+
+
+training = deepcopy(base)
+training.update(
+
+    log_base="data/{subject}_training_run{run:02d}",
+
+    trial_dur=("expon", .2, .6),  # In seconds
+    pulse_duration=.2,  # In seconds
+    pulse_gap=0,  # In seconds; can be 0
+
+    self_paced=True,
+
+    trials_per_run=200,
+    trials_per_break=100,
+
+)

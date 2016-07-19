@@ -50,12 +50,8 @@ def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
         rs = np.random.RandomState()
 
     # Convert seconds to screen refresh units
-    pulse_flips = refresh_hz * p.pulse_duration
-    refract_flips = refresh_hz * p.min_refractory
-    if p.mean_gap == 0:
-        expon_beta = None
-    else:
-        expon_beta = p.mean_gap - p.min_refractory
+    pulse_secs = cregg.flexible_values(p.pulse_duration, random_state=rs)
+    pulse_flips = refresh_hz * pulse_secs
 
     # Schedule the first pulse for the trial onset
     pulse_times = [0]
@@ -64,14 +60,10 @@ def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
     while True:
 
         last_pulse = pulse_times[-1]
-        if expon_beta is None:
-            ipi = 0
-        else:
-            ipi = rs.exponential(expon_beta)
+        ipi = cregg.flexible_values(p.pulse_gap, random_state=rs)
         ipi_flips = int(np.round(ipi * refresh_hz))
         next_pulse = (last_pulse +
                       pulse_flips +
-                      refract_flips +
                       ipi_flips)
         if (next_pulse + pulse_flips) > trial_flips:
             break
@@ -83,7 +75,8 @@ def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
     return pulse_times
 
 
-def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
+def contrast_schedule(onsets, mean, sd, limits,
+                      trial_flips, pulse_flips, rs=None):
     """Return a vector with the contrast on each flip."""
     if rs is None:
         rs = np.random.RandomState()
@@ -94,7 +87,7 @@ def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
         offset = onset + pulse_flips
         while True:
             pulse_contrast = rs.normal(mean, sd)
-            if 0 <= pulse_contrast <= 1:
+            if limits[0] <= pulse_contrast <= limits[1]:
                 break
         contrast_vector[onset:offset] = pulse_contrast
         contrast_values.append(pulse_contrast)
@@ -102,23 +95,63 @@ def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
     return contrast_vector, contrast_values
 
 
+def generate_contrast_pair(p):
+    """Find a valid pair of contrasts (or distribution means).
+
+    Currently not vectorized, but should be...
+
+    """
+    rs = np.random.RandomState()
+    need_contrasts = True
+    while need_contrasts:
+
+        # Determine the "pedestal" contrast
+        # Note that this is misleading as it varies from trial to trial
+        # But it makes sense give that our main IV is the delta
+        pedestal = np.round(cregg.flexible_values(p.contrast_pedestal), 2)
+
+        # Determine the "variable" contrast
+        delta_dir = rs.choice([-1, 1])
+        delta = cregg.flexible_values(p.contrast_deltas)
+        variable = pedestal + delta_dir * delta
+
+        # Determine the assignment to sides
+        contrasts = ((pedestal, variable)
+                     if rs.randint(2)
+                     else (variable, pedestal))
+
+        # Check if this is a valid pair
+        within_limits = (min(contrasts) >= p.contrast_limits[0]
+                         and max(contrasts) <= p.contrast_limits[1])
+        if within_limits:
+            need_contrasts = False
+
+    return contrasts
+
+
 # =========================================================================== #
 # Experiment functions
 # =========================================================================== #
 
 
-def nrsa_pilot(p, win, stims):
+def training(p, win, stims):
+
+    design = behavior_design(p)
+    behavior(p, win, stims, design)
+
+
+def behavior(p, win, stims, design):
 
     stim_event = EventEngine(win, p, stims)
 
     stims["instruct"].draw()
 
-    design = nrsa_pilot_design(p)
-
     log_cols = list(design.columns)
-    log_cols += ["stim_time", "act_mean_l", "act_mean_r", "act_mean_diff",
+    log_cols += ["stim_time",
+                 "act_mean_l", "act_mean_r", "act_mean_delta",
                  "pulse_count",
-                 "key", "response", "gen_correct", "act_correct", "rt"]
+                 "key", "response",
+                 "gen_correct", "act_correct", "rt"]
 
     log = cregg.DataLog(p, log_cols)
     log.pulses = PulseLog()
@@ -159,6 +192,7 @@ def nrsa_pilot(p, win, stims):
                 vector, values = contrast_schedule(trial_onsets,
                                                    mean,
                                                    p.contrast_sd,
+                                                   p.contrast_limits,
                                                    trial_flips,
                                                    pulse_flips)
                 trial_contrast[:, i] = vector
@@ -169,12 +203,12 @@ def nrsa_pilot(p, win, stims):
             act_mean_l, act_mean_r = trial_contrast_means
             t_info.ix["act_mean_l"] = act_mean_l
             t_info.ix["act_mean_r"] = act_mean_r
-            t_info.ix["act_mean_diff"] = act_mean_r - act_mean_l
+            t_info.ix["act_mean_delta"] = act_mean_r - act_mean_l
 
             # Log the pulse-wise information
             log.pulses.update(trial_onsets, trial_contrast_values)
 
-            # Compute the difference in the generating means
+            # Compute the signed difference in the generating means
             contrast_delta = t_info["gen_mean_r"] - t_info["gen_mean_l"]
 
             # Execute this trial
@@ -182,7 +216,7 @@ def nrsa_pilot(p, win, stims):
 
             # Log whether the response agreed with what was actually shown
             res["act_correct"] = (res["response"] ==
-                                  (t_info["act_mean_diff"] > 0))
+                                  (t_info["act_mean_delta"] > 0))
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
@@ -360,30 +394,24 @@ class PulseLog(object):
 # =========================================================================== #
 
 
-def nrsa_pilot_design(p):
+def behavior_design(p):
 
-    cols = [
-            "trial_dur", "gen_mean_l", "gen_mean_r",
-            ]
+    columns = ["iti", "trial_dur", "gen_mean_l", "gen_mean_r"]
+    iti = cregg.flexible_values(p.iti_dur, p.trials_per_run)
+    trial_dur = cregg.flexible_values(p.trial_dur, p.trials_per_run)
+    df = pd.DataFrame(dict(iti=iti, trial_dur=trial_dur),
+                      columns=columns,
+                      dtype=np.float)
 
-    conditions = list(itertools.product(
-        p.trial_duration, p.contrast_means, p.contrast_means,
-        ))
+    for i in range(p.trials_per_run):
+        df.loc[i, ["gen_mean_l", "gen_mean_r"]] = generate_contrast_pair(p)
 
-    dfs = []
-    trials = np.arange(len(conditions))
-    for _ in xrange(p.cycles):
-        df = pd.DataFrame(conditions, columns=cols, index=trials)
-        df["iti"] = np.random.uniform(*p.iti_params, size=trials.size)
-        df = df.reindex(np.random.permutation(df.index))
-        dfs.append(df)
+    df["gen_mean_delta"] = df["gen_mean_r"] - df["gen_mean_l"]
+    trial = df.index.values
+    df["break"] = ~(trial % p.trials_per_break).astype(bool)
+    df.loc[0, "break"] = False
 
-    design = pd.concat(dfs).reset_index(drop=True)
-    design["gen_mean_diff"] = design.gen_mean_r - design.gen_mean_l
-    trial = design.index.values
-    design["break"] = ~(trial % p.trials_per_break).astype(bool)
-    design.loc[0, "break"] = False
-    return design
+    return df
 
 
 if __name__ == "__main__":
