@@ -7,9 +7,15 @@ import pandas as pd
 
 from psychopy import core, visual, event
 import cregg
+from scdp import StimArray
 
 import warnings
 warnings.simplefilter("ignore", FutureWarning)
+
+
+# =========================================================================== #
+# Basic setup
+# =========================================================================== #
 
 
 def main(arglist):
@@ -23,47 +29,82 @@ def main(arglist):
     win = cregg.launch_window(p)
     p.win_refresh_hz = win.refresh_hz
 
-    # Fixation point
-    fix = cregg.Fixation(win, p)
+    # Initialize some common visual objects
+    stims = cregg.make_common_visual_objects(win, p)
 
-    # The main stimulus arrays
-    # TODO Change to use ElementArrayStim?
-    lights = Lights(win, p)
-
-    # Progress bar to show during behavioral breaks
-    progress = cregg.ProgressBar(win, p)
-
-    stims = dict(
-
-        fix=fix,
-        lights=lights,
-        progress=progress,
-
-    )
-
-    # Instructions
-    if hasattr(p, "instruct_text"):
-        instruct = cregg.WaitText(win, p.instruct_text,
-                                  advance_keys=p.wait_keys,
-                                  quit_keys=p.quit_keys)
-        stims["instruct"] = instruct
-
-    # Text that allows subjects to take a break between blocks
-    if hasattr(p, "break_text"):
-        take_break = cregg.WaitText(win, p.break_text,
-                                    advance_keys=p.wait_keys,
-                                    quit_keys=p.quit_keys)
-        stims["break"] = take_break
-
-    # Text that alerts subjects to the end of an experimental run
-    if hasattr(p, "finish_text"):
-        finish_run = cregg.WaitText(win, p.finish_text,
-                                    advance_keys=p.finish_keys,
-                                    quit_keys=p.quit_keys)
-        stims["finish"] = finish_run
+    # Initialize the main stimulus arrays
+    stims["patches"] = StimArray(win, p)
 
     # Execute the experiment function
     globals()[mode](p, win, stims)
+
+
+# =========================================================================== #
+# Helper functions
+# =========================================================================== #
+
+
+def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
+    """Return indices for frames where the each pulse will start."""
+    if rs is None:
+        rs = np.random.RandomState()
+
+    # Convert seconds to screen refresh units
+    pulse_flips = refresh_hz * p.pulse_duration
+    refract_flips = refresh_hz * p.min_refractory
+    if p.mean_gap == 0:
+        expon_beta = None
+    else:
+        expon_beta = p.mean_gap - p.min_refractory
+
+    # Schedule the first pulse for the trial onset
+    pulse_times = [0]
+
+    # Schedule additional pulses
+    while True:
+
+        last_pulse = pulse_times[-1]
+        if expon_beta is None:
+            ipi = 0
+        else:
+            ipi = rs.exponential(expon_beta)
+        ipi_flips = int(np.round(ipi * refresh_hz))
+        next_pulse = (last_pulse +
+                      pulse_flips +
+                      refract_flips +
+                      ipi_flips)
+        if (next_pulse + pulse_flips) > trial_flips:
+            break
+        else:
+            pulse_times.append(int(next_pulse))
+
+    pulse_times = np.array(pulse_times, np.int)
+
+    return pulse_times
+
+
+def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
+    """Return a vector with the contrast on each flip."""
+    if rs is None:
+        rs = np.random.RandomState()
+
+    contrast_vector = np.zeros(trial_flips)
+    contrast_values = []
+    for onset in onsets:
+        offset = onset + pulse_flips
+        while True:
+            pulse_contrast = rs.normal(mean, sd)
+            if 0 <= pulse_contrast <= 1:
+                break
+        contrast_vector[onset:offset] = pulse_contrast
+        contrast_values.append(pulse_contrast)
+
+    return contrast_vector, contrast_values
+
+
+# =========================================================================== #
+# Experiment functions
+# =========================================================================== #
 
 
 def nrsa_pilot(p, win, stims):
@@ -159,68 +200,7 @@ def save_pulse_log(log):
 
 
 # =========================================================================== #
-# =========================================================================== #
-
-
-def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
-    """Return indices for frames where the each pulse will start."""
-    if rs is None:
-        rs = np.random.RandomState()
-
-    # Convert seconds to screen refresh units
-    pulse_flips = refresh_hz * p.pulse_duration
-    refract_flips = refresh_hz * p.min_refractory
-    if p.mean_gap == 0:
-        expon_beta = None
-    else:
-        expon_beta = p.mean_gap - p.min_refractory
-
-    # Schedule the first pulse for the trial onset
-    pulse_times = [0]
-
-    # Schedule additional pulses
-    while True:
-
-        last_pulse = pulse_times[-1]
-        if expon_beta is None:
-            ipi = 0
-        else:
-            ipi = rs.exponential(expon_beta)
-        ipi_flips = int(np.round(ipi * refresh_hz))
-        next_pulse = (last_pulse +
-                      pulse_flips +
-                      refract_flips +
-                      ipi_flips)
-        if (next_pulse + pulse_flips) > trial_flips:
-            break
-        else:
-            pulse_times.append(int(next_pulse))
-
-    pulse_times = np.array(pulse_times, np.int)
-
-    return pulse_times
-
-
-def contrast_schedule(onsets, mean, sd, trial_flips, pulse_flips, rs=None):
-    """Return a vector with the contrast on each flip."""
-    if rs is None:
-        rs = np.random.RandomState()
-
-    contrast_vector = np.zeros(trial_flips)
-    contrast_values = []
-    for onset in onsets:
-        offset = onset + pulse_flips
-        while True:
-            pulse_contrast = rs.normal(mean, sd)
-            if 0 <= pulse_contrast <= 1:
-                break
-        contrast_vector[onset:offset] = pulse_contrast
-        contrast_values.append(pulse_contrast)
-
-    return contrast_vector, contrast_values
-
-
-# =========================================================================== #
+# Event controller
 # =========================================================================== #
 
 
@@ -361,31 +341,8 @@ class EventEngine(object):
 
 
 # =========================================================================== #
+# Stimulus log control
 # =========================================================================== #
-
-
-class Lights(object):
-    """Main sources of information in the task."""
-    def __init__(self, win, p):
-
-        self.win = win
-        self.p = p
-
-        self.lights = [
-            visual.GratingStim(win,
-                               sf=p.light_sf,
-                               tex=p.light_tex,
-                               mask=p.light_mask,
-                               size=p.light_size,
-                               color=p.light_color,
-                               pos=pos)
-            for pos in p.light_pos
-            ]
-
-    def draw(self):
-
-        for light in self.lights:
-            light.draw()
 
 
 class PulseLog(object):
@@ -408,6 +365,7 @@ class PulseLog(object):
 
 
 # =========================================================================== #
+# Design functions
 # =========================================================================== #
 
 

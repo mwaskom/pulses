@@ -35,17 +35,23 @@ base = dict(
     ready_keys=["lshift", "rshift"],
     wait_keys=["space"],
     finish_keys=["return"],
-    trigger_keys=["t", "5", "quoteleft"],
+    trigger_keys=["quoteleft"],
     resp_keys=["lshift", "rshift"],
     fmri_resp_keys=["4", "9"],
 
-    # Lights
-    light_size=5,
-    light_color=1,
-    light_tex="sin",
-    light_sf=1,
-    light_mask="gauss",
-    light_pos=[(-5, 0), (5, 0)],
+    # Stimulus parameters
+    stim_radius=3,
+    stim_tex="sin",
+    stim_sf=3,
+    stim_mask="raisedCos",
+    stim_gratings=10,
+    stim_speed=1,
+    stim_positions=[(-5, 0), (5, 0)],
+
+    # Stimulus contrast parameters
+    contrast_pedestal=("norm", .2, .05),
+    contrast_limits=(.1, .3),
+    contrast_deltas=[0, .005, .01, .02, .04, .08],
 
     # Timing parameters
     orient_dur=0,
@@ -68,8 +74,6 @@ base = dict(
 
    finish_text=(
         "Run Finished!",
-        ""
-        "Please tell the experimenter",
     ),
 
     # Progress bar shown during breaks
@@ -94,8 +98,6 @@ nrsa_pilot.update(
     pulse_duration=.2,  # In seconds
     min_refractory=.6,  # In seconds
     mean_gap=2,  # In seconds; can be 0
-
-    rotation_rate=.25,  # Full rotations per second
 
     cycles=10,
     trials_per_break=20,
