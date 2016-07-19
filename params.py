@@ -84,6 +84,9 @@ base = dict(
     prog_bar_linewidth=2,
     prog_bar_color="white",
 
+    # Parameters for plotting performance after each run
+    show_performance_plots=True,
+
     )
 
 

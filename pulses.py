@@ -1,11 +1,13 @@
 from __future__ import division, print_function
+import os
 import sys
-import itertools
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-from psychopy import core, visual, event
+from psychopy import core, event
 import cregg
 from scdp import StimArray
 
@@ -163,7 +165,7 @@ def behavior(p, win, stims, design):
     log.pulses = PulseLog()
 
     with cregg.PresentationLoop(win, p, log, fix=stims["fix"],
-                                exit_func=save_pulse_log):
+                                exit_func=behavior_exit):
 
         for t, t_info in design.iterrows():
 
@@ -231,11 +233,37 @@ def behavior(p, win, stims, design):
         stims["finish"].draw()
 
 
+# =========================================================================== #
+# Experiment exit functions
+# =========================================================================== #
+
+
+def behavior_exit(log):
+
+    save_pulse_log(log)
+    df = pd.read_csv(log.fname)
+    png_fstem = log.p.log_base.format(subject=log.p.subject, run=log.p.run)
+    png_fname = png_fstem + ".png"
+    plot_performance(df, png_fname)
+    if log.p.show_performance_plots:
+        os.system("open " + png_fname)
+
+
+def plot_performance(df, fname):
+
+    f, axes = plt.subplots(1, 2, figsize=(8, 4))
+    unsigned_delta = df.gen_mean_delta.abs()
+    sns.pointplot(x=unsigned_delta, y="gen_correct", data=df, ax=axes[0])
+    sns.pointplot(x=unsigned_delta, y="rt", data=df, ax=axes[1])
+    f.tight_layout()
+    f.savefig(fname)
+    plt.close(f)
+
+
 def save_pulse_log(log):
 
     if not log.p.nolog:
-        fname = log.p.log_base.format(subject=log.p.subject,
-                                      run=log.p.run)
+        fname = log.p.log_base.format(subject=log.p.subject, run=log.p.run)
         log.pulses.save(fname)
 
 
