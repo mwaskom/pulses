@@ -4,8 +4,6 @@ import sys
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
 
 from psychopy import core, event
 import cregg
@@ -242,14 +240,20 @@ def behavior_exit(log):
 
     save_pulse_log(log)
     df = pd.read_csv(log.fname)
+
     png_fstem = log.p.log_base.format(subject=log.p.subject, run=log.p.run)
     png_fname = png_fstem + ".png"
-    plot_performance(df, png_fname)
-    if log.p.show_performance_plots:
-        os.system("open " + png_fname)
+
+    if df.size:
+        plot_performance(df, png_fname)
+        if log.p.show_performance_plots:
+            os.system("open " + png_fname)
 
 
 def plot_performance(df, fname):
+
+    import seaborn as sns
+    import matplotlib.pyplot as plt
 
     f, axes = plt.subplots(1, 2, figsize=(8, 4))
     unsigned_delta = df.gen_mean_delta.abs()
@@ -349,26 +353,39 @@ class EventEngine(object):
     def __call__(self, contrast_values, contrast_delta, stim_time=None):
         """Execute a stimulus event."""
 
-        # Show the fixation point and wait to start the trial
+        # Pre-stimulus fixation
+        self.fix.color = self.p.fix_ready_color
         if self.p.self_paced:
             stim_time = self.wait_for_ready()
         else:
-            self.fix.color = self.p.fix_ready_color
-            cregg.precise_wait(self.wi, self.clock, stim_time, self.fix)
+            cregg.precise_wait(self.win, self.clock, stim_time, self.fix)
 
-        # Frames where the lights can pulse
-        for i, frame_contrast in enumerate(contrast_values):
+        # Pre-integration stimulus
+        self.fix.color = self.p.fix_pre_stim_color
+        pre_stim_contrast = cregg.flexible_values(self.p.contrast_pre_stim)
+        pre_stim_secs = cregg.flexible_values(self.p.pre_stim_dur)
+        pre_stim_flips = np.round(self.win.refresh_hz * pre_stim_secs)
+        for _ in range(int(pre_stim_flips)):
+            self.lights.contrast = pre_stim_contrast
+            self.lights.draw()
+            self.fix.draw()
+            self.win.flip()
 
+        # Decision period (frames where the stimulus can pulse)
+        self.fix.color = self.p.fix_stim_color
+        for frame_contrast in contrast_values:
             self.lights.contrast = frame_contrast
             self.lights.draw()
             self.fix.draw()
             self.win.flip()
 
         # Post stimulus delay
-        self.fix.color = self.p.fix_delay_color
-        self.fix.draw()
-        self.win.flip()
-        cregg.wait_check_quit(self.p.post_stim_dur)
+        self.fix.color = self.p.fix_post_stim_color
+        post_stim_secs = cregg.flexible_values(self.p.post_stim_dur)
+        post_stim_flips = np.round(self.win.refresh_hz * post_stim_secs)
+        for _ in range(int(post_stim_flips)):
+            self.fix.draw()
+            self.win.flip()
 
         # Response period
         # TODO Given that we are showing feedback based on the generating
