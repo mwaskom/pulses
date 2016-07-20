@@ -1,4 +1,6 @@
 data/
+*.pyc
+*.sw{o,p}
 *.ipynb
 .ipynb_checkpoints/
 Icon*
