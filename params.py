@@ -95,7 +95,7 @@ training_no_gaps.update(
 
     log_base="data/{subject}_training_no_gaps_run{run:02d}",
 
-    trial_dur=("expon", .2, .6),  # In seconds
+    trial_dur=("truncexpon", 4, .2, .6),  # In seconds
     pulse_duration=.2,  # In seconds
     pulse_gap=0,  # In seconds; can be 0
 
