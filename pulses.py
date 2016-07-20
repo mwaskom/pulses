@@ -154,10 +154,10 @@ def behavior(p, win, stims, design):
 
     log_cols = list(design.columns)
     log_cols += ["stim_time",
-                 "act_mean_l", "act_mean_r", "act_mean_delta",
+                 "obs_mean_l", "obs_mean_r", "obs_mean_delta",
                  "pulse_count",
                  "key", "response", "response_during_stim",
-                 "gen_correct", "act_correct", "rt"]
+                 "gen_correct", "obs_correct", "rt"]
 
     log = cregg.DataLog(p, log_cols)
     log.pulses = PulseLog()
@@ -205,10 +205,10 @@ def behavior(p, win, stims, design):
                 trial_contrast_values.append(values)
 
             # Log some information about the actual values
-            act_mean_l, act_mean_r = trial_contrast_means
-            t_info.ix["act_mean_l"] = act_mean_l
-            t_info.ix["act_mean_r"] = act_mean_r
-            t_info.ix["act_mean_delta"] = act_mean_r - act_mean_l
+            obs_mean_l, obs_mean_r = trial_contrast_means
+            t_info.ix["obs_mean_l"] = obs_mean_l
+            t_info.ix["obs_mean_r"] = obs_mean_r
+            t_info.ix["obs_mean_delta"] = obs_mean_r - obs_mean_l
 
             # Log the pulse-wise information
             log.pulses.update(trial_onsets, trial_contrast_values)
@@ -220,8 +220,8 @@ def behavior(p, win, stims, design):
             res = stim_event(trial_contrast, contrast_delta)
 
             # Log whether the response agreed with what was actually shown
-            res["act_correct"] = (res["response"] ==
-                                  (t_info["act_mean_delta"] > 0))
+            res["obs_correct"] = (res["response"] ==
+                                  (t_info["obs_mean_delta"] > 0))
 
             # Record the result of the trial
             t_info = t_info.append(pd.Series(res))
