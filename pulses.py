@@ -156,7 +156,7 @@ def behavior(p, win, stims, design):
     log_cols += ["stim_time",
                  "act_mean_l", "act_mean_r", "act_mean_delta",
                  "pulse_count",
-                 "key", "response",
+                 "key", "response", "response_during_stim",
                  "gen_correct", "act_correct", "rt"]
 
     log = cregg.DataLog(p, log_cols)
@@ -190,7 +190,6 @@ def behavior(p, win, stims, design):
             t_info.ix["pulse_count"] = len(trial_onsets)
 
             # Determine the sequence of stimulus contrast values
-            # TODO Improve this by using semantic indexing and not position
             trial_contrast = np.zeros((trial_flips, 2))
             trial_contrast_means = []
             trial_contrast_values = []
@@ -359,6 +358,7 @@ class EventEngine(object):
             stim_time = self.wait_for_ready()
         else:
             cregg.precise_wait(self.win, self.clock, stim_time, self.fix)
+        event.clearEvents()
 
         # Pre-integration stimulus
         self.fix.color = self.p.fix_pre_stim_color
@@ -388,23 +388,22 @@ class EventEngine(object):
             self.win.flip()
 
         # Response period
-        # TODO Given that we are showing feedback based on the generating
-        # means and not what actually happens, the concept of "correct" is
-        # a little confusing. Rework to specify in terms of feedback valnece
+        stim_keys = event.getKeys()
         if contrast_delta == 0:
             correct_response = np.random.choice([0, 1])
         else:
-            # 1 here will map to right button press below
-            # Probably a safer way to do this...
             correct_response = int(contrast_delta > 0)
-
         result = self.collect_response(correct_response)
         result["stim_time"] = stim_time
+        result["response_during_stim"] = bool(stim_keys)
 
         # Feedback
         self.fix.color = self.p.fix_fb_colors[int(result["gen_correct"])]
-        self.fix.draw()
-        self.win.flip()
+        feedback_secs = cregg.flexible_values(self.p.feedback_dur)
+        feedback_flips = np.round(self.win.refresh_hz * feedback_secs)
+        for _ in range(int(feedback_flips)):
+            self.fix.draw()
+            self.win.flip()
 
         cregg.wait_check_quit(self.p.feedback_dur)
 
