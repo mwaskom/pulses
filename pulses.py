@@ -284,7 +284,7 @@ class EventEngine(object):
         self.p = p
 
         self.fix = stims.get("fix", None)
-        self.lights = stims.get("patches", None)
+        self.patches = stims.get("patches", None)
 
         self.break_keys = p.resp_keys + p.quit_keys
         self.ready_keys = p.ready_keys
@@ -366,16 +366,16 @@ class EventEngine(object):
         pre_stim_secs = cregg.flexible_values(self.p.pre_stim_dur)
         pre_stim_flips = np.round(self.win.refresh_hz * pre_stim_secs)
         for _ in range(int(pre_stim_flips)):
-            self.lights.contrast = pre_stim_contrast
-            self.lights.draw()
+            self.patches.contrast = pre_stim_contrast
+            self.patches.draw()
             self.fix.draw()
             self.win.flip()
 
         # Decision period (frames where the stimulus can pulse)
         self.fix.color = self.p.fix_stim_color
         for frame_contrast in contrast_values:
-            self.lights.contrast = frame_contrast
-            self.lights.draw()
+            self.patches.contrast = frame_contrast
+            self.patches.draw()
             self.fix.draw()
             self.win.flip()
 
