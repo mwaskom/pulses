@@ -101,8 +101,8 @@ training_no_gaps.update(
 
     self_paced=True,
 
-    trials_per_run=600,
-    trials_per_break=700,
+    trials_per_run=120,
+    trials_per_break=150,
 
 )
 
@@ -118,7 +118,7 @@ training_with_gaps.update(
 
     self_paced=True,
 
-    trials_per_run=60,
+    trials_per_run=30,
     trials_per_break=100,
 
 )
