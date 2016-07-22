@@ -95,36 +95,34 @@ def contrast_schedule(onsets, mean, sd, limits,
     return contrast_vector, contrast_values
 
 
-def generate_contrast_pair(p):
-    """Find a valid pair of contrasts (or distribution means).
+def generate_contrast_pairs(deltas, p):
+    """Find valid pairs of contrasts (or distribution means) given deltas."""
+    rng = np.random.RandomState()
+    deltas = np.asarray(deltas)
+    n = len(deltas)
+    contrasts = np.zeros((n, 2))
+    replace = np.ones(n, np.bool)
 
-    Currently not vectorized, but should be...
-
-    """
-    rs = np.random.RandomState()
-    need_contrasts = True
-    while need_contrasts:
+    while replace.any():
 
         # Determine the "pedestal" contrast
         # Note that this is misleading as it may vary from trial to trial
         # But it makes sense give that our main IV is the delta
-        pedestal = np.round(cregg.flexible_values(p.contrast_pedestal), 2)
+        pedestal = cregg.flexible_values(p.contrast_pedestal,
+                                         replace.sum(), rng)
 
         # Determine the "variable" contrast
-        delta_dir = rs.choice([-1, 1])
-        delta = cregg.flexible_values(p.contrast_deltas)
-        variable = pedestal + delta_dir * delta
+        variable = pedestal + deltas[replace]
 
-        # Determine the assignment to sides
-        contrasts = ((pedestal, variable)
-                     if rs.randint(2)
-                     else (variable, pedestal))
+        # Stack together into columns
+        contrasts[replace] = np.c_[pedestal, variable]
 
-        # Check if this is a valid pair
-        within_limits = (min(contrasts) >= p.contrast_limits[0]
-                         and max(contrasts) <= p.contrast_limits[1])
-        if within_limits:
-            need_contrasts = False
+        # Check for invalid pairs
+        replace = ((contrasts.min(axis=1) < p.contrast_limits[0])
+                   | (contrasts.max(axis=1) > p.contrast_limits[1]))
+
+    # Permute the columns for random assignment to side
+    contrasts = np.apply_along_axis(rng.permutation, 1, contrasts)
 
     return contrasts
 
@@ -472,7 +470,7 @@ class PulseLog(object):
 # =========================================================================== #
 
 
-def behavior_design(p):
+def behavior_design_old(p):
 
     columns = ["iti", "trial_dur", "gen_mean_l", "gen_mean_r"]
     iti = cregg.flexible_values(p.iti_dur, p.trials_per_run)
@@ -493,6 +491,18 @@ def behavior_design(p):
     df.loc[0, "break"] = False
 
     return df
+
+
+def behavior_design(p):
+
+    cycle_data = []
+
+    for _ in range(p.cycles_per_run - p.cycles_repeated):
+
+        # Determine the duration of each trial
+        trial_dur = cregg.flexible_values(p.trial_dur, p.trials_per_run)
+
+        # Determine the contrasts for each trial
 
 
 if __name__ == "__main__":

@@ -68,7 +68,7 @@ base = dict(
     # ----------------------------
 
     contrast_pre_stim=.2,
-    contrast_pedestal=.2,
+    contrast_pedestal=.2,  # TODO maybe make stochastic?
     contrast_limits=(.1, .3),
     contrast_deltas=[0, .005, .01, .02, .04, .08],
     contrast_sd=.02,
@@ -137,7 +137,9 @@ training_no_gaps.update(
 
     self_paced=True,
 
-    trials_per_run=100,
+    cycles_per_run=8,
+    repeated_cycles=2,
+
     trials_per_break=150,
 
 )
@@ -158,7 +160,9 @@ training_with_gaps.update(
 
     self_paced=True,
 
-    trials_per_run=40,
+    cycles_per_run=3,
+    cycles_repeated=1,
+
     trials_per_break=100,
 
 )
