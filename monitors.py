@@ -51,7 +51,6 @@ waglab_mbpro = dict(name='waglab-mbpro',
                     refresh_hz=60,
                     notes="This should be true of both Curtis and Ari")
 
-
 kiani_psychophys = dict(name="kiani_psychophys",
                         width=40,
                         distance=52,
@@ -61,5 +60,13 @@ kiani_psychophys = dict(name="kiani_psychophys",
                         gamma_grid=array([[.001, 92.9, 2.21],
                                           [.007, 18.5, 2.24],
                                           [-.016, 64.3, 2.22],
-                                          [-.019, 10.5, 2.22]], float32),
+                                          [-.019, 10.5, 2.22]]),
                         notes="Kiani lab psychophysics rig")
+
+cbi_projector = dict(name="cbi_projector",
+                     width=32.4,
+                     distance=58,
+                     size=[1024, 768],
+                     refresh_hz=60,
+                     gamma=2.3994,
+                     notes="Parameters taken from CBI intranet page")
