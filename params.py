@@ -57,6 +57,12 @@ base = dict(
     stim_positions=[(-5, 0), (5, 0)],
     stim_synchronize=True,
 
+    # Control of randomness
+    # ---------------------
+
+    fixed_seed=668,
+    fixed_seed_prop=.3,
+
     # Stimulus contrast parameters
     # ----------------------------
 

@@ -44,13 +44,13 @@ def main(arglist):
 # =========================================================================== #
 
 
-def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
+def pulse_onsets(p, refresh_hz, trial_flips, rng=None):
     """Return indices for frames where each pulse will start."""
-    if rs is None:
-        rs = np.random.RandomState()
+    if rng is None:
+        rng = np.random.RandomState()
 
     # Convert seconds to screen refresh units
-    pulse_secs = cregg.flexible_values(p.pulse_duration, random_state=rs)
+    pulse_secs = cregg.flexible_values(p.pulse_duration, random_state=rng)
     pulse_flips = refresh_hz * pulse_secs
 
     # Schedule the first pulse for the trial onset
@@ -60,7 +60,7 @@ def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
     while True:
 
         last_pulse = pulse_times[-1]
-        ipi = cregg.flexible_values(p.pulse_gap, random_state=rs)
+        ipi = cregg.flexible_values(p.pulse_gap, random_state=rng)
         ipi_flips = int(np.round(ipi * refresh_hz))
         next_pulse = (last_pulse +
                       pulse_flips +
@@ -76,17 +76,17 @@ def pulse_onsets(p, refresh_hz, trial_flips, rs=None):
 
 
 def contrast_schedule(onsets, mean, sd, limits,
-                      trial_flips, pulse_flips, rs=None):
+                      trial_flips, pulse_flips, rng=None):
     """Return a vector with the contrast on each flip."""
-    if rs is None:
-        rs = np.random.RandomState()
+    if rng is None:
+        rng = np.random.RandomState()
 
     contrast_vector = np.zeros(trial_flips)
     contrast_values = []
     for onset in onsets:
         offset = onset + pulse_flips
         while True:
-            pulse_contrast = rs.normal(mean, sd)
+            pulse_contrast = rng.normal(mean, sd)
             if limits[0] <= pulse_contrast <= limits[1]:
                 break
         contrast_vector[onset:offset] = pulse_contrast
@@ -405,6 +405,8 @@ class EventEngine(object):
         # Response period
         stim_keys = event.getKeys()
         if contrast_delta == 0:
+            # Determine the correct response randomly
+            # Note independence from the RNG for the rest of the trial
             correct_response = np.random.choice([0, 1])
         else:
             correct_response = int(contrast_delta > 0)
