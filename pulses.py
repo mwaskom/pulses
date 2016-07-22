@@ -95,38 +95,6 @@ def contrast_schedule(onsets, mean, sd, limits,
     return contrast_vector, contrast_values
 
 
-def generate_contrast_pairs(deltas, p):
-    """Find valid pairs of contrasts (or distribution means) given deltas."""
-    rng = np.random.RandomState()
-    deltas = np.asarray(deltas)
-    n = len(deltas)
-    contrasts = np.zeros((n, 2))
-    replace = np.ones(n, np.bool)
-
-    while replace.any():
-
-        # Determine the "pedestal" contrast
-        # Note that this is misleading as it may vary from trial to trial
-        # But it makes sense give that our main IV is the delta
-        pedestal = cregg.flexible_values(p.contrast_pedestal,
-                                         replace.sum(), rng)
-
-        # Determine the "variable" contrast
-        variable = pedestal + deltas[replace]
-
-        # Stack together into columns
-        contrasts[replace] = np.c_[pedestal, variable]
-
-        # Check for invalid pairs
-        replace = ((contrasts.min(axis=1) < p.contrast_limits[0])
-                   | (contrasts.max(axis=1) > p.contrast_limits[1]))
-
-    # Permute the columns for random assignment to side
-    contrasts = np.apply_along_axis(rng.permutation, 1, contrasts)
-
-    return contrasts
-
-
 # =========================================================================== #
 # Experiment functions
 # =========================================================================== #
@@ -493,16 +461,59 @@ def behavior_design_old(p):
     return df
 
 
+def generate_contrast_pairs(deltas, p):
+    """Find valid pairs of contrasts (or distribution means) given deltas."""
+    rng = np.random.RandomState()
+    deltas = np.asarray(deltas)
+    contrasts = np.zeros((len(deltas), 2))
+    replace = np.ones(len(deltas), np.bool)
+
+    while replace.any():
+
+        # Determine the "pedestal" contrast
+        # Note that this is not a fully correct use of this term
+        pedestal = cregg.flexible_values(p.contrast_pedestal,
+                                         replace.sum(), rng)
+
+        # Determine the two stimulus contrasts
+        contrasts = np.c_[pedestal - deltas[replace] / 2,
+                          pedestal + deltas[replace] / 2]
+
+        # Check for invalid pairs
+        replace = ((contrasts.min(axis=1) < p.contrast_limits[0])
+                   | (contrasts.max(axis=1) > p.contrast_limits[1]))
+
+    return contrasts
+
+
 def behavior_design(p):
 
     cycle_data = []
 
+    seed_base = np.random.randint(1000, 5000)
+
     for _ in range(p.cycles_per_run - p.cycles_repeated):
 
-        # Determine the duration of each trial
-        trial_dur = cregg.flexible_values(p.trial_dur, p.trials_per_run)
+        # Everything is structured around the vectoreof signed deltas
+        unsigned_deltas = np.array(p.contrast_deltas)
+        signed_deltas = np.concatenate([-unsigned_deltas, unsigned_deltas])
+        trials_per_cycle = len(signed_deltas)
 
         # Determine the contrasts for each trial
+        contrasts = generate_contrast_pairs(signed_deltas, p)
+        column_names = ["gen_mean_l", "gen_mean_r"]
+        cycle_df = pd.DataFrame(contrasts, columns=column_names)
+        cycle_df["gen_mean_delta"] = signed_deltas
+
+        # Determine the duration of each trial
+        trial_dur = cregg.flexible_values(p.trial_dur, trials_per_cycle)
+        cycle_df["trial_dur"] = trial_dur
+
+        # Determine a fixed seed for each cycle condition
+        seed = (seed_base + signed_deltas * 10000).astype(np.int)
+        cycle_df["random_seed"] = seed
+
+    return cycle_df
 
 
 if __name__ == "__main__":

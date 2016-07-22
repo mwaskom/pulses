@@ -68,7 +68,8 @@ base = dict(
     # ----------------------------
 
     contrast_pre_stim=.2,
-    contrast_pedestal=.2,  # TODO maybe make stochastic?
+    #contrast_pedestal=.2,  # TODO maybe make stochastic?
+    contrast_pedestal=("norm", .2, .02),
     contrast_limits=(.1, .3),
     contrast_deltas=[0, .005, .01, .02, .04, .08],
     contrast_sd=.02,
