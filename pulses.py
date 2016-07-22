@@ -146,6 +146,12 @@ def training_with_gaps(p, win, stims):
     behavior(p, win, stims, design)
 
 
+def scan_prototype(p, win, stims):
+
+    design = behavior_design(p)
+    behavior(p, win, stims, design)
+
+
 def behavior(p, win, stims, design):
 
     stim_event = EventEngine(win, p, stims)
@@ -217,7 +223,12 @@ def behavior(p, win, stims, design):
             contrast_delta = t_info["gen_mean_r"] - t_info["gen_mean_l"]
 
             # Execute this trial
-            res = stim_event(trial_contrast, contrast_delta)
+            # TODO Improve; this is a hack to test fMRI "timing"
+            if p.self_paced:
+                stim_time = None
+            else:
+                stim_time = stim_event.clock.getTime() + .5
+            res = stim_event(trial_contrast, contrast_delta, stim_time)
 
             # Log whether the response agreed with what was actually shown
             res["obs_correct"] = (res["response"] ==
@@ -236,6 +247,9 @@ def behavior(p, win, stims, design):
 
 
 def behavior_exit(log):
+
+    if log.p.nolog:
+        return
 
     save_pulse_log(log)
     df = pd.read_csv(log.fname)
@@ -361,6 +375,7 @@ class EventEngine(object):
         event.clearEvents()
 
         # Pre-integration stimulus
+        self.patches.reset_animation(synchronize=self.p.stim_synchronize)
         self.fix.color = self.p.fix_pre_stim_color
         pre_stim_contrast = cregg.flexible_values(self.p.contrast_pre_stim)
         pre_stim_secs = cregg.flexible_values(self.p.pre_stim_dur)
