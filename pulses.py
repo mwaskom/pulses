@@ -155,13 +155,14 @@ def scan_prototype(p, win, stims):
 def behavior(p, win, stims, design):
 
     stim_event = EventEngine(win, p, stims)
+    trial_clock = stim_event.clock
+    main_rng = np.random.RandomState()
 
     stims["instruct"].draw()
 
     log_cols = list(design.columns)
-    log_cols += ["stim_time",
+    log_cols += ["stim_time", "stim_onset", "pulse_count",
                  "obs_mean_l", "obs_mean_r", "obs_mean_delta",
-                 "pulse_count",
                  "key", "response", "response_during_stim",
                  "gen_correct", "obs_correct", "rt"]
 
@@ -184,15 +185,24 @@ def behavior(p, win, stims, design):
             stims["fix"].draw()
             win.flip()
 
-            # Wait for the ITI before the stimulus
-            cregg.wait_check_quit(t_info["iti"])
+            # Compute the ITI duration
+            stim_time = trial_clock.getTime() + t_info["iti"]
+
+            # Determine the randomness of this trial
+            if t_info["fixed_seed"]:
+                seed = p.fixed_seed + int(np.sign(t_info["gen_mean_delta"]))
+                trial_rng = np.random.RandomState(seed)
+            else:
+                trial_rng = main_rng
+            stims["patches"].rng = trial_rng
 
             # Build the pulse schedule for this trial
             trial_flips = win.refresh_hz * t_info["trial_dur"]
             pulse_flips = win.refresh_hz * p.pulse_duration
 
             # Schedule pulse onsets
-            trial_onsets = pulse_onsets(p, win.refresh_hz, trial_flips)
+            trial_onsets = pulse_onsets(p, win.refresh_hz,
+                                        trial_flips, trial_rng)
             t_info.ix["pulse_count"] = len(trial_onsets)
 
             # Determine the sequence of stimulus contrast values
@@ -205,7 +215,8 @@ def behavior(p, win, stims, design):
                                                    p.contrast_sd,
                                                    p.contrast_limits,
                                                    trial_flips,
-                                                   pulse_flips)
+                                                   pulse_flips,
+                                                   trial_rng)
                 trial_contrast[:, i] = vector
                 trial_contrast_means.append(np.mean(values))
                 trial_contrast_values.append(values)
@@ -223,12 +234,7 @@ def behavior(p, win, stims, design):
             contrast_delta = t_info["gen_mean_r"] - t_info["gen_mean_l"]
 
             # Execute this trial
-            # TODO Improve; this is a hack to test fMRI "timing"
-            if p.self_paced:
-                stim_time = None
-            else:
-                stim_time = stim_event.clock.getTime() + .5
-            res = stim_event(trial_contrast, contrast_delta, stim_time)
+            res = stim_event(stim_time, trial_contrast, contrast_delta)
 
             # Log whether the response agreed with what was actually shown
             res["obs_correct"] = (res["response"] ==
@@ -363,15 +369,18 @@ class EventEngine(object):
                     gen_correct=correct,
                     rt=rt)
 
-    def __call__(self, contrast_values, contrast_delta, stim_time=None):
+    def __call__(self, stim_time, contrast_values, contrast_delta):
         """Execute a stimulus event."""
 
-        # Pre-stimulus fixation
+        # Inter-trial interval
+        self.fix.color = self.p.fix_iti_color
+        stim_onset = cregg.precise_wait(self.win, self.clock,
+                                        stim_time, self.fix)
+
+        # Stimulus onset
         self.fix.color = self.p.fix_ready_color
         if self.p.self_paced:
-            stim_time = self.wait_for_ready()
-        else:
-            cregg.precise_wait(self.win, self.clock, stim_time, self.fix)
+            stim_onset = self.wait_for_ready()
         event.clearEvents()
 
         # Pre-integration stimulus
@@ -412,6 +421,7 @@ class EventEngine(object):
             correct_response = int(contrast_delta > 0)
         result = self.collect_response(correct_response)
         result["stim_time"] = stim_time
+        result["stim_onset"] = stim_onset
         result["response_during_stim"] = bool(stim_keys)
 
         # Feedback
@@ -474,6 +484,8 @@ def behavior_design(p):
         df.loc[i, ["gen_mean_l", "gen_mean_r"]] = generate_contrast_pair(p)
 
     df["gen_mean_delta"] = df["gen_mean_r"] - df["gen_mean_l"]
+
+    df["fixed_seed"] = np.random.rand(len(df)) < p.fixed_seed_prop
 
     trial = df.index.values
     df["break"] = ~(trial % p.trials_per_break).astype(bool)

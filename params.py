@@ -28,8 +28,8 @@ base = dict(
     fix_size=.3,
     fix_iti_color=(0, 0, 0),
     fix_stim_color=(1, 1, 1),
-    fix_ready_color=(.5, .5, -1),
-    fix_pre_stim_color=(.5, .5, -1),
+    fix_ready_color=(.9, .6, -1),
+    fix_pre_stim_color=(.9, .6, -1),
     fix_post_stim_color=(.5, .5, -1),
     fix_resp_color=(0, 0, 0),
     fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
@@ -61,7 +61,7 @@ base = dict(
     # ---------------------
 
     fixed_seed=668,
-    fixed_seed_prop=.3,
+    fixed_seed_prop=1,
 
     # Stimulus contrast parameters
     # ----------------------------
@@ -79,7 +79,7 @@ base = dict(
     post_stim_dur=0,
     resp_dur=10,
     feedback_dur=.4,
-    iti_dur=("uniform", .2, .4),
+    iti_dur=.5,
     after_break_dur=2,
 
     # Scan-related parameters
