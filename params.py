@@ -32,7 +32,8 @@ base = dict(
     fix_pre_stim_color=(.9, .6, -1),
     fix_post_stim_color=(.5, .5, -1),
     fix_resp_color=(0, 0, 0),
-    fix_fb_colors=[(1, 0, 0), (0, .75, 0)],
+    fix_fb_pos_color=(1, 0, 0),
+    fix_fb_neg_color=(0, .75, 0),
 
     # Response settings
     # -----------------

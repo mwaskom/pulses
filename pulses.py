@@ -425,7 +425,8 @@ class EventEngine(object):
         result["response_during_stim"] = bool(stim_keys)
 
         # Feedback
-        self.fix.color = self.p.fix_fb_colors[int(result["gen_correct"])]
+        fb_colors = [self.p.fix_fb_pos_color, self.p.fix_fb_neg_color]
+        self.fix.color = fb_colors[int(result["gen_correct"])]
         feedback_secs = cregg.flexible_values(self.p.feedback_dur)
         feedback_flips = np.round(self.win.refresh_hz * feedback_secs)
         for _ in range(int(feedback_flips)):
