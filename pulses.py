@@ -154,12 +154,8 @@ def behavior(p, win, stims, design):
             # Compute the ITI duration
             stim_time = trial_clock.getTime() + t_info["iti"]
 
-            # Determine the randomness of this trial
-            if t_info["fixed_seed"]:
-                seed = p.fixed_seed + int(np.sign(t_info["gen_mean_delta"]))
-                trial_rng = np.random.RandomState(seed)
-            else:
-                trial_rng = main_rng
+            # Set up a random number generator for this trial
+            trial_rng = np.random.RandomState(t_info["random_seed"])
             stims["patches"].rng = trial_rng
 
             # Build the pulse schedule for this trial
@@ -490,11 +486,10 @@ def behavior_design(p):
 
     cycle_data = []
 
-    seed_base = np.random.randint(1000, 5000)
-
+    # Build sets of trial schedules representing each signed stimulus strength
     for _ in range(p.cycles_per_run - p.cycles_repeated):
 
-        # Everything is structured around the vectoreof signed deltas
+        # Everything is structured around the vector of signed deltas
         unsigned_deltas = np.array(p.contrast_deltas)
         signed_deltas = np.concatenate([-unsigned_deltas, unsigned_deltas])
         trials_per_cycle = len(signed_deltas)
@@ -510,10 +505,26 @@ def behavior_design(p):
         cycle_df["trial_dur"] = trial_dur
 
         # Determine a fixed seed for each cycle condition
-        seed = (seed_base + signed_deltas * 10000).astype(np.int)
+        seed_base = np.random.randint(1000, 9000)
+        seed = (seed_base + 10000 * signed_deltas).astype(np.int)
         cycle_df["random_seed"] = seed
 
-    return cycle_df
+        # Add a columne identifying if these trials are "paired"
+        cycle_df["paired_trial"] = False
+
+        cycle_data.append(cycle_df)
+
+    # Duplicate sets so that we have some identical trials
+    for i in range(p.cycles_repeated):
+        cycle_data[i]["paired_trial"] = True
+        cycle_data.insert(0, cycle_data[i])
+
+    # Concatenate sets and randomize trial order
+    run_df = (pd.concat(cycle_data)
+                .sample(frac=1, replace=False)
+                .reset_index(drop=True))
+
+    return run_df
 
 
 if __name__ == "__main__":
