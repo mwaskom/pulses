@@ -78,7 +78,7 @@ base = dict(
 
     pre_stim_dur=0,
     post_stim_dur=0,
-    resp_dur=10,
+    resp_dur=3.5,
     feedback_dur=.4,
     iti_dur=.5,
     after_break_dur=2,
@@ -171,7 +171,7 @@ scan_prototype = deepcopy(training_with_gaps)
 scan_prototype.update(
 
     self_paced=False,
-    iti_dur=("truncexpon", 4, 2, 2),
+    iti_dur=("truncexpon", 4, 0, 2),
     seconds_per_run=500,
 
 )

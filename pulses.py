@@ -102,19 +102,19 @@ def contrast_schedule(onsets, mean, sd, limits,
 
 def training_no_gaps(p, win, stims):
 
-    design = behavior_design(p)
+    design = generate_run_design(p)
     behavior(p, win, stims, design)
 
 
 def training_with_gaps(p, win, stims):
 
-    design = behavior_design(p)
+    design = generate_run_design(p)
     behavior(p, win, stims, design)
 
 
 def scan_prototype(p, win, stims):
 
-    design = behavior_design(p)
+    design = generate_run_design(p)
     behavior(p, win, stims, design)
 
 
@@ -122,7 +122,6 @@ def behavior(p, win, stims, design):
 
     stim_event = EventEngine(win, p, stims)
     trial_clock = stim_event.clock
-    main_rng = np.random.RandomState()
 
     stims["instruct"].draw()
 
@@ -150,9 +149,6 @@ def behavior(p, win, stims, design):
             # Start the trial
             stims["fix"].draw()
             win.flip()
-
-            # Compute the ITI duration
-            stim_time = trial_clock.getTime() + t_info["iti"]
 
             # Set up a random number generator for this trial
             trial_rng = np.random.RandomState(t_info["random_seed"])
@@ -196,7 +192,7 @@ def behavior(p, win, stims, design):
             contrast_delta = t_info["gen_mean_r"] - t_info["gen_mean_l"]
 
             # Execute this trial
-            res = stim_event(stim_time, trial_contrast, contrast_delta)
+            res = stim_event(t_info, trial_contrast, contrast_delta)
 
             # Log whether the response agreed with what was actually shown
             res["obs_correct"] = (res["response"] ==
@@ -293,7 +289,7 @@ class EventEngine(object):
                     else:
                         continue
 
-    def collect_response(self, correct_response):
+    def collect_response(self, resp_dur, correct_response):
         """Wait for a button press and determine result."""
         # Initialize trial data
         correct = False
@@ -309,7 +305,7 @@ class EventEngine(object):
         # Wait for the key press
         event.clearEvents()
         self.resp_clock.reset()
-        keys = event.waitKeys(self.p.resp_dur,
+        keys = event.waitKeys(resp_dur,
                               self.break_keys,
                               self.resp_clock)
 
@@ -331,13 +327,13 @@ class EventEngine(object):
                     gen_correct=correct,
                     rt=rt)
 
-    def __call__(self, stim_time, contrast_values, contrast_delta):
+    def __call__(self, t_info, contrast_values, contrast_delta):
         """Execute a stimulus event."""
 
         # Inter-trial interval
         self.fix.color = self.p.fix_iti_color
         stim_onset = cregg.precise_wait(self.win, self.clock,
-                                        stim_time, self.fix)
+                                        t_info["stim_time"], self.fix)
 
         # Stimulus onset
         self.fix.color = self.p.fix_ready_color
@@ -349,7 +345,7 @@ class EventEngine(object):
         self.patches.reset_animation(synchronize=self.p.stim_synchronize)
         self.fix.color = self.p.fix_pre_stim_color
         pre_stim_contrast = cregg.flexible_values(self.p.contrast_pre_stim)
-        pre_stim_secs = cregg.flexible_values(self.p.pre_stim_dur)
+        pre_stim_secs = t_info["pre_stim_dur"]
         pre_stim_flips = np.round(self.win.refresh_hz * pre_stim_secs)
         for _ in range(int(pre_stim_flips)):
             self.patches.contrast = pre_stim_contrast
@@ -367,7 +363,7 @@ class EventEngine(object):
 
         # Post stimulus delay
         self.fix.color = self.p.fix_post_stim_color
-        post_stim_secs = cregg.flexible_values(self.p.post_stim_dur)
+        post_stim_secs = t_info["post_stim_dur"]
         post_stim_flips = np.round(self.win.refresh_hz * post_stim_secs)
         for _ in range(int(post_stim_flips)):
             self.fix.draw()
@@ -381,15 +377,14 @@ class EventEngine(object):
             correct_response = np.random.choice([0, 1])
         else:
             correct_response = int(contrast_delta > 0)
-        result = self.collect_response(correct_response)
-        result["stim_time"] = stim_time
+        result = self.collect_response(t_info["resp_dur"], correct_response)
         result["stim_onset"] = stim_onset
         result["response_during_stim"] = bool(stim_keys)
 
         # Feedback
         fb_colors = [self.p.fix_fb_pos_color, self.p.fix_fb_neg_color]
         self.fix.color = fb_colors[int(result["gen_correct"])]
-        feedback_secs = cregg.flexible_values(self.p.feedback_dur)
+        feedback_secs = t_info["feedback_dur"]
         feedback_flips = np.round(self.win.refresh_hz * feedback_secs)
         for _ in range(int(feedback_flips)):
             self.fix.draw()
@@ -459,7 +454,7 @@ def generate_contrast_pairs(deltas, p):
     return contrasts
 
 
-def behavior_design(p):
+def generate_run_design(p):
 
     cycle_data = []
 
@@ -489,6 +484,13 @@ def behavior_design(p):
         # Add a columne identifying if these trials are "paired"
         cycle_df["paired_trial"] = False
 
+        # Add in some timing information we want kept constant
+        n = len(cycle_df)
+        cycle_df["pre_stim_dur"] = cregg.flexible_values(p.pre_stim_dur, n)
+        cycle_df["post_stim_dur"] = cregg.flexible_values(p.post_stim_dur, n)
+        cycle_df["resp_dur"] = cregg.flexible_values(p.resp_dur, n)
+        cycle_df["feedback_dur"] = cregg.flexible_values(p.feedback_dur, n)
+
         cycle_data.append(cycle_df)
 
     # Duplicate sets so that we have some identical trials
@@ -502,15 +504,14 @@ def behavior_design(p):
                 .reset_index(drop=True))
     n_trials = len(run_df)
 
-    # Add in other timing information
-    run_df["pre_stim_dur"] = cregg.flexible_values(p.pre_stim_dur, n_trials)
-    run_df["post_stim_dur"] = cregg.flexible_values(p.post_stim_dur, n_trials)
-    run_df["feedback_dur"] = cregg.flexible_values(p.feedback_dur, n_trials)
+    # Add in breaks
+    run_df["break"] = ~(run_df.index.values % p.trials_per_break).astype(bool)
 
     # Generate ITIs to make the run duration what we expect
     trial_seconds = (run_df["trial_dur"]
                      + run_df["pre_stim_dur"]
                      + run_df["post_stim_dur"]
+                     + run_df["resp_dur"]
                      + run_df["feedback_dur"])
     total_seconds = trial_seconds.sum()
 
@@ -518,7 +519,7 @@ def behavior_design(p):
     iti = cregg.flexible_values(p.iti_dur, n_trials)
     needed_seconds -= iti.sum()
     iti += needed_seconds / n_trials
-    run_df["iti_dur"] = iti
+    run_df["iti"] = iti
     assert iti.min() > 0
 
     # Schedule the onset of each stimulus
