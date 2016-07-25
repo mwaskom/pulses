@@ -156,6 +156,13 @@ def experiment_loop(p, win, stims, design):
             trial_flips = win.refresh_hz * t_info["trial_dur"]
             pulse_flips = win.refresh_hz * p.pulse_duration
 
+            # XXX BEGIN HACK
+            # Currently we have timing issues because we cannot draw the stimulus
+            # fast enough. My laptop can draw the stim at about 30 Hz. So we are
+            # only going to schedule half as many frames as we expect.
+            #pulse_flips //= 2
+            # XXX END HACK
+
             # Schedule pulse onsets
             trial_onsets = pulse_onsets(p, win.refresh_hz,
                                         trial_flips, trial_rng)
@@ -193,7 +200,8 @@ def experiment_loop(p, win, stims, design):
             res = stim_event(t_info, trial_contrast, contrast_delta)
 
             # XXX Debugging
-            print(t_info["stim_time"], res["stim_onset"])
+            print(("Expected vs. actual trial onset: {:.2f}, {:.2f}"
+                   .format(t_info["stim_time"], res["stim_onset"])))
 
             # Log whether the response agreed with what was actually shown
             res["obs_correct"] = (res["response"] ==
@@ -363,14 +371,17 @@ class EventEngine(object):
 
         # Decision period (frames where the stimulus can pulse)
         self.fix.color = self.p.fix_stim_color
-        for frame_contrast in contrast_values:
+        for i, frame_contrast in enumerate(contrast_values):
             self.patches.contrast = frame_contrast
-            self.patches.draw()
+            if frame_contrast[0] > 0:
+                animate = i % 3
+                self.patches.draw(animate)
             self.fix.draw()
             self.win.flip()
 
         # XXX Debugging
-        print(t_info["trial_dur"], self.clock.getTime() - stim_start)
+        print(("Expected vs. actual decision period duration {:.2f}, {:.2f}"
+               .format(t_info["trial_dur"], self.clock.getTime() - stim_start)))
         dropped_after_stim = self.win.nDroppedFrames
         dropped_during_stim = dropped_after_stim - dropped_before_stim
         print("Dropped frames during stim: ", dropped_during_stim)
@@ -545,7 +556,7 @@ def generate_run_design(p):
             needed_seconds = p.seconds_per_run - total_seconds
             needed_seconds -= iti.sum()
             iti += needed_seconds / n_trials
-        if iti.min() > 0:
+        if iti.min() > 1:  # XXX needs parameterization
             satisfied = True
     run_df["iti"] = iti
     trial_seconds += iti
