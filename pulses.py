@@ -103,25 +103,24 @@ def contrast_schedule(onsets, mean, sd, limits,
 def training_no_gaps(p, win, stims):
 
     design = generate_run_design(p)
-    behavior(p, win, stims, design)
+    experiment_loop(p, win, stims, design)
 
 
 def training_with_gaps(p, win, stims):
 
     design = generate_run_design(p)
-    behavior(p, win, stims, design)
+    experiment_loop(p, win, stims, design)
 
 
-def scan_prototype(p, win, stims):
+def scan_pilot(p, win, stims):
 
     design = generate_run_design(p)
-    behavior(p, win, stims, design)
+    experiment_loop(p, win, stims, design)
 
 
-def behavior(p, win, stims, design):
+def experiment_loop(p, win, stims, design):
 
     stim_event = EventEngine(win, p, stims)
-    trial_clock = stim_event.clock
 
     stims["instruct"].draw()
 
@@ -485,11 +484,14 @@ def generate_run_design(p):
         cycle_df["paired_trial"] = False
 
         # Add in some timing information we want kept constant
-        n = len(cycle_df)
-        cycle_df["pre_stim_dur"] = cregg.flexible_values(p.pre_stim_dur, n)
-        cycle_df["post_stim_dur"] = cregg.flexible_values(p.post_stim_dur, n)
-        cycle_df["resp_dur"] = cregg.flexible_values(p.resp_dur, n)
-        cycle_df["feedback_dur"] = cregg.flexible_values(p.feedback_dur, n)
+        cycle_df["pre_stim_dur"] = cregg.flexible_values(p.pre_stim_dur,
+                                                         trials_per_cycle)
+        cycle_df["post_stim_dur"] = cregg.flexible_values(p.post_stim_dur,
+                                                          trials_per_cycle)
+        cycle_df["resp_dur"] = cregg.flexible_values(p.resp_dur,
+                                                     trials_per_cycle)
+        cycle_df["feedback_dur"] = cregg.flexible_values(p.feedback_dur,
+                                                         trials_per_cycle)
 
         cycle_data.append(cycle_df)
 
@@ -506,8 +508,9 @@ def generate_run_design(p):
 
     # Add in breaks
     run_df["break"] = ~(run_df.index.values % p.trials_per_break).astype(bool)
+    run_df.loc[0, "break"] = False
 
-    # Generate ITIs to make the run duration what we expect
+    # Determine the full length of each trial
     trial_seconds = (run_df["trial_dur"]
                      + run_df["pre_stim_dur"]
                      + run_df["post_stim_dur"]
@@ -515,10 +518,14 @@ def generate_run_design(p):
                      + run_df["feedback_dur"])
     total_seconds = trial_seconds.sum()
 
-    needed_seconds = p.seconds_per_run - total_seconds
+    # Generate ITIs to make the run duration what we expect
     iti = cregg.flexible_values(p.iti_dur, n_trials)
-    needed_seconds -= iti.sum()
-    iti += needed_seconds / n_trials
+    if p.seconds_per_run is None:
+        needed_seconds = 0
+    else:
+        needed_seconds = p.seconds_per_run - total_seconds
+        needed_seconds -= iti.sum()
+        iti += needed_seconds / n_trials
     run_df["iti"] = iti
     assert iti.min() > 0
 

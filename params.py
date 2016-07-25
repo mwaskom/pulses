@@ -82,6 +82,7 @@ base = dict(
     feedback_dur=.4,
     iti_dur=.5,
     after_break_dur=2,
+    seconds_per_run=None,
 
     # Scan-related parameters
     # -----------------------
@@ -167,8 +168,8 @@ training_with_gaps.update(
 
 )
 
-scan_prototype = deepcopy(training_with_gaps)
-scan_prototype.update(
+scan_pilot = deepcopy(training_with_gaps)
+scan_pilot.update(
 
     self_paced=False,
     iti_dur=("truncexpon", 4, 0, 2),
