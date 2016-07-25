@@ -1,6 +1,6 @@
 """Hold information about different monitors."""
 from textwrap import dedent
-from numpy import array, float32
+from numpy import array
 
 cni_30 = dict(name='cni_30',
               calib_file='calib/cni_lums_20110718.csv',

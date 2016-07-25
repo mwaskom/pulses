@@ -51,6 +51,7 @@ def pulse_onsets(p, refresh_hz, trial_flips, rng=None):
 
     # Convert seconds to screen refresh units
     pulse_secs = cregg.flexible_values(p.pulse_duration, random_state=rng)
+    # TODO this won't handle stochastic pulse durations properly
     pulse_flips = refresh_hz * pulse_secs
 
     # Schedule the first pulse for the trial onset
@@ -125,7 +126,7 @@ def experiment_loop(p, win, stims, design):
     stims["instruct"].draw()
 
     log_cols = list(design.columns)
-    log_cols += ["stim_time", "stim_onset", "pulse_count",
+    log_cols += ["stim_onset", "pulse_count", "dropped_frames",
                  "obs_mean_l", "obs_mean_r", "obs_mean_delta",
                  "key", "response", "response_during_stim",
                  "gen_correct", "obs_correct", "rt"]
@@ -136,6 +137,8 @@ def experiment_loop(p, win, stims, design):
     with cregg.PresentationLoop(win, p, log, fix=stims["fix"],
                                 exit_func=behavior_exit):
 
+        stim_event.clock.reset()
+
         for t, t_info in design.iterrows():
 
             if t_info["break"]:
@@ -144,10 +147,6 @@ def experiment_loop(p, win, stims, design):
                 stims["progress"].update_bar(t / len(design))
                 stims["progress"].draw()
                 stims["break"].draw()
-
-            # Start the trial
-            stims["fix"].draw()
-            win.flip()
 
             # Set up a random number generator for this trial
             trial_rng = np.random.RandomState(t_info["random_seed"])
@@ -193,6 +192,9 @@ def experiment_loop(p, win, stims, design):
             # Execute this trial
             res = stim_event(t_info, trial_contrast, contrast_delta)
 
+            # XXX Debugging
+            print(t_info["stim_time"], res["stim_onset"])
+
             # Log whether the response agreed with what was actually shown
             res["obs_correct"] = (res["response"] ==
                                   (t_info["obs_mean_delta"] > 0))
@@ -220,7 +222,7 @@ def behavior_exit(log):
     png_fstem = log.p.log_base.format(subject=log.p.subject, run=log.p.run)
     png_fname = png_fstem + ".png"
 
-    if df.size:
+    if df.size and df.response.notnull().any():
         plot_performance(df, png_fname)
         if log.p.show_performance_plots:
             os.system("open " + png_fname)
@@ -329,6 +331,9 @@ class EventEngine(object):
     def __call__(self, t_info, contrast_values, contrast_delta):
         """Execute a stimulus event."""
 
+        # Reset the dropped frames count
+        self.win.nDroppedFrames = 0
+
         # Inter-trial interval
         self.fix.color = self.p.fix_iti_color
         stim_onset = cregg.precise_wait(self.win, self.clock,
@@ -352,6 +357,10 @@ class EventEngine(object):
             self.fix.draw()
             self.win.flip()
 
+        # XXX Debugging
+        stim_start = self.clock.getTime()
+        dropped_before_stim = self.win.nDroppedFrames
+
         # Decision period (frames where the stimulus can pulse)
         self.fix.color = self.p.fix_stim_color
         for frame_contrast in contrast_values:
@@ -359,6 +368,12 @@ class EventEngine(object):
             self.patches.draw()
             self.fix.draw()
             self.win.flip()
+
+        # XXX Debugging
+        print(t_info["trial_dur"], self.clock.getTime() - stim_start)
+        dropped_after_stim = self.win.nDroppedFrames
+        dropped_during_stim = dropped_after_stim - dropped_before_stim
+        print("Dropped frames during stim: ", dropped_during_stim)
 
         # Post stimulus delay
         self.fix.color = self.p.fix_post_stim_color
@@ -389,12 +404,14 @@ class EventEngine(object):
             self.fix.draw()
             self.win.flip()
 
-        cregg.wait_check_quit(self.p.feedback_dur)
-
         # End of trial
         self.fix.color = self.p.fix_iti_color
         self.fix.draw()
         self.win.flip()
+
+        # Count the number of frames dropped on this trial
+        result["dropped_frames"] = self.win.nDroppedFrames
+
 
         return result
 
@@ -511,28 +528,33 @@ def generate_run_design(p):
     run_df.loc[0, "break"] = False
 
     # Determine the full length of each trial
-    trial_seconds = (run_df["trial_dur"]
-                     + run_df["pre_stim_dur"]
+    trial_seconds = (run_df["pre_stim_dur"]
+                     + run_df["trial_dur"]
                      + run_df["post_stim_dur"]
                      + run_df["resp_dur"]
                      + run_df["feedback_dur"])
     total_seconds = trial_seconds.sum()
 
     # Generate ITIs to make the run duration what we expect
-    iti = cregg.flexible_values(p.iti_dur, n_trials)
-    if p.seconds_per_run is None:
-        needed_seconds = 0
-    else:
-        needed_seconds = p.seconds_per_run - total_seconds
-        needed_seconds -= iti.sum()
-        iti += needed_seconds / n_trials
+    satisfied = False
+    while not satisfied:
+        iti = cregg.flexible_values(p.iti_dur, n_trials)
+        if p.seconds_per_run is None:
+            needed_seconds = 0
+        else:
+            needed_seconds = p.seconds_per_run - total_seconds
+            needed_seconds -= iti.sum()
+            iti += needed_seconds / n_trials
+        if iti.min() > 0:
+            satisfied = True
     run_df["iti"] = iti
-    assert iti.min() > 0
+    trial_seconds += iti
 
     # Schedule the onset of each stimulus
-    trial_seconds += iti
-    run_df["stim_time"] = trial_seconds.shift(1).fillna(0).cumsum()
-    run_df["trial_length"] = trial_seconds
+    run_df["stim_time"] = trial_seconds.cumsum().shift(1).fillna(0) + iti
+
+    # TODO fix nomenclature so this is less confusing
+    run_df["full_trial_dur"] = trial_seconds
 
     return run_df
 

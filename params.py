@@ -53,10 +53,11 @@ base = dict(
     stim_tex="sin",
     stim_sf=3,
     stim_mask="raisedCos",
-    stim_gratings=10,
+    #stim_gratings=10,
     stim_speed=1,
     stim_positions=[(-5, 0), (5, 0)],
     stim_synchronize=True,
+    stim_gratings=2,  # XXX DEBUG
 
     # Control of randomness
     # ---------------------
@@ -81,7 +82,6 @@ base = dict(
     resp_dur=3.5,
     feedback_dur=.4,
     iti_dur=.5,
-    after_break_dur=2,
     seconds_per_run=None,
 
     # Scan-related parameters
@@ -171,6 +171,7 @@ training_with_gaps.update(
 scan_pilot = deepcopy(training_with_gaps)
 scan_pilot.update(
 
+    log_base="data/{subject}_scan_pilot_run{run:02d}",
     self_paced=False,
     iti_dur=("truncexpon", 4, 0, 2),
     seconds_per_run=500,
