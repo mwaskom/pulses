@@ -68,7 +68,6 @@ base = dict(
     # ----------------------------
 
     contrast_pre_stim=.2,
-    #contrast_pedestal=.2,  # TODO maybe make stochastic?
     contrast_pedestal=("norm", .2, .02),
     contrast_limits=(.1, .3),
     contrast_deltas=[0, .005, .01, .02, .04, .08],
@@ -139,7 +138,7 @@ training_no_gaps.update(
     self_paced=True,
 
     cycles_per_run=8,
-    repeated_cycles=2,
+    cycles_repeated=2,
 
     trials_per_break=150,
 
@@ -172,5 +171,7 @@ scan_prototype = deepcopy(training_with_gaps)
 scan_prototype.update(
 
     self_paced=False,
+    iti_dur=("truncexpon", 4, 2, 2),
+    seconds_per_run=500,
 
 )

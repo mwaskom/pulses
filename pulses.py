@@ -523,6 +523,31 @@ def behavior_design(p):
     run_df = (pd.concat(cycle_data)
                 .sample(frac=1, replace=False)
                 .reset_index(drop=True))
+    n_trials = len(run_df)
+
+    # Add in other timing information
+    run_df["pre_stim_dur"] = cregg.flexible_values(p.pre_stim_dur, n_trials)
+    run_df["post_stim_dur"] = cregg.flexible_values(p.post_stim_dur, n_trials)
+    run_df["feedback_dur"] = cregg.flexible_values(p.feedback_dur, n_trials)
+
+    # Generate ITIs to make the run duration what we expect
+    trial_seconds = (run_df["trial_dur"]
+                     + run_df["pre_stim_dur"]
+                     + run_df["post_stim_dur"]
+                     + run_df["feedback_dur"])
+    total_seconds = trial_seconds.sum()
+
+    needed_seconds = p.seconds_per_run - total_seconds
+    iti = cregg.flexible_values(p.iti_dur, n_trials)
+    needed_seconds -= iti.sum()
+    iti += needed_seconds / n_trials
+    run_df["iti_dur"] = iti
+    assert iti.min() > 0
+
+    # Schedule the onset of each stimulus
+    trial_seconds += iti
+    run_df["stim_time"] = trial_seconds.shift(1).fillna(0).cumsum()
+    run_df["trial_length"] = trial_seconds
 
     return run_df
 
