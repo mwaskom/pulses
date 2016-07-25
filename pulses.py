@@ -434,29 +434,6 @@ class PulseLog(object):
 # =========================================================================== #
 
 
-def behavior_design_old(p):
-
-    columns = ["iti", "trial_dur", "gen_mean_l", "gen_mean_r"]
-    iti = cregg.flexible_values(p.iti_dur, p.trials_per_run)
-    trial_dur = cregg.flexible_values(p.trial_dur, p.trials_per_run)
-    df = pd.DataFrame(dict(iti=iti, trial_dur=trial_dur),
-                      columns=columns,
-                      dtype=np.float)
-
-    for i in range(p.trials_per_run):
-        df.loc[i, ["gen_mean_l", "gen_mean_r"]] = generate_contrast_pair(p)
-
-    df["gen_mean_delta"] = df["gen_mean_r"] - df["gen_mean_l"]
-
-    df["fixed_seed"] = np.random.rand(len(df)) < p.fixed_seed_prop
-
-    trial = df.index.values
-    df["break"] = ~(trial % p.trials_per_break).astype(bool)
-    df.loc[0, "break"] = False
-
-    return df
-
-
 def generate_contrast_pairs(deltas, p):
     """Find valid pairs of contrasts (or distribution means) given deltas."""
     rng = np.random.RandomState()
