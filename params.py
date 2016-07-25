@@ -168,5 +168,6 @@ scan_pilot.update(
     self_paced=False,
     iti_dur=("truncexpon", 4, 1, 2),
     seconds_per_run=560,
+    stim_speed=0,
 
 )

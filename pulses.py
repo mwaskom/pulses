@@ -201,8 +201,8 @@ def experiment_loop(p, win, stims, design):
             res = stim_event(t_info, trial_contrast, contrast_delta)
 
             # XXX Debugging
-            print(("Expected vs. actual trial onset: {:.2f}, {:.2f}"
-                   .format(t_info["stim_time"], res["stim_onset"])))
+            #print(("Expected vs. actual trial onset: {:.2f}, {:.2f}"
+            #      .format(t_info["stim_time"], res["stim_onset"])))
 
             # Log whether the response agreed with what was actually shown
             res["obs_correct"] = (res["response"] ==
@@ -369,25 +369,24 @@ class EventEngine(object):
             self.win.flip()
 
         # XXX Debugging
-        stim_start = self.clock.getTime()
-        dropped_before_stim = self.win.nDroppedFrames
+        #stim_start = self.clock.getTime()
+        #dropped_before_stim = self.win.nDroppedFrames
 
         # Decision period (frames where the stimulus can pulse)
         self.fix.color = self.p.fix_stim_color
         for i, frame_contrast in enumerate(contrast_values):
             self.patches.contrast = frame_contrast
             if frame_contrast[0] > 0:
-                animate = i % 3
-                self.patches.draw(animate)
+                self.patches.draw(animate=False)
             self.fix.draw()
             self.win.flip()
 
         # XXX Debugging
-        print(("Expected vs. actual decision period duration {:.2f}, {:.2f}"
-               .format(t_info["trial_dur"], self.clock.getTime() - stim_start)))
-        dropped_after_stim = self.win.nDroppedFrames
-        dropped_during_stim = dropped_after_stim - dropped_before_stim
-        print("Dropped frames during stim: ", dropped_during_stim)
+        #print(("Expected vs. actual decision period duration {:.2f}, {:.2f}"
+        #       .format(t_info["trial_dur"], self.clock.getTime() - stim_start)))
+        #dropped_after_stim = self.win.nDroppedFrames
+        #dropped_during_stim = dropped_after_stim - dropped_before_stim
+        #print("Dropped frames during stim: ", dropped_during_stim)
 
         # Post stimulus delay
         self.fix.color = self.p.fix_post_stim_color
