@@ -15,7 +15,7 @@ base = dict(
     # -------------
 
     monitor_name="mlw-mbair",
-    fmri_monitor_name="cbi-projector",
+    fmri_monitor_name="cbi_projector",
     screen_number=0,
     fmri_screen_number=0,
     monitor_units="deg",
@@ -44,7 +44,7 @@ base = dict(
     finish_keys=["return"],
     trigger_keys=["quoteleft", "grave"],
     resp_keys=["lshift", "rshift"],
-    fmri_resp_keys=["4", "9"],
+    fmri_resp_keys=["9", "4"],
 
     # Stimulus parameters
     # -------------------
