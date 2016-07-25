@@ -374,10 +374,10 @@ class EventEngine(object):
 
         # Decision period (frames where the stimulus can pulse)
         self.fix.color = self.p.fix_stim_color
-        for i, frame_contrast in enumerate(contrast_values):
+        for frame_contrast in contrast_values:
             self.patches.contrast = frame_contrast
-            if frame_contrast[0] > 0:
-                self.patches.draw(animate=False)
+            if any(frame_contrast):
+                self.patches.draw()
             self.fix.draw()
             self.win.flip()
 
