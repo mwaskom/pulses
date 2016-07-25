@@ -167,7 +167,7 @@ scan_pilot.update(
     log_base="data/{subject}_scan_pilot_run{run:02d}",
     self_paced=False,
     iti_dur=("truncexpon", 4, 1, 2),
-    seconds_per_run=560,
+    seconds_per_run=558,
     stim_speed=0,
 
 )
