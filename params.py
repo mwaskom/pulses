@@ -15,7 +15,7 @@ base = dict(
     # -------------
 
     monitor_name="mlw-mbair",
-    fmri_monitor_name="cni_47",
+    fmri_monitor_name="cbi-projector",
     screen_number=0,
     fmri_screen_number=0,
     monitor_units="deg",
