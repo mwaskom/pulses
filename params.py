@@ -42,7 +42,7 @@ base = dict(
     ready_keys=["lshift", "rshift"],
     wait_keys=["space"],
     finish_keys=["return"],
-    trigger_keys=["quoteleft"],
+    trigger_keys=["quoteleft", "grave"],
     resp_keys=["lshift", "rshift"],
     fmri_resp_keys=["4", "9"],
 
@@ -81,7 +81,7 @@ base = dict(
     # -----------------------
 
     tr=1.5,
-    dummy_trs=6,
+    equilibrium_trs=6,
 
     # Data-related parameters
     # -----------------------
