@@ -126,10 +126,11 @@ def experiment_loop(p, win, stims, design):
     stims["instruct"].draw()
 
     log_cols = list(design.columns)
-    log_cols += ["stim_onset", "pulse_count", "dropped_frames",
+    log_cols += ["stim_onset", "resp_onset", "pulse_count",
                  "obs_mean_l", "obs_mean_r", "obs_mean_delta",
                  "key", "response", "response_during_stim",
-                 "gen_correct", "obs_correct", "rt"]
+                 "gen_correct", "obs_correct", "rt",
+                 "dropped_frames"]
 
     log = cregg.DataLog(p, log_cols)
     log.pulses = PulseLog()
@@ -310,6 +311,7 @@ class EventEngine(object):
         self.fix.color = self.p.fix_resp_color
         self.fix.draw()
         self.win.flip()
+        resp_onset = self.clock.getTime()
 
         # Wait for the key press
         event.clearEvents()
@@ -331,7 +333,8 @@ class EventEngine(object):
                 response = self.resp_keys.index(key)
                 correct = response == correct_response
 
-        return dict(key=used_key,
+        return dict(resp_onset=resp_onset,
+                    key=used_key,
                     response=response,
                     gen_correct=correct,
                     rt=rt)
