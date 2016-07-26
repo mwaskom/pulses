@@ -231,7 +231,7 @@ def behavior_exit(log):
     png_fstem = log.p.log_base.format(subject=log.p.subject, run=log.p.run)
     png_fname = png_fstem + ".png"
 
-    if df.size and df.response.notnull().any():
+    if df.size:
         plot_performance(df, png_fname)
         if log.p.show_performance_plots:
             os.system("open " + png_fname)
@@ -243,9 +243,17 @@ def plot_performance(df, fname):
     import matplotlib.pyplot as plt
 
     f, axes = plt.subplots(1, 2, figsize=(8, 4))
-    unsigned_delta = df.gen_mean_delta.abs()
-    sns.pointplot(x=unsigned_delta, y="gen_correct", data=df, ax=axes[0])
-    sns.pointplot(x=unsigned_delta, y="rt", data=df, ax=axes[1])
+
+    # Plot the psychometric function
+    if df.response.notnull().any():  # Needed due to matplotlib 1.4 bug
+        unsigned_delta = df.gen_mean_delta.abs()
+        sns.pointplot(x=unsigned_delta, y="gen_correct", data=df, ax=axes[0])
+
+    # Plot the difference in scheduled and achieved stim onset
+    axes[1].plot(df.stim_time, df.stim_time - df.stim_onset, marker="o")
+    axes[1].set(xlabel="Stim time (s)", ylabel="Stim timing error (s)")
+    axes[1].axhline(y=0, c=".5", lw=2, dashes=(4, 1.5))
+
     f.tight_layout()
     f.savefig(fname)
     plt.close(f)
