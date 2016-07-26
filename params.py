@@ -75,6 +75,7 @@ base = dict(
     resp_dur=3.5,
     feedback_dur=.4,
     iti_dur=.5,
+    leadout_dur=0,
     seconds_per_run=None,
 
     # Scan-related parameters
@@ -168,6 +169,7 @@ scan_pilot.update(
     self_paced=False,
     iti_dur=("truncexpon", 4, 1, 2),
     seconds_per_run=558,
+    leadout_dur=12,
     stim_speed=0,
 
 )

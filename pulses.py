@@ -212,6 +212,13 @@ def experiment_loop(p, win, stims, design):
             t_info = t_info.append(pd.Series(res))
             log.add_data(t_info)
 
+        # Show the final fixation to allow hemodynamics to return to baseline
+        stims["fix"].color = p.fix_iti_color
+        stims["fix"].draw()
+        win.flip()
+        cregg.wait_check_quit(p.leadout_dur)
+
+        # Finish the run
         stims["finish"].draw()
 
 
@@ -239,6 +246,8 @@ def behavior_exit(log):
 
 def plot_performance(df, fname):
 
+    import matplotlib as mpl
+    mpl.use("Agg")
     import seaborn as sns
     import matplotlib.pyplot as plt
 
