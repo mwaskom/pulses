@@ -380,8 +380,9 @@ class EventEngine(object):
         pre_stim_secs = t_info["pre_stim_dur"]
         pre_stim_flips = np.round(self.win.refresh_hz * pre_stim_secs)
         for _ in range(int(pre_stim_flips)):
-            self.patches.contrast = pre_stim_contrast
-            self.patches.draw()
+            if pre_stim_contrast:
+                self.patches.contrast = pre_stim_contrast
+                self.patches.draw()
             self.fix.draw()
             self.win.flip()
 
