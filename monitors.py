@@ -63,6 +63,13 @@ kiani_psychophys = dict(name="kiani_psychophys",
                                           [-.019, 10.5, 2.22]]),
                         notes="Kiani lab psychophysics rig")
 
+kiani_workspace = dict(name="kiani_workspace",
+                       width=59.5,
+                       distance=54,
+                       size=[1920, 1080],
+                       refresh_hz=30,
+                       notes="Large Dell monitor at my workspace in lab.")
+
 cbi_projector = dict(name="cbi_projector",
                      width=32.4,
                      distance=58,
