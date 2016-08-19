@@ -51,17 +51,21 @@ waglab_mbpro = dict(name='waglab-mbpro',
                     refresh_hz=60,
                     notes="This should be true of both Curtis and Ari")
 
-kiani_psychophys = dict(name="kiani_psychophys",
-                        width=40,
-                        distance=52,
-                        size=[1600, 1200],
-                        refresh_hz=75,
-                        gamma=2.2,
-                        gamma_grid=array([[.001, 92.9, 2.21],
-                                          [.007, 18.5, 2.24],
-                                          [-.016, 64.3, 2.22],
-                                          [-.019, 10.5, 2.22]]),
-                        notes="Kiani lab psychophysics rig")
+kianilab_ps1 = dict(name="kianilab-ps1",
+                    width=40,
+                    distance=52,
+                    size=[1600, 1200],
+                    refresh_hz=75,
+                    gamma=2.0721,
+                    notes="Kiani lab psychophysics rig")
+
+kianilab_ps2 = dict(name="kianilab-ps2",
+                    width=33,
+                    size=[1440, 900],
+                    distance=45,
+                    refresh_hz=60,
+                    notes=("Kiani lab psychophysics laptop screen. "
+                           "Size is half actual pixels due to retina."))
 
 kiani_workspace = dict(name="kiani_workspace",
                        width=59.5,
