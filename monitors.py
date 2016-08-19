@@ -57,6 +57,10 @@ kianilab_ps1 = dict(name="kianilab-ps1",
                     size=[1600, 1200],
                     refresh_hz=75,
                     gamma=2.0721,
+                    gamma_grid=[[0.0183, 100.5176, 2.0721],
+                                [-0.0117, 20.8175, 2.0902],
+                                [-0.0314, 70.0783, 2.0604],
+                                [0.0152, 10.5013, 2.1699]],
                     notes="Kiani lab psychophysics rig")
 
 kianilab_ps2 = dict(name="kianilab-ps2",
