@@ -491,8 +491,8 @@ def generate_contrast_pairs(deltas, p):
                                          replace.sum(), rng)
 
         # Determine the two stimulus contrasts
-        contrasts = np.c_[pedestal - deltas[replace] / 2,
-                          pedestal + deltas[replace] / 2]
+        contrasts[replace] = np.c_[pedestal - deltas[replace] / 2,
+                                   pedestal + deltas[replace] / 2]
 
         # Check for invalid pairs
         replace = ((contrasts.min(axis=1) < p.contrast_limits[0])
