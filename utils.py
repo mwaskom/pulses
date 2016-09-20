@@ -207,13 +207,38 @@ class SaccadeTargets(object):
     def __init__(self, win, p):
 
         self.targets = []
+        self.null_color = win.color
+        self.positions = p.eye_target_pos
+
         for pos in p.eye_target_pos:
             dot = visual.Circle(win, interpolate=True,
-                                fillColor=p.eye_target_color,
-                                lineColor=p.eye_target_color,
                                 size=p.eye_target_size,
                                 pos=pos)
             self.targets.append(dot)
+
+        self.color = p.eye_target_color
+
+    @property
+    def color(self):
+
+        return self._colors
+
+    @color.setter
+    def color(self, color):
+
+        if isinstance(color, list):
+            if not len(color) == len(self.positions):
+                raise ValueError("Wrong number of colors")
+            colors = color
+        else:
+            colors = [color for _ in self.positions]
+        self._colors = colors
+
+        for color, target in zip(colors, self.targets):
+            if color is None:
+                color = self.null_color
+            target.fillColor = color
+            target.lineColor = color
 
     def draw(self):
 
