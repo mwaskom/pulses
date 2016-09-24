@@ -7,7 +7,9 @@ import pandas as pd
 
 from psychopy import core, event
 import cregg
-from scdp import StimArray
+
+from utils import EyeTracker, SaccadeTargets, GazeStim
+from stimuli import StimArray
 
 import warnings
 warnings.simplefilter("ignore", FutureWarning)
@@ -25,6 +27,9 @@ def main(arglist):
     p = cregg.Params(mode)
     p.set_by_cmdline(arglist)
 
+    # Initialize the connection to the eyetracker
+    tracker = EyeTracker(p)
+
     # Open up the stimulus window
     win = cregg.launch_window(p)
     p.win_refresh_hz = win.refresh_hz
@@ -34,66 +39,18 @@ def main(arglist):
 
     # Initialize the main stimulus arrays
     stims["patches"] = StimArray(win, p)
+    stims["criterion"] = StimArray(win, p, positions=p.stim_crit_position)
+
+    # Initialize the saccade targets
+    stims["targets"] = SaccadeTargets(win, p)
+
+    # Initialize the gaze stimulus
+    if p.eye_response and p.eye_show_gaze:
+        GazeStim(win, tracker)
 
     # Execute the experiment function
-    globals()[mode](p, win, stims)
+    experiment_loop(p, win, stims, tracker)
 
-
-# =========================================================================== #
-# Helper functions
-# =========================================================================== #
-
-
-def pulse_onsets(p, refresh_hz, trial_flips, rng=None):
-    """Return indices for frames where each pulse will start."""
-    if rng is None:
-        rng = np.random.RandomState()
-
-    # Convert seconds to screen refresh units
-    pulse_secs = cregg.flexible_values(p.pulse_duration, random_state=rng)
-    # TODO this won't handle stochastic pulse durations properly
-    pulse_flips = refresh_hz * pulse_secs
-
-    # Schedule the first pulse for the trial onset
-    pulse_times = [0]
-
-    # Schedule additional pulses
-    while True:
-
-        last_pulse = pulse_times[-1]
-        ipi = cregg.flexible_values(p.pulse_gap, random_state=rng)
-        ipi_flips = int(np.round(ipi * refresh_hz))
-        next_pulse = (last_pulse +
-                      pulse_flips +
-                      ipi_flips)
-        if (next_pulse + pulse_flips) > trial_flips:
-            break
-        else:
-            pulse_times.append(int(next_pulse))
-
-    pulse_times = np.array(pulse_times, np.int)
-
-    return pulse_times
-
-
-def contrast_schedule(onsets, mean, sd, limits,
-                      trial_flips, pulse_flips, rng=None):
-    """Return a vector with the contrast on each flip."""
-    if rng is None:
-        rng = np.random.RandomState()
-
-    contrast_vector = np.zeros(trial_flips)
-    contrast_values = []
-    for onset in onsets:
-        offset = onset + pulse_flips
-        while True:
-            pulse_contrast = rng.normal(mean, sd)
-            if limits[0] <= pulse_contrast <= limits[1]:
-                break
-        contrast_vector[onset:offset] = pulse_contrast
-        contrast_values.append(pulse_contrast)
-
-    return contrast_vector, contrast_values
 
 
 # =========================================================================== #
@@ -101,27 +58,18 @@ def contrast_schedule(onsets, mean, sd, limits,
 # =========================================================================== #
 
 
-def training_no_gaps(p, win, stims):
+def experiment_loop(p, win, stims, tracker):
+    """Outer loop for the experiment."""
 
-    design = generate_run_design(p)
-    experiment_loop(p, win, stims, design)
+    # Initialize the trial controller
+    stim_event = TrialEngine(win, p, stims)
 
-
-def training_with_gaps(p, win, stims):
-
-    design = generate_run_design(p)
-    experiment_loop(p, win, stims, design)
-
-
-def scan_pilot(p, win, stims):
-
-    design = generate_run_design(p)
-    experiment_loop(p, win, stims, design)
-
-
-def experiment_loop(p, win, stims, design):
-
-    stim_event = EventEngine(win, p, stims)
+    # Connect relevant attributes that are not currently connected
+    # This messiness indicates need for a more abstract experiment context
+    # object so that this doesn't need to be in every script
+    tracker.win = win
+    tracker.clock = stim_event.clock
+    stim_event.tracker = tracker
 
     stims["instruct"].draw()
 
@@ -222,11 +170,6 @@ def experiment_loop(p, win, stims, design):
         stims["finish"].draw()
 
 
-# =========================================================================== #
-# Experiment exit functions
-# =========================================================================== #
-
-
 def behavior_exit(log):
 
     if log.p.nolog:
@@ -280,7 +223,7 @@ def save_pulse_log(log):
 # =========================================================================== #
 
 
-class EventEngine(object):
+class TrialEngine(object):
     """Controller object for trial events."""
     def __init__(self, win, p, stims):
 
@@ -289,11 +232,18 @@ class EventEngine(object):
 
         self.fix = stims.get("fix", None)
         self.patches = stims.get("patches", None)
+        self.targets = stims.get("targets", None)
+        self.criterion = stims.get("criterion", None)
 
         self.break_keys = p.resp_keys + p.quit_keys
         self.ready_keys = p.ready_keys
         self.resp_keys = p.resp_keys
         self.quit_keys = p.quit_keys
+
+        self.wait_fix_dur = p.wait_fix_dur
+
+        if p.feedback_sounds:
+            self.auditory_fb = cregg.AuditoryFeedback()
 
         self.clock = core.Clock()
         self.resp_clock = core.Clock()
@@ -303,18 +253,32 @@ class EventEngine(object):
         self.fix.color = self.p.fix_ready_color
         self.fix.draw()
         self.win.flip()
+        timeout = self.clock.getTime() + self.wait_fix_dur
         while True:
-            keys = event.waitKeys(np.inf, self.p.ready_keys + self.p.quit_keys)
-            for key in keys:
-                if key in self.quit_keys:
-                    core.quit()
-                elif key in self.ready_keys:
-                    listen_for = [k for k in self.ready_keys if k != key]
-                    next_key = event.waitKeys(.1, listen_for)
-                    if next_key is not None:
-                        return self.clock.getTime()
-                    else:
-                        continue
+
+            if self.clock.getTime() > timeout:
+                return None
+
+            if self.p.key_response:
+                listen_keys = self.p.ready_keys + self.p.quit_keys
+                keys = event.getKeys(keyList=listen_keys)
+                for key in keys:
+                    if key in self.quit_keys:
+                        core.quit()
+                    elif key in self.ready_keys:
+                        listen_for = [k for k in self.ready_keys if k != key]
+                        next_key = event.waitKeys(.1, listen_for)
+                        if next_key is not None:
+                            return self.clock.getTime()
+                        else:
+                            continue
+
+            if self.p.eye_response:
+                if self.tracker.check_fixation():
+                    return self.clock.getTime()
+
+            self.fix.draw()
+            self.win.flip()
 
     def collect_response(self, resp_dur, correct_response):
         """Wait for a button press and determine result."""
@@ -356,7 +320,7 @@ class EventEngine(object):
                     gen_correct=correct,
                     rt=rt)
 
-    def __call__(self, t_info, contrast_values, contrast_delta):
+    def __call__(self, t_info):
         """Execute a stimulus event."""
 
         # Reset the dropped frames count
@@ -588,6 +552,59 @@ def generate_run_design(p):
     run_df["full_trial_dur"] = trial_seconds
 
     return run_df
+
+
+def pulse_onsets(p, refresh_hz, trial_flips, rng=None):
+    """Return indices for frames where each pulse will start."""
+    if rng is None:
+        rng = np.random.RandomState()
+
+    # Convert seconds to screen refresh units
+    pulse_secs = cregg.flexible_values(p.pulse_duration, random_state=rng)
+    # TODO this won't handle stochastic pulse durations properly
+    pulse_flips = refresh_hz * pulse_secs
+
+    # Schedule the first pulse for the trial onset
+    pulse_times = [0]
+
+    # Schedule additional pulses
+    while True:
+
+        last_pulse = pulse_times[-1]
+        ipi = cregg.flexible_values(p.pulse_gap, random_state=rng)
+        ipi_flips = int(np.round(ipi * refresh_hz))
+        next_pulse = (last_pulse +
+                      pulse_flips +
+                      ipi_flips)
+        if (next_pulse + pulse_flips) > trial_flips:
+            break
+        else:
+            pulse_times.append(int(next_pulse))
+
+    pulse_times = np.array(pulse_times, np.int)
+
+    return pulse_times
+
+
+def contrast_schedule(onsets, mean, sd, limits,
+                      trial_flips, pulse_flips, rng=None):
+    """Return a vector with the contrast on each flip."""
+    if rng is None:
+        rng = np.random.RandomState()
+
+    contrast_vector = np.zeros(trial_flips)
+    contrast_values = []
+    for onset in onsets:
+        offset = onset + pulse_flips
+        while True:
+            pulse_contrast = rng.normal(mean, sd)
+            if limits[0] <= pulse_contrast <= limits[1]:
+                break
+        contrast_vector[onset:offset] = pulse_contrast
+        contrast_values.append(pulse_contrast)
+
+    return contrast_vector, contrast_values
+
 
 
 if __name__ == "__main__":
