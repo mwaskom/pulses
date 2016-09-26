@@ -73,15 +73,9 @@ def experiment_loop(p, win, stims, tracker):
     stim_event.tracker = tracker
 
     # Initialize the experiment log
-    # TODO we need to add all the columns
-    log_cols = []
-
-    log = cregg.DataLog(p, log_cols)
-
-    # Add an empty list to hold the pulse information for each trial
-    # This will get concatenated into a dataframe and saved out at the end
-    # of the run
-    log.pulse_log = []
+    trial_log = []
+    pulse_log = []
+    log = (trial_log, pulse_log)
 
     # Initialize the random number generator
     rng = np.random.RandomState()
@@ -91,7 +85,7 @@ def experiment_loop(p, win, stims, tracker):
                                 fix=stims["fix"],
                                 tracker=tracker,
                                 feedback_func=show_performance_feedback,
-                                exit_func=save_pulse_log):
+                                exit_func=save_data):
 
         tracker.start_run()
         stim_event.clock.reset()
@@ -103,7 +97,8 @@ def experiment_loop(p, win, stims, tracker):
             stim_event(t_info, p_info)
 
             # Record the result of the trial
-            log.add_data(t_info)
+            trial_log.append(t_info)
+            pulse_log.append(p_info)
 
         # Put the screen in ITI mode for the remainder of the run
         stims["fix"].color = p.fix_iti_color
@@ -112,11 +107,13 @@ def experiment_loop(p, win, stims, tracker):
         cregg.wait_check_quit(p.max_run_dur - stim_event.clock.getTime())
 
 
-def save_pulse_log(log):
+def save_data(p, logs):
 
-    if not log.p.nolog:
-        fname = log.p.log_base.format(subject=log.p.subject, run=log.p.run)
-        log.pulses.save(fname)
+    if not p.nolog:
+
+        trial_log, pulse_log = logs
+        pd.DataFrame(trial_log).to_csv(p.log_stem + "_trials.csv")
+        pd.concat(pulse_log).to_csv(p.log_stem + "_pulses.csv")
 
 
 # =========================================================================== #
@@ -181,6 +178,7 @@ def generate_trials(p, clock):
 
             # Pulse info (filled in below)
             pulse_count=np.nan,
+            pulse_train_dur=np.nan,
 
             # Achieved timing data
             fix_onset=np.nan,
@@ -199,12 +197,21 @@ def generate_trials(p, clock):
 
         )
 
-        t_info = pd.Series(trial_info)
+        t_info = pd.Series(trial_info, dtype=np.object)
         p_info = make_pulse_train(p, t_info)
 
         t_info["pulse_count"] = len(p_info)
+        t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
+                                     + p_info["pulse_dur"].sum())
 
-        expected_trial_dur = 0  # TODO FIX
+        expected_trial_dur = (t_info["pre_targ_dur"]
+                              + t_info["post_targ_dur"]
+                              + t_info["crit_stim_dur"]
+                              + t_info["pulse_train_dur"]
+                              + t_info["post_stim_dur"]
+                              + t_info["feedback_dur"]
+                              + 2)  # Account for fix/response delay
+
         if (now + expected_trial_dur) > p.max_run_dur:
             raise StopIteration
 
