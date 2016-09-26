@@ -571,7 +571,9 @@ class TrialEngine(object):
             cregg.wait_check_quit(info["gap_dur"])
 
             # Set the contrast for this pulse
-            self.patches.contrast = info["contrast"]
+            contrast = [0, 0]
+            contrast[t_info["stim_position"]] = info["contrast"]
+            self.patches.contrast = contrast
 
             # Show the stimulus
             for frame in self.secs_to_flips(info["pulse_dur"]):
