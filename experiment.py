@@ -93,6 +93,7 @@ def experiment_loop(p, win, stims, tracker):
                                 feedback_func=show_performance_feedback,
                                 exit_func=save_pulse_log):
 
+        tracker.start_run()
         stim_event.clock.reset()
 
         # Loop over trials
