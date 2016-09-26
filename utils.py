@@ -13,6 +13,7 @@ from scipy.spatial import distance
 from psychopy import visual, iohub
 from psychopy.visual.grating import GratingStim
 from psychopy.tools.monitorunittools import pix2deg
+import cregg
 
 
 class EyeTracker(object):
@@ -270,3 +271,66 @@ class GazeStim(GratingStim):
             self.opacity = 1
 
         super(GazeStim, self).draw()
+
+
+def show_performance_feedback(win, p, log):
+
+    if log.p.nolog:
+        return
+
+    df = pd.read_csv(log.fname).query("answered")
+
+    if not df.size:
+        return
+
+    lines = ["End of the run!", ""]
+
+    if p.target_accuracy is not None:
+
+        mean_acc = df.query("unsigned_delta > 0").correct.mean()
+
+        lines.append(
+            ("You were correct on {:.0f}% of trials"
+             .format(mean_acc * 100))
+        )
+
+        lines.append(
+            ("Our average participant is correct on {:.0f}% of trials"
+             .format(p.target_accuracy * 100))
+        )
+
+        if mean_acc < p.target_accuracy:
+            lines.append(
+                "Please try to by more accurate without sacrificing speed!"
+            )
+        else:
+            lines.append(
+                "Great job! Keep it up!"
+            )
+
+        lines.append("")
+
+    if p.target_rt is not None:
+
+        mean_rt = df.rt.mean()
+
+        lines.append(
+            ("You spent {:.2f} seconds per trial"
+             .format(mean_rt))
+        )
+
+        lines.append(
+            ("Our average participant spends {:.2f} seconds per trial"
+             .format(p.target_rt))
+        )
+
+        if mean_rt < p.target_rt:
+            lines.append(
+                "Great job! Keep it up!"
+            )
+        else:
+            lines.append(
+                "Please try to speed up without sacrificing accuracy!"
+            )
+
+    cregg.WaitText(win, lines, p.finish_keys).draw()
