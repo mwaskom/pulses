@@ -285,10 +285,15 @@ class GazeStim(GratingStim):
 
 def show_performance_feedback(win, p, log):
 
-    if log.p.nolog:
+    if p.nolog:
         return
 
-    df = pd.read_csv(log.fname).query("answered")
+    trial_log, _ = log
+
+    if not trial_log:
+        return
+
+    df = pd.DataFrame(trial_log).query("answered")
 
     if not df.size:
         return

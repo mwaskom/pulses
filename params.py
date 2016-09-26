@@ -186,8 +186,11 @@ base = dict(
     # Duration of criterion stimulus
     crit_stim_dur=.2,
 
+    # Gap between the criterion stimulus and the pulse train
+    pre_stim_dur=("truncexpon", 4, .2, .2),
+
     # Gap between the pulse train and the response cue
-    post_stim_dur=("truncexpon", 4, .2, .2),
+    post_stim_dur=0,
 
     # How the design is created. Of the three parameters (train duration, pulse
     # count, and pulse gap), only two can be used and the third is determined

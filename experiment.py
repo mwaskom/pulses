@@ -174,6 +174,7 @@ def generate_trials(p, clock):
             pre_targ_dur=cregg.flexible_values(p.pre_targ_dur),
             post_targ_dur=cregg.flexible_values(p.post_targ_dur),
             crit_stim_dur=cregg.flexible_values(p.crit_stim_dur),
+            pre_stim_dur=cregg.flexible_values(p.pre_stim_dur),
             post_stim_dur=cregg.flexible_values(p.post_stim_dur),
 
             # Pulse info (filled in below)
@@ -184,12 +185,13 @@ def generate_trials(p, clock):
             fix_onset=np.nan,
             resp_onset=np.nan,
             targ_onset=np.nan,
-            fb_onset=np.nan,
+            crit_onset=np.nan,
+            feedback_onset=np.nan,
 
             # Subject response fields
             response=np.nan,
             correct=np.nan,
-            answered=np.nan,
+            answered=False,
             rt=np.nan,
             eye_response=np.nan,
             key_response=np.nan,
@@ -209,7 +211,7 @@ def generate_trials(p, clock):
                               + t_info["crit_stim_dur"]
                               + t_info["pulse_train_dur"]
                               + t_info["post_stim_dur"]
-                              + t_info["feedback_dur"]
+                              + p.feedback_dur
                               + 2)  # Account for fix/response delay
 
         if (now + expected_trial_dur) > p.max_run_dur:
@@ -475,7 +477,7 @@ class TrialEngine(object):
         self.fix.draw()
         self.targets.draw()
         vbl = self.win.flip()
-        t_info["fb_onset"] = vbl
+        t_info["feedback_onset"] = vbl
         self.tracker.send_message("feedback")
 
         # Play a sound for feeback
@@ -555,27 +557,20 @@ class TrialEngine(object):
                 self.auditory_fb("fixbreak")
                 return
 
-        # Pulse train period
-        for p, info in p_info.iterrows():
-
-            # Show the gap screen
+        # Wait for pre-stimulus fixation
+        for frame in self.secs_to_flips(t_info["post_stim_dur"]):
             self.targets.draw()
             self.fix.draw()
             vbl = self.win.flip()
+            if not self.tracker.check_fixation(trial_fix):
+                self.auditory_fb("fixbreak")
+                return
 
-            if p:
-                # Log the pulse offset from the previous pulse
-                # TODO Reconsider whether this is the best way to do things
-                p_info.loc[p - 1, "offset_time"] = vbl
-                self.tracker.send_message("pulse_offset")
+        # Pulse train period
+        for p, info in p_info.iterrows():
 
             # Reset the stimulus object
             self.patches.reset_animation()
-
-            # Wait for the next pulse
-            # TODO we should probably improve timing performance here
-            # TODO what do we do about fixation/blinks
-            cregg.wait_check_quit(info["gap_dur"])
 
             # Set the contrast for this pulse
             contrast = [0, 0]
@@ -595,12 +590,17 @@ class TrialEngine(object):
                     self.auditory_fb("fixbreak")
                     return
 
-        # Reset the screen to offset the final pulse
-        self.targets.draw()
-        self.fix.draw()
-        vbl = self.win.flip()
-        info["offset_time"] = vbl
-        self.tracker.send_message("pulse_offset")
+            # Show the gap screen
+            self.targets.draw()
+            self.fix.draw()
+            vbl = self.win.flip()
+            info.loc["offset_time"] = vbl
+            self.tracker.send_message("pulse_offset")
+
+            # Wait for the next pulse
+            # TODO we should probably improve timing performance here
+            # TODO what do we do about fixation/blinks
+            cregg.wait_check_quit(info["gap_dur"])
 
         # Wait for post-stimulus fixation
         for frame in self.secs_to_flips(t_info["post_stim_dur"]):
