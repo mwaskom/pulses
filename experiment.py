@@ -283,45 +283,52 @@ class TrialEngine(object):
             self.fix.draw()
             self.win.flip()
 
-    def collect_response(self, resp_dur, correct_response):
-        """Wait for a button press and determine result."""
-        # Initialize trial data
-        correct = False
-        used_key = np.nan
-        response = np.nan
-        rt = np.nan
+    def collect_response(self, t_info, fix_window=(0, 0)):
+        """Handle the logic of collecting a key or eye response."""
 
-        # Put the screen into response mode
-        self.fix.color = self.p.fix_resp_color
-        self.fix.draw()
-        self.win.flip()
-        resp_onset = self.clock.getTime()
-
-        # Wait for the key press
+        # Prepare to handle responses
         event.clearEvents()
-        self.resp_clock.reset()
-        keys = event.waitKeys(resp_dur,
-                              self.break_keys,
-                              self.resp_clock)
+        had_key_response = False
+        had_eye_response = False
 
-        # Determine what was pressed
-        keys = [] if keys is None else keys
-        for key, timestamp in keys:
+        # Signal that a responses is needed and wait for it
+        self.fix.color = self.p.fix_resp_color
 
-            if key in self.quit_keys:
-                core.quit()
+        for frame in self.secs_to_flips(t_info["resp_max_wait"]):
 
-            if key in self.resp_keys:
-                used_key = key
-                rt = timestamp
-                response = self.resp_keys.index(key)
-                correct = response == correct_response
+            # Check keyboard responses
+            if self.p.key_response:
+                keys = event.getKeys(self.break_keys,
+                                     timeStamped=self.resp_clock)
+                if keys:
+                    had_key_response = True
+                    break
 
-        return dict(resp_onset=resp_onset,
-                    key=used_key,
-                    response=response,
-                    gen_correct=correct,
-                    rt=rt)
+            # Check eye response
+            if self.p.eye_response:
+                if not self.tracker.check_fixation(fix_window):
+                    had_eye_response = True
+                    fix_break_time = self.resp_clock.getTime()
+                    break
+
+            # Show the stimuli and flip the window
+            self.targets.draw()
+            self.fix.draw()
+            vbl = self.win.flip()
+            if not frame:
+                self.resp_clock.reset()
+                t_info["resp_onset"] = vbl
+
+        # Parse the response results and assign data to the result object
+        if had_key_response:
+            pass
+
+        elif had_eye_response:
+            pass
+
+        else:
+            pass
+
 
     def __call__(self, t_info, p_info):
         """Execute a stimulus event."""
@@ -372,6 +379,10 @@ class TrialEngine(object):
             if not self.tracker.check_fixation(new_sample=False):
                 self.auditory_fb("fixbreak")
                 return t_info
+        else:
+            trial_fix = (0, 0)
+
+        # TODO We need to add more eyetracker messages in this section
 
         # Show response targets and wait for post-target period
         for frame in self.secs_to_flips(t_info["post_target_dur"]):
@@ -440,12 +451,7 @@ class TrialEngine(object):
                 return t_info
 
         # Collect the response
-        self.fix.color = self.p.fix_resp_color
-        self.targets.draw()
-        self.fix.draw()
-        vbl = self.win.flip()
-        t_info["resp_onset"] = vbl
-        self.collect_response(t_info)
+        self.collect_response(t_info, trial_fix)
 
         # Set the screen back to iti mode
         self.fix.color = self.fix.iti_color

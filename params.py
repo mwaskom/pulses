@@ -214,6 +214,9 @@ base = dict(
     # Duration of each stimulus pulse
     pulse_dur=.2,
 
+    # Maximum duration to wait for a response
+    resp_max_wait=2,
+
     # Duration of feedback
     feedback_dur=.5,
 
