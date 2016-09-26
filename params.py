@@ -48,14 +48,11 @@ base = dict(
     # Color that indicates subject should start a self-paced trial
     fix_ready_color=(1, -1, -1),
 
-    # Color that immediately precedes the stimulus
-    fix_pre_stim_color=(1, -1, -1),
-
     # Color during the stimulus
     fix_stim_color=(1, -1, -1),
 
-    # Color that immediately follows the stimulus
-    fix_post_stim_color=None,
+    # Color that signals onset of response period
+    fix_resp_color=None,
 
     # Keypress input settings
     # -----------------------
@@ -180,14 +177,17 @@ base = dict(
     # Duration to wait for fixation/initiation button press
     wait_fix_dur=5,
 
-    # Duration to show targets without stimulus
-    pre_stim_dur=("truncexpon", 4, .2, .2),
+    # Duration to wait after fixation before showing targets
+    pre_targ_dur=("truncexpon", 4, .2, .2),
+
+    # Duration to wait after showing targets
+    post_targ_dur=("truncexpon", 4, .2, .2),
 
     # Duration of criterion stimulus
     crit_stim_dur=.2,
 
-    # Gap between the criterion and the decision stimulus
-    crit_stim_gap=("truncexpon", 4, .2, .2),
+    # Gap between the pulse train and the response cue
+    post_stim_dur=("truncexpon", 4, .2, .2),
 
     # How the design is created. Of the three parameters (train duration,
     # pulse count, and pulse gap), only two can be used and the third is

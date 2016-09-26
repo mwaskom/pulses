@@ -8,7 +8,8 @@ import pandas as pd
 from psychopy import core, event
 import cregg
 
-from utils import EyeTracker, SaccadeTargets, GazeStim
+from utils import (EyeTracker, SaccadeTargets, GazeStim,
+                   show_performance_feedback)
 from stimuli import StimArray
 
 import warnings
@@ -52,7 +53,6 @@ def main(arglist):
     experiment_loop(p, win, stims, tracker)
 
 
-
 # =========================================================================== #
 # Experiment functions
 # =========================================================================== #
@@ -71,20 +71,31 @@ def experiment_loop(p, win, stims, tracker):
     tracker.clock = stim_event.clock
     stim_event.tracker = tracker
 
-    stims["instruct"].draw()
-
-    log_cols = list(design.columns)
-    log_cols += ["stim_onset", "resp_onset", "pulse_count",
-                 "obs_mean_l", "obs_mean_r", "obs_mean_delta",
-                 "key", "response", "response_during_stim",
-                 "gen_correct", "obs_correct", "rt",
-                 "dropped_frames"]
+    # Initialize the experiment log
+    # We shouldn't need to duplicate this information, and we won't with a
+    # different approach to maintaining the log
+    # TODO we need to add all the columns
+    log_cols = ["stim_onset", "resp_onset", "pulse_count",
+                "obs_mean_l", "obs_mean_r", "obs_mean_delta",
+                "key", "response", "response_during_stim",
+                "gen_correct", "obs_correct", "rt",
+                "dropped_frames"]
 
     log = cregg.DataLog(p, log_cols)
-    log.pulses = PulseLog()
+
+    # Add an empty list to hold the pulse information for each trial
+    # This will get concatenated into a dataframe and saved out at the end
+    # of the run
+    log.pulse_log = []
+
+    # Initialize the random number generator
+    rng = np.random.RandomState()
+    stims["patches"].rng = rng
 
     with cregg.PresentationLoop(win, p, log, fix=stims["fix"],
-                                exit_func=behavior_exit):
+                                tracker=tracker,
+                                feedback_func=show_performance_feedback,
+                                exit_func=experiment_exit):
 
         stim_event.clock.reset()
 
@@ -104,13 +115,6 @@ def experiment_loop(p, win, stims, tracker):
             # Build the pulse schedule for this trial
             trial_flips = win.refresh_hz * t_info["trial_dur"]
             pulse_flips = win.refresh_hz * p.pulse_duration
-
-            # XXX BEGIN HACK
-            # Currently we have timing issues because we cannot draw the stimulus
-            # fast enough. My laptop can draw the stim at about 30 Hz. So we are
-            # only going to schedule half as many frames as we expect.
-            #pulse_flips //= 2
-            # XXX END HACK
 
             # Schedule pulse onsets
             trial_onsets = pulse_onsets(p, win.refresh_hz,
@@ -148,10 +152,6 @@ def experiment_loop(p, win, stims, tracker):
             # Execute this trial
             res = stim_event(t_info, trial_contrast, contrast_delta)
 
-            # XXX Debugging
-            #print(("Expected vs. actual trial onset: {:.2f}, {:.2f}"
-            #      .format(t_info["stim_time"], res["stim_onset"])))
-
             # Log whether the response agreed with what was actually shown
             res["obs_correct"] = (res["response"] ==
                                   (t_info["obs_mean_delta"] > 0))
@@ -170,7 +170,7 @@ def experiment_loop(p, win, stims, tracker):
         stims["finish"].draw()
 
 
-def behavior_exit(log):
+def experiment_exit(log):
 
     if log.p.nolog:
         return
@@ -242,11 +242,14 @@ class TrialEngine(object):
 
         self.wait_fix_dur = p.wait_fix_dur
 
-        if p.feedback_sounds:
-            self.auditory_fb = cregg.AuditoryFeedback()
+        self.auditory_fb = cregg.AuditoryFeedback(p.feedback_sounds)
 
         self.clock = core.Clock()
         self.resp_clock = core.Clock()
+
+    def secs_to_flips(self, secs, round_func=np.floor):
+        """Convert durations in seconds to flips."""
+        return range(int(round_func(secs * self.win.refresh_hz)))
 
     def wait_for_ready(self):
         """Allow the subject to control the start of the trial."""
@@ -320,95 +323,136 @@ class TrialEngine(object):
                     gen_correct=correct,
                     rt=rt)
 
-    def __call__(self, t_info):
+    def __call__(self, t_info, p_info):
         """Execute a stimulus event."""
+        # Initialize the trial result data
+        # TODO move into trial generator
+        res = pd.Series(dict(
+            fix_onset=np.nan,
+            targ_onset=np.nan,
+            crit_onset=np.nan,
+            resp_onset=np.nan,
+            correct=False,
+            response=np.nan,
+            rt=np.nan,
+            answered=False,
+            eye_response=False,
+            key_response=False,
+            key=np.nan,
+        ))
 
-        # Reset the dropped frames count
-        self.win.nDroppedFrames = 0
+        # Inter-trial-interval
+        self.fix.color = self.fix.iti_color
+        self.fix.draw()
+        self.win.flip()
+        wait_dur = t_info["trial_time"] - self.clock.getTime()
+        cregg.wait_check_quit(wait_dur, self.p.quit_keys)
 
-        # Inter-trial interval
-        self.fix.color = self.p.fix_iti_color
-        stim_onset = cregg.precise_wait(self.win, self.clock,
-                                        t_info["stim_time"], self.fix)
-
-        # Stimulus onset
+        # Trial onset
         self.fix.color = self.p.fix_ready_color
-        if self.p.self_paced:
-            stim_onset = self.wait_for_ready()
-        event.clearEvents()
+        self.tracker.send_message("trial_{}".format(t_info["trial"]))
+        self.tracker.send_message("fixation_on")
+        fix_time = self.wait_for_ready()
+        if fix_time is None:
+            self.auditory_fb("nofix")
+            return t_info
+        t_info["fix_onset"] = fix_time
 
-        # Pre-integration stimulus
-        self.patches.reset_animation(synchronize=self.p.stim_synchronize)
-        self.fix.color = self.p.fix_pre_stim_color
-        pre_stim_contrast = cregg.flexible_values(self.p.contrast_pre_stim)
-        pre_stim_secs = t_info["pre_stim_dur"]
-        pre_stim_flips = np.round(self.win.refresh_hz * pre_stim_secs)
-        for _ in range(int(pre_stim_flips)):
-            if pre_stim_contrast:
-                self.patches.contrast = pre_stim_contrast
+        # Pre target period
+        for frame in self.secs_to_flips(t_info["pre_targ_dur"]):
+            self.fix.draw()
+            vbl = self.win.flip()
+            if not self.tracker.check_fixation():
+                self.auditory_fb("fixbreak")
+                return t_info
+
+        # Recenter fixation window
+        if self.p.fix_eye_recenter:
+            trial_fix = self.tracker.read_gaze()
+            if not self.tracker.check_fixation(new_sample=False):
+                self.auditory_fb("fixbreak")
+                return t_info
+
+        # Show response targets and wait for post-target period
+        for frame in self.secs_to_flips(t_info["post_target_dur"]):
+            self.targets.draw()
+            self.fix.draw()
+            vbl = self.win.flip()
+            if not frame:
+                t_info["targ_onset"] = vbl
+            if not self.tracker.check_fixation(trial_fix):
+                self.auditory_fb("fixbreak")
+                return t_info
+
+        # Show criterion stimulus
+        self.criterion.reset_animation()
+        self.criterion.contrast = t_info["pedestal"]
+        for frame in self.secs_to_flips(t_info["crit_stim_dur"]):
+            self.criterion.draw()
+            self.targets.draw()
+            self.fix.draw()
+            vbl = self.win.flip()
+            if not frame:
+                t_info["crit_onset"] = vbl
+            if not self.tracker.check_fixation(trial_fix):
+                self.auditory_fb("fixbreak")
+                return t_info
+
+        # Pulse train period
+        for p, info in p_info.iterrows():
+
+            # Show the gap screen
+            self.targets.draw()
+            self.fix.draw()
+            vbl = self.win.flip()
+            info.loc[p, "offset_time"] = vbl
+
+            # Reset the stimulus object
+            self.patches.reset_animation()
+
+            # Wait for the next pulse
+            # TODO we should probably improve timing performance here
+            # TODO what do we do about fixation/blinks
+            cregg.wait_check_quit(info["gap_dur"])
+
+            # Set the contrast for this pulse
+            self.patches.contrast = info["contrast"]
+
+            # Show the stimulus
+            for frame in self.secs_to_flips(t_info["pulse_dur"]):
                 self.patches.draw()
+                self.targets.draw()
+                self.fix.draw()
+                vbl = self.win.flip()
+                if not frame:
+                    info.loc[p, "onset_time"] = vbl
+                if not self.tracker.check_fixation(trial_fix):
+                    self.auditory_fb("fixbreak")
+                    return t_info
+
+        # Wait for post-stimulus fixation
+        for frame in self.secs_to_flips(t_info["post_stim_dur"]):
+            self.targets.draw()
             self.fix.draw()
-            self.win.flip()
+            vbl = self.win.flip()
+            if not self.tracker.check_fixation(trial_fix):
+                self.auditory_fb("fixbreak")
+                return t_info
 
-        # XXX Debugging
-        #stim_start = self.clock.getTime()
-        #dropped_before_stim = self.win.nDroppedFrames
+        # Collect the response
+        self.fix.color = self.p.fix_resp_color
+        self.targets.draw()
+        self.fix.draw()
+        vbl = self.win.flip()
+        t_info["resp_onset"] = vbl
+        self.collect_response(t_info)
 
-        # Decision period (frames where the stimulus can pulse)
-        self.fix.color = self.p.fix_stim_color
-        for frame_contrast in contrast_values:
-            self.patches.contrast = frame_contrast
-            if any(frame_contrast):
-                self.patches.draw()
-            self.fix.draw()
-            self.win.flip()
-
-        # XXX Debugging
-        #print(("Expected vs. actual decision period duration {:.2f}, {:.2f}"
-        #       .format(t_info["trial_dur"], self.clock.getTime() - stim_start)))
-        #dropped_after_stim = self.win.nDroppedFrames
-        #dropped_during_stim = dropped_after_stim - dropped_before_stim
-        #print("Dropped frames during stim: ", dropped_during_stim)
-
-        # Post stimulus delay
-        self.fix.color = self.p.fix_post_stim_color
-        post_stim_secs = t_info["post_stim_dur"]
-        post_stim_flips = np.round(self.win.refresh_hz * post_stim_secs)
-        for _ in range(int(post_stim_flips)):
-            self.fix.draw()
-            self.win.flip()
-
-        # Response period
-        stim_keys = event.getKeys()
-        if contrast_delta == 0:
-            # Determine the correct response randomly
-            # Note independence from the RNG for the rest of the trial
-            correct_response = np.random.choice([0, 1])
-        else:
-            correct_response = int(contrast_delta > 0)
-        result = self.collect_response(t_info["resp_dur"], correct_response)
-        result["stim_onset"] = stim_onset
-        result["response_during_stim"] = bool(stim_keys)
-
-        # Feedback
-        fb_colors = [self.p.fix_fb_pos_color, self.p.fix_fb_neg_color]
-        self.fix.color = fb_colors[int(result["gen_correct"])]
-        feedback_secs = t_info["feedback_dur"]
-        feedback_flips = np.round(self.win.refresh_hz * feedback_secs)
-        for _ in range(int(feedback_flips)):
-            self.fix.draw()
-            self.win.flip()
-
-        # End of trial
-        self.fix.color = self.p.fix_iti_color
+        # Set the screen back to iti mode
+        self.fix.color = self.fix.iti_color
         self.fix.draw()
         self.win.flip()
 
-        # Count the number of frames dropped on this trial
-        result["dropped_frames"] = self.win.nDroppedFrames
-
-
-        return result
+        return t_info
 
 
 # =========================================================================== #
@@ -604,7 +648,6 @@ def contrast_schedule(onsets, mean, sd, limits,
         contrast_values.append(pulse_contrast)
 
     return contrast_vector, contrast_values
-
 
 
 if __name__ == "__main__":
