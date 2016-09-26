@@ -372,10 +372,10 @@ class TrialEngine(object):
             # Show the stimuli and flip the window
             self.targets.draw()
             self.fix.draw()
-            vbl = self.win.flip()
+            flip_time = self.win.flip()
             if not frame:
                 self.resp_clock.reset()
-                t_info["resp_onset"] = vbl
+                t_info["resp_onset"] = flip_time
                 self.tracker.send_message("response_cue")
 
         # Parse the response results and assign data to the result object
@@ -401,6 +401,7 @@ class TrialEngine(object):
             current_response = None
             targ_time = None
             lost_target = False
+
             while not valid_response:
 
                 # Response timeout
@@ -476,8 +477,8 @@ class TrialEngine(object):
 
         self.fix.draw()
         self.targets.draw()
-        vbl = self.win.flip()
-        t_info["feedback_onset"] = vbl
+        flip_time = self.win.flip()
+        t_info["feedback_onset"] = flip_time
         self.tracker.send_message("feedback")
 
         # Play a sound for feeback
@@ -516,7 +517,7 @@ class TrialEngine(object):
         # Pre target period
         for frame in self.secs_to_flips(t_info["pre_targ_dur"]):
             self.fix.draw()
-            vbl = self.win.flip()
+            flip_time = self.win.flip()
             if not self.tracker.check_fixation():
                 self.auditory_fb("fixbreak")
                 return
@@ -534,10 +535,10 @@ class TrialEngine(object):
         for frame in self.secs_to_flips(t_info["post_targ_dur"]):
             self.targets.draw()
             self.fix.draw()
-            vbl = self.win.flip()
+            flip_time = self.win.flip()
             if not frame:
                 self.tracker.send_message("targets_on")
-                t_info["targ_onset"] = vbl
+                t_info["targ_onset"] = flip_time
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
                 return
@@ -549,10 +550,10 @@ class TrialEngine(object):
             self.criterion.draw()
             self.targets.draw()
             self.fix.draw()
-            vbl = self.win.flip()
+            flip_time = self.win.flip()
             if not frame:
                 self.tracker.send_message("criterion_on")
-                t_info["crit_onset"] = vbl
+                t_info["crit_onset"] = flip_time
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
                 return
@@ -561,7 +562,7 @@ class TrialEngine(object):
         for frame in self.secs_to_flips(t_info["post_stim_dur"]):
             self.targets.draw()
             self.fix.draw()
-            vbl = self.win.flip()
+            flip_time = self.win.flip()
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
                 return
@@ -582,10 +583,10 @@ class TrialEngine(object):
                 self.patches.draw()
                 self.targets.draw()
                 self.fix.draw()
-                vbl = self.win.flip()
+                flip_time = self.win.flip()
                 if not frame:
                     self.tracker.send_message("pulse_onset")
-                    info["onset_time"] = vbl
+                    info["onset_time"] = flip_time
                 if not self.tracker.check_fixation(trial_fix):
                     self.auditory_fb("fixbreak")
                     return
@@ -593,8 +594,8 @@ class TrialEngine(object):
             # Show the gap screen
             self.targets.draw()
             self.fix.draw()
-            vbl = self.win.flip()
-            info.loc["offset_time"] = vbl
+            flip_time = self.win.flip()
+            info.loc["offset_time"] = flip_time
             self.tracker.send_message("pulse_offset")
 
             # Wait for the next pulse
@@ -606,7 +607,7 @@ class TrialEngine(object):
         for frame in self.secs_to_flips(t_info["post_stim_dur"]):
             self.targets.draw()
             self.fix.draw()
-            vbl = self.win.flip()
+            flip_time = self.win.flip()
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
                 return
