@@ -91,15 +91,12 @@ def experiment_loop(p, win, stims, tracker):
                                 fix=stims["fix"],
                                 tracker=tracker,
                                 feedback_func=show_performance_feedback,
-                                exit_func=experiment_exit):
+                                exit_func=save_pulse_log):
 
         stim_event.clock.reset()
 
         # Loop over trials
-        for t, t_info in generate_trials(p, stim_event.clock):
-
-            # Generate the pulse train for this trial
-            p_info = make_pulse_train(p, t_info)
+        for t_info, p_info in generate_trials(p, stim_event.clock):
 
             # Execute this trial
             t_info = stim_event(t_info, p_info)
@@ -117,23 +114,6 @@ def experiment_loop(p, win, stims, tracker):
         stims["finish"].draw()
 
 
-def experiment_exit(log):
-
-    if log.p.nolog:
-        return
-
-    save_pulse_log(log)
-    df = pd.read_csv(log.fname)
-
-    png_fstem = log.p.log_base.format(subject=log.p.subject, run=log.p.run)
-    png_fname = png_fstem + ".png"
-
-    if df.size:
-        plot_performance(df, png_fname)
-        if log.p.show_performance_plots:
-            os.system("open " + png_fname)
-
-
 def save_pulse_log(log):
 
     if not log.p.nolog:
@@ -144,6 +124,11 @@ def save_pulse_log(log):
 # =========================================================================== #
 # Design functions
 # =========================================================================== #
+
+
+def generate_trials(p, clock):
+    """Yield trial and pulse train info."""
+    pass
 
 
 # =========================================================================== #
@@ -246,6 +231,7 @@ class TrialEngine(object):
             if not frame:
                 self.resp_clock.reset()
                 t_info["resp_onset"] = vbl
+                self.tracker.send_message("response_cue")
 
         # Parse the response results and assign data to the result object
         if had_key_response:
@@ -322,7 +308,41 @@ class TrialEngine(object):
                 t_info["correct"] = (t_info["response"]
                                      == t_info["correct_response"])
 
+        t_info["answered"] = not np.isnan(t_info["response"])
+
         return t_info
+
+    def give_feedback(self, t_info):
+        """Present auditory and/or visual feedback to the subject."""
+        # Show visual feedback
+        if self.p.feedback_visual is None:
+            self.targets.color = None
+        else:
+            fb_color = self.p.feedback_colors[int(t_info["correct"])]
+            if self.p.feedback_visual.startswith("fix"):
+                self.fix.color = fb_color
+            elif self.p.feedback_visual.startswith("targ"):
+                targ_colors = [None for _ in self.p.eye_target_pos]
+                if t_info["answered"]:
+                    targ_colors[t_info["response"]] = fb_color
+                self.targets.color = targ_colors
+            else:
+                raise ValueError("Visual feedback mode not understood")
+
+        self.fix.draw()
+        self.targets.draw()
+        self.win.flip()
+        self.tracker.send_message("feedback")
+
+        # Play a sound for feeback
+        if self.p.feedback_sounds:
+            if t_info["answered"]:
+                if t_info["correct"]:
+                    self.auditory_fb("correct")
+                else:
+                    self.auditory_fb("wrong")
+            else:
+                self.auditory_fb("noresp")
 
     def __call__(self, t_info, p_info):
         """Execute a stimulus event."""
@@ -342,6 +362,7 @@ class TrialEngine(object):
         if fix_time is None:
             self.auditory_fb("nofix")
             return t_info
+        self.tracker.send_message("acquired_fixation")
         t_info["fix_onset"] = fix_time
 
         # Pre target period
@@ -369,6 +390,7 @@ class TrialEngine(object):
             self.fix.draw()
             vbl = self.win.flip()
             if not frame:
+                self.tracker.send_message("targets_on")
                 t_info["targ_onset"] = vbl
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
@@ -383,6 +405,7 @@ class TrialEngine(object):
             self.fix.draw()
             vbl = self.win.flip()
             if not frame:
+                self.tracker.send_message("criterion_on")
                 t_info["crit_onset"] = vbl
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
@@ -396,6 +419,8 @@ class TrialEngine(object):
             self.fix.draw()
             vbl = self.win.flip()
             info.loc[p, "offset_time"] = vbl
+            if p:
+                self.tracker.send_message("pulse_offset")
 
             # Reset the stimulus object
             self.patches.reset_animation()
@@ -415,6 +440,7 @@ class TrialEngine(object):
                 self.fix.draw()
                 vbl = self.win.flip()
                 if not frame:
+                    self.tracker.send_message("pulse_onset")
                     info.loc[p, "onset_time"] = vbl
                 if not self.tracker.check_fixation(trial_fix):
                     self.auditory_fb("fixbreak")
@@ -432,8 +458,12 @@ class TrialEngine(object):
         # Collect the response
         self.collect_response(t_info, trial_fix)
 
+        # Present feedback
+        self.give_feedback(t_info)
+
         # Set the screen back to iti mode
-        self.fix.color = self.fix.iti_color
+        self.targets.color = self.p.eye_target_color
+        self.fix.color = self.p.fix.iti_color
         self.fix.draw()
         self.win.flip()
 
