@@ -22,17 +22,6 @@ base = dict(
     # Name of monitor spec used when `-fmri` flag is used
     fmri_monitor_name="cbi_projector",
 
-    # Screen numbers to use for regular and fmri-mode runs
-    # Note that screen_number > 0 is currently broken on OSX 10.9+
-    screen_number=0,
-    fmri_screen_number=0,
-
-    # Units for specifying stimulus attributes in
-    monitor_units="deg",
-
-    # Whether to run in full screen mode
-    full_screen=True,
-
     # Mean luminance of the display (in cd/m^2)
     mean_luminance=25,
 
@@ -187,7 +176,7 @@ base = dict(
     crit_stim_dur=.2,
 
     # Gap between the criterion stimulus and the pulse train
-    pre_stim_dur=("truncexpon", 4, .2, .2),
+    pre_stim_dur=("truncexpon", (8 - 2) / 3, 2, 3),
 
     # Gap between the pulse train and the response cue
     post_stim_dur=0,
