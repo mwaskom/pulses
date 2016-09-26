@@ -4,6 +4,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+from scipy.spatial import distance
 
 from psychopy import core, event
 import cregg
@@ -321,14 +322,80 @@ class TrialEngine(object):
 
         # Parse the response results and assign data to the result object
         if had_key_response:
-            pass
+            for key_name, key_time in keys:
+
+                # Check if the subjected asked to quit
+                if key_name in self.quit_keys:
+                    core.quit()
+
+                # Otherwise use the first valid response key
+                if key_name in self.resp_keys:
+                    t_info["rt"] = key_time
+                    t_info["key"] = key_name
+                    t_info["response"] = self.resp_keys.index(key_name)
+                    t_info["correct"] = (t_info["response"]
+                                         == t_info["correct_response"])
 
         elif had_eye_response:
-            pass
 
-        else:
-            pass
+            # Initialize variables used to control response logic
+            valid_response = False
+            current_response = None
+            targ_time = None
+            lost_target = False
+            while not valid_response:
 
+                # Response timeout
+                now = self.resp_clock.getTime()
+                wait_timeout = fix_break_time + self.p.eye_target_wait
+                if (targ_time is None) and (now > wait_timeout):
+                    # Haven't acquired any target fast enough
+                    break
+
+                gaze = self.tracker.read_gaze()
+
+                if not np.isnan(gaze).any():
+                    for i, pos in enumerate(self.p.eye_target_pos):
+                        targ_distance = distance.euclidean(gaze, pos)
+                        if targ_distance < self.p.eye_targ_window:
+                            if current_response is None:
+                                current_response = i
+                            elif current_response != i:
+                                # Change of mind; break
+                                lost_target = True
+                        elif (targ_time is not None
+                              and current_response == i):
+                            # We had been in the target window but then left
+                            lost_target = True
+                elif targ_time is not None:
+                    # We acquired the target but then lost the eye (blink?)
+                    lost_target = True
+
+                if lost_target:
+                    break
+
+                if current_response is not None:
+                    if targ_time is None:
+                        # First flip on which we have the target
+                        targ_time = now
+                    elif now > (targ_time + self.p.eye_target_hold):
+                        # We've held the target
+                        # Should be the only time valid_response is set to True
+                        valid_response = True
+                        break
+
+                self.fix.draw()
+                self.targets.draw()
+                self.win.flip()
+
+            if valid_response:
+
+                t_info["rt"] = fix_break_time
+                t_info["response"] = current_response
+                t_info["correct"] = (t_info["response"]
+                                     == t_info["correct_response"])
+
+        return t_info
 
     def __call__(self, t_info, p_info):
         """Execute a stimulus event."""
