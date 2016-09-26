@@ -61,8 +61,7 @@ class EyeTracker(object):
         # Set up a base for log file names
         # TODO this won't work if cregg is updated to use date in template
         # Also in general it doesn't play great with cregg
-        self.log_base = (p.log_base.format(subject=p.subject, run=p.run)
-                         + "_eyedat")
+        self.log_stem = p.log_stem + "_eyedat"
 
         # Initialize lists for the logged data
         self.log_timestamps = []
@@ -154,14 +153,25 @@ class EyeTracker(object):
 
         return gaze
 
-    def check_fixation(self, pos=(0, 0), log=True):
+    def check_fixation(self, pos=(0, 0), new_sample=True, log=True):
         """Return True if eye is in the fixation window."""
-        gaze = self.read_gaze(log=log)
+        if new_sample:
+            gaze = self.read_gaze(log=log)
+        else:
+            gaze = self.log_positions[-1]
         if not np.isnan(gaze).any():
             fix_distance = distance.euclidean(pos, gaze)
             if fix_distance < self.fix_window_radius:
                 return True
         return False
+
+    def check_eye_open(self, new_sample=True, log=True):
+        """Return True if we get a valid sample of the eye position."""
+        if new_sample:
+            gaze = self.read_gaze(log=log)
+        else:
+            gaze = self.log_positions[-1]
+        return not np.isnan(gaze).any()
 
     def close_connection(self):
         """Close down the connection to Eyelink and save the eye data."""
@@ -172,7 +182,7 @@ class EyeTracker(object):
     def move_edf_file(self):
         """Move the Eyelink edf data to the right location."""
         edf_src_fname = "eyedat.EDF"
-        edf_trg_fname = self.log_base + ".edf"
+        edf_trg_fname = self.log_stem + ".edf"
         if os.path.exists(edf_src_fname):
             edf_mtime = os.stat(edf_src_fname).st_mtime
             age = time.time() - edf_mtime
@@ -194,7 +204,7 @@ class EyeTracker(object):
                               index=self.log_timestamps,
                               columns=["x", "y"])
 
-        log_df.to_csv(self.log_base + ".csv")
+        log_df.to_csv(self.log_stem + ".csv")
 
     def shutdown(self):
         """Handle all of the things that need to happen when ending a run."""
