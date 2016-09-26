@@ -189,13 +189,13 @@ base = dict(
     # Gap between the pulse train and the response cue
     post_stim_dur=("truncexpon", 4, .2, .2),
 
-    # How the design is created. Of the three parameters (train duration,
-    # pulse count, and pulse gap), only two can be used and the third is
-    # determined by the other. This parameter selects the two of those three
-    # that are free. The value should be a tuple with the values either
-    # "duration", "gap", or "count". Depending on this parameter, one of the
-    # parameters below is ignored.
-    pulse_free_params=("train", "gap"),
+    # How the design is created. Of the three parameters (train duration, pulse
+    # count, and pulse gap), only two can be used and the third is determined
+    # by the other. The pulse gap is always specified, and this parameter
+    # selects the other parmater that determines the design.  The value should
+    # be either "duration" or "count". Depending on this parameter, some of the
+    # parameters below are ignored.
+    pulse_design_target="duration",
 
     # Duration of each pulse train
     pulse_train_dur=("truncexpon", (16 - 6) / 4, 6, 4),
@@ -232,9 +232,6 @@ base = dict(
     # Number of TRs at beginning that will be thrown out
     # Stimulus timing will begin after this time period
     equilibrium_trs=6,
-
-    # Additional time to wait at the end of the run in "fmri" mode
-    leadout_dur=0,
 
     # Feedback parameters
     # -------------------

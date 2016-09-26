@@ -1,6 +1,6 @@
 from __future__ import division, print_function
-import os
 import sys
+import itertools
 
 import numpy as np
 import pandas as pd
@@ -99,19 +99,16 @@ def experiment_loop(p, win, stims, tracker):
         for t_info, p_info in generate_trials(p, stim_event.clock):
 
             # Execute this trial
-            t_info = stim_event(t_info, p_info)
+            stim_event(t_info, p_info)
 
             # Record the result of the trial
             log.add_data(t_info)
 
-        # Show the final fixation to allow hemodynamics to return to baseline
+        # Put the screen in ITI mode for the remainder of the run
         stims["fix"].color = p.fix_iti_color
         stims["fix"].draw()
         win.flip()
-        cregg.wait_check_quit(p.leadout_dur)
-
-        # Finish the run
-        stims["finish"].draw()
+        cregg.wait_check_quit(p.max_run_dur - stim_event.clock.getTime())
 
 
 def save_pulse_log(log):
@@ -128,7 +125,145 @@ def save_pulse_log(log):
 
 def generate_trials(p, clock):
     """Yield trial and pulse train info."""
-    pass
+    # Create an infinite iterator for the stimulus position
+    if p.stim_pos_method == "random":
+        def position_gen():
+            while True:
+                yield np.random.choice([0, 1])
+        stim_positions = position_gen()
+    elif p.stim_pos_method == "alternate":
+        stim_positions = itertools.cycle([0, 1])
+    else:
+        raise ValueError("Value for `stim_pos_method` not valid")
+
+    # Create an infinite iterator for trial data
+    for t in itertools.count():
+
+        # Get the current time
+        now = clock.getTime()
+
+        # Schedule the next trial
+        iti = cregg.flexible_values(p.iti_dur)
+        trial_time = now + iti
+
+        # Determine the stimulus parameters for this trial
+        pedestal = cregg.flexible_values(p.contrast_pedestal)
+        delta = cregg.flexible_values(p.contrast_deltas)
+
+        # Determine the response that will yield positive feedback
+        if delta == 0:
+            rewarded_resp = np.random.choice([0, 1])
+        else:
+            rewarded_resp = int(delta > 0)
+
+        trial_info = dict(
+
+            # Basic trial info
+            trial=t,
+
+            # Stimulus parameters
+            pedestal=pedestal,
+            signed_delta=delta,
+            unsigned_delta=np.abs(delta),
+            pct_delta=np.abs(delta) * 100,
+            contrast=pedestal + delta,
+            stim_position=next(stim_positions),
+            rewarded_resp=rewarded_resp,
+
+            # Timing parameters
+            iti=iti,
+            trial_time=trial_time,
+            pre_targ_dur=cregg.flexible_values(p.pre_targ_dur),
+            post_targ_dur=cregg.flexible_values(p.post_targ_dur),
+            crit_stim_dur=cregg.flexible_values(p.crit_stim_dur),
+            post_stim_dur=cregg.flexible_values(p.post_stim_dur),
+
+            # Pulse info (filled in below)
+            pulse_count=np.nan,
+
+            # Achieved timing data
+            fix_onset=np.nan,
+            resp_onset=np.nan,
+            targ_onset=np.nan,
+            fb_onset=np.nan,
+
+            # Subject response fields
+            response=np.nan,
+            correct=np.nan,
+            answered=np.nan,
+            rt=np.nan,
+            eye_response=np.nan,
+            key_response=np.nan,
+            key=np.nan,
+
+        )
+
+        t_info = pd.Series(trial_info)
+        p_info = make_pulse_train(p, t_info)
+
+        t_info["pulse_count"] = len(p_info)
+
+        expected_trial_dur = 0  # TODO FIX
+        if (now + expected_trial_dur) > p.max_run_dur:
+            raise StopIteration
+
+        yield t_info, p_info
+
+
+def make_pulse_train(p, t_info):
+    """Generate the pulse train for a given trial."""
+
+    # Generate vectorized data for more pulses than we would expect
+    n_gen = 20
+    gap_dur = cregg.flexible_values(p.pulse_gap, n_gen)
+    pulse_dur = cregg.flexible_values(p.pulse_dur, n_gen)
+
+    if p.pulse_design_target == "duration":
+
+        # Target the entire duration of the pulse train
+        train_dur = cregg.flexible_values(p.pulse_train_dur)
+        count = 1 + np.argmax((gap_dur + pulse_dur).cumsum() > train_dur)
+        gap_dur = gap_dur[:count]
+        pulse_dur = pulse_dur[:count]
+
+    elif p.pulse_design_target == "count":
+
+        # Target the number of pulses
+        if np.random.rand() < p.pulse_design_target:
+            count = 1
+        else:
+            count = cregg.flexible_values(p.pulse_count,
+                                          max=p.pulse_count_max)
+        gap_dur = gap_dur[:count]
+        pulse_dur = pulse_dur[:count]
+        train_dur = gap_dur.sum() + pulse_dur.sum()
+
+    else:
+        raise ValueError("Pulse design target not understood")
+
+    # Generate the stimulus strength for each pulse
+    contrast = cregg.flexible_values(t_info["contrast"], count)
+
+    p_info = pd.DataFrame(dict(
+
+        # Link to the trial data structure
+        trial=t_info["trial"],
+
+        # Time of each element of the "pulse" (gap and stim on)
+        gap_dur=gap_dur,
+        pulse_dur=pulse_dur,
+        pulse_time=(gap_dur + pulse_dur).cumsum() - gap_dur,
+
+        # Stimulus strength on each pulse
+        contrast=contrast,
+
+        # Intitialize fields to track achieved performance
+        onset_time=np.nan,
+        offset_time=np.nan,
+
+    ))
+
+    return p_info
 
 
 # =========================================================================== #
@@ -207,7 +342,7 @@ class TrialEngine(object):
         # Signal that a responses is needed and wait for it
         self.fix.color = self.p.fix_resp_color
 
-        for frame in self.secs_to_flips(t_info["resp_max_wait"]):
+        for frame in self.secs_to_flips(self.p.resp_max_wait):
 
             # Check keyboard responses
             if self.p.key_response:
@@ -247,7 +382,7 @@ class TrialEngine(object):
                     t_info["key"] = key_name
                     t_info["response"] = self.resp_keys.index(key_name)
                     t_info["correct"] = (t_info["response"]
-                                         == t_info["correct_response"])
+                                         == t_info["rewarded_resp"])
 
         elif had_eye_response:
 
@@ -293,7 +428,7 @@ class TrialEngine(object):
                         targ_time = now
                     elif now > (targ_time + self.p.eye_target_hold):
                         # We've held the target
-                        # Should be the only time valid_response is set to True
+                        # Should be the only time valid_response is True
                         valid_response = True
                         break
 
@@ -306,7 +441,7 @@ class TrialEngine(object):
                 t_info["rt"] = fix_break_time
                 t_info["response"] = current_response
                 t_info["correct"] = (t_info["response"]
-                                     == t_info["correct_response"])
+                                     == t_info["rewarded_resp"])
 
         t_info["answered"] = not np.isnan(t_info["response"])
 
@@ -331,7 +466,8 @@ class TrialEngine(object):
 
         self.fix.draw()
         self.targets.draw()
-        self.win.flip()
+        vbl = self.win.flip()
+        t_info["fb_onset"] = vbl
         self.tracker.send_message("feedback")
 
         # Play a sound for feeback
@@ -344,11 +480,13 @@ class TrialEngine(object):
             else:
                 self.auditory_fb("noresp")
 
+        cregg.wait_check_quit(self.p.feedback_dur)
+
     def __call__(self, t_info, p_info):
         """Execute a stimulus event."""
 
         # Inter-trial-interval
-        self.fix.color = self.fix.iti_color
+        self.fix.color = self.p.fix_iti_color
         self.fix.draw()
         self.win.flip()
         wait_dur = t_info["trial_time"] - self.clock.getTime()
@@ -361,7 +499,7 @@ class TrialEngine(object):
         fix_time = self.wait_for_ready()
         if fix_time is None:
             self.auditory_fb("nofix")
-            return t_info
+            return
         self.tracker.send_message("acquired_fixation")
         t_info["fix_onset"] = fix_time
 
@@ -371,21 +509,19 @@ class TrialEngine(object):
             vbl = self.win.flip()
             if not self.tracker.check_fixation():
                 self.auditory_fb("fixbreak")
-                return t_info
+                return
 
         # Recenter fixation window
-        if self.p.fix_eye_recenter:
+        if self.p.eye_fix_recenter:
             trial_fix = self.tracker.read_gaze()
             if not self.tracker.check_fixation(new_sample=False):
                 self.auditory_fb("fixbreak")
-                return t_info
+                return
         else:
             trial_fix = (0, 0)
 
-        # TODO We need to add more eyetracker messages in this section
-
         # Show response targets and wait for post-target period
-        for frame in self.secs_to_flips(t_info["post_target_dur"]):
+        for frame in self.secs_to_flips(t_info["post_targ_dur"]):
             self.targets.draw()
             self.fix.draw()
             vbl = self.win.flip()
@@ -394,7 +530,7 @@ class TrialEngine(object):
                 t_info["targ_onset"] = vbl
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
-                return t_info
+                return
 
         # Show criterion stimulus
         self.criterion.reset_animation()
@@ -409,7 +545,7 @@ class TrialEngine(object):
                 t_info["crit_onset"] = vbl
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
-                return t_info
+                return
 
         # Pulse train period
         for p, info in p_info.iterrows():
@@ -418,8 +554,11 @@ class TrialEngine(object):
             self.targets.draw()
             self.fix.draw()
             vbl = self.win.flip()
-            info.loc[p, "offset_time"] = vbl
+
             if p:
+                # Log the pulse offset from the previous pulse
+                # TODO Reconsider whether this is the best way to do things
+                p_info.loc[p - 1, "offset_time"] = vbl
                 self.tracker.send_message("pulse_offset")
 
             # Reset the stimulus object
@@ -434,17 +573,24 @@ class TrialEngine(object):
             self.patches.contrast = info["contrast"]
 
             # Show the stimulus
-            for frame in self.secs_to_flips(t_info["pulse_dur"]):
+            for frame in self.secs_to_flips(info["pulse_dur"]):
                 self.patches.draw()
                 self.targets.draw()
                 self.fix.draw()
                 vbl = self.win.flip()
                 if not frame:
                     self.tracker.send_message("pulse_onset")
-                    info.loc[p, "onset_time"] = vbl
+                    info["onset_time"] = vbl
                 if not self.tracker.check_fixation(trial_fix):
                     self.auditory_fb("fixbreak")
-                    return t_info
+                    return
+
+        # Reset the screen to offset the final pulse
+        self.targets.draw()
+        self.fix.draw()
+        vbl = self.win.flip()
+        info["offset_time"] = vbl
+        self.tracker.send_message("pulse_offset")
 
         # Wait for post-stimulus fixation
         for frame in self.secs_to_flips(t_info["post_stim_dur"]):
@@ -453,7 +599,7 @@ class TrialEngine(object):
             vbl = self.win.flip()
             if not self.tracker.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
-                return t_info
+                return
 
         # Collect the response
         self.collect_response(t_info, trial_fix)
@@ -463,11 +609,11 @@ class TrialEngine(object):
 
         # Set the screen back to iti mode
         self.targets.color = self.p.eye_target_color
-        self.fix.color = self.p.fix.iti_color
+        self.fix.color = self.p.fix_iti_color
         self.fix.draw()
         self.win.flip()
 
-        return t_info
+        return
 
 
 if __name__ == "__main__":
