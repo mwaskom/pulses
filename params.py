@@ -242,15 +242,10 @@ base = dict(
     # -----------------------
 
     # Template string for naming log files with data from the run
-    log_template="data/{subject}_{mode}_run{run:02d}",
+    log_template="data/{subject}_{mode}_{date}_run{run:02d}",
 
     # Communication
     # -------------
-
-    # Whether the behavior/diagnostics plot should be opened at the end
-    # of the run with a system call to the `open` command. Probably only
-    # works on a Mac.
-    show_performance_plots=False,
 
     # Target accuracy used for feedback at end of run
     target_accuracy=.8,
