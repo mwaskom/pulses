@@ -288,7 +288,7 @@ def show_performance_feedback(win, p, log):
     if p.nolog:
         return
 
-    trial_log, _ = log
+    trial_log = log["trials"]
 
     if not trial_log:
         return

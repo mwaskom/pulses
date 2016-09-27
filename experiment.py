@@ -75,7 +75,7 @@ def experiment_loop(p, win, stims, tracker):
     # Initialize the experiment log
     trial_log = []
     pulse_log = []
-    log = (trial_log, pulse_log)
+    log = dict(trials=trial_log, pulses=pulse_log)
 
     # Initialize the random number generator
     rng = np.random.RandomState()
@@ -107,13 +107,15 @@ def experiment_loop(p, win, stims, tracker):
         cregg.wait_check_quit(p.max_run_dur - stim_event.clock.getTime())
 
 
-def save_data(p, logs):
+def save_data(p, log):
 
     if not p.nolog:
 
-        trial_log, pulse_log = logs
-        pd.DataFrame(trial_log).to_csv(p.log_stem + "_trials.csv", index=False)
-        pd.concat(pulse_log).to_csv(p.log_stem + "_pulses.csv", index=False)
+        trial_log = pd.DataFrame(log["trials"])
+        trial_log.to_csv(p.log_stem + "_trials.csv", index=False)
+
+        pulse_log = pd.concat(log["pulses"])
+        pulse_log.to_csv(p.log_stem + "_pulses.csv", index=False)
 
 
 # =========================================================================== #
