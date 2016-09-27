@@ -93,6 +93,8 @@ def experiment_loop(p, win, stims, tracker):
         # Loop over trials
         for t_info, p_info in generate_trials(p, stim_event.clock):
 
+            # TODO update stimulus RNG?
+
             # Execute this trial
             stim_event(t_info, p_info)
 
@@ -125,7 +127,6 @@ def save_data(p, log):
 
 def generate_trials(p, clock):
     """Yield trial and pulse train info."""
-    # TODO need to find a way to generate constant trials
     # Create an infinite iterator for the stimulus position
     if p.stim_pos_method == "random":
         def position_gen():
@@ -140,16 +141,20 @@ def generate_trials(p, clock):
     # Create an infinite iterator for trial data
     for t in itertools.count(1):
 
+        # Get a random state fo rthis trial
+        # TODO need to find a way to generate constant trials
+        rng = np.random.RandomState()
+
         # Get the current time
         now = clock.getTime()
 
         # Schedule the next trial
-        iti = cregg.flexible_values(p.iti_dur)
+        iti = cregg.flexible_values(p.iti_dur, random_state=rng)
         trial_time = now + iti
 
         # Determine the stimulus parameters for this trial
-        pedestal = cregg.flexible_values(p.contrast_pedestal)
-        delta = cregg.flexible_values(p.contrast_deltas)
+        pedestal = cregg.flexible_values(p.contrast_pedestal, random_state=rng)
+        delta = cregg.flexible_values(p.contrast_deltas, random_state=rng)
 
         # Determine the response that will yield positive feedback
         if delta == 0:
@@ -174,11 +179,11 @@ def generate_trials(p, clock):
             # Timing parameters
             iti=iti,
             trial_time=trial_time,
-            pre_targ_dur=cregg.flexible_values(p.pre_targ_dur),
-            post_targ_dur=cregg.flexible_values(p.post_targ_dur),
-            crit_stim_dur=cregg.flexible_values(p.crit_stim_dur),
-            pre_stim_dur=cregg.flexible_values(p.pre_stim_dur),
-            post_stim_dur=cregg.flexible_values(p.post_stim_dur),
+            pre_targ_dur=cregg.flexible_values(p.pre_targ_dur, 1, rng),
+            post_targ_dur=cregg.flexible_values(p.post_targ_dur, 1, rng),
+            crit_stim_dur=cregg.flexible_values(p.crit_stim_dur, 1, rng),
+            pre_stim_dur=cregg.flexible_values(p.pre_stim_dur, 1, rng),
+            post_stim_dur=cregg.flexible_values(p.post_stim_dur, 1, rng),
 
             # Pulse info (filled in below)
             pulse_count=np.nan,
@@ -203,7 +208,7 @@ def generate_trials(p, clock):
         )
 
         t_info = pd.Series(trial_info, dtype=np.object)
-        p_info = make_pulse_train(p, t_info)
+        p_info = make_pulse_train(p, t_info, rng)
 
         t_info["pulse_count"] = len(p_info)
         t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
@@ -223,18 +228,20 @@ def generate_trials(p, clock):
         yield t_info, p_info
 
 
-def make_pulse_train(p, t_info):
+def make_pulse_train(p, t_info, random_state=None):
     """Generate the pulse train for a given trial."""
+    if random_state is None:
+        rng = np.random.RandomState()
 
     # Generate vectorized data for more pulses than we would expect
     n_gen = 20
-    gap_dur = cregg.flexible_values(p.pulse_gap, n_gen)
-    pulse_dur = cregg.flexible_values(p.pulse_dur, n_gen)
+    gap_dur = cregg.flexible_values(p.pulse_gap, n_gen, rng)
+    pulse_dur = cregg.flexible_values(p.pulse_dur, n_gen, rng)
 
     if p.pulse_design_target == "duration":
 
         # Target the entire duration of the pulse train
-        train_dur = cregg.flexible_values(p.pulse_train_dur)
+        train_dur = cregg.flexible_values(p.pulse_train_dur, 1, rng)
         count = 1 + np.argmax((gap_dur + pulse_dur).cumsum() > train_dur)
         gap_dur = gap_dur[:count]
         pulse_dur = pulse_dur[:count]
@@ -245,7 +252,7 @@ def make_pulse_train(p, t_info):
         if np.random.rand() < p.pulse_design_target:
             count = 1
         else:
-            count = cregg.flexible_values(p.pulse_count,
+            count = cregg.flexible_values(p.pulse_count, 1, rng,
                                           max=p.pulse_count_max)
         gap_dur = gap_dur[:count]
         pulse_dur = pulse_dur[:count]
@@ -256,7 +263,7 @@ def make_pulse_train(p, t_info):
 
     # Generate the stimulus strength for each pulse
     contrast_dist = "norm", t_info["contrast"], p.contrast_sd
-    contrast = cregg.flexible_values(contrast_dist, count)
+    contrast = cregg.flexible_values(contrast_dist, count, rng)
 
     p_info = pd.DataFrame(dict(
 
