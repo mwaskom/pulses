@@ -151,7 +151,7 @@ base = dict(
     # distribution with mean (pedestal + delta)
 
     contrast_pedestal=.5,
-    contrast_deltas=[-.256, -.128, -.064, -.032, -.016,
+    contrast_deltas=[-.256, -.128, -.064, -.032, -.016, -0.,
                      0., .016, .032, .064, .128, .256],
     contrast_sd=.032,
 
