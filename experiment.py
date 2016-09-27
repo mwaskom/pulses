@@ -1,4 +1,5 @@
 from __future__ import division, print_function
+import os
 import sys
 import itertools
 
@@ -49,6 +50,12 @@ def main(arglist):
     # Initialize the gaze stimulus
     if p.eye_response and p.eye_show_gaze:
         GazeStim(win, tracker)
+
+    # Ensure that the output directory exists
+    if not p.nolog:
+        log_dir = os.path.dirname(p.log_stem)
+        if not os.path.exists(log_dir):
+            os.makedirs(log_dir)
 
     # Execute the experiment function
     experiment_loop(p, win, stims, tracker)
@@ -102,6 +109,8 @@ def experiment_loop(p, win, stims, tracker):
             trial_log.append(t_info)
             pulse_log.append(p_info)
 
+            # TODO send data to client?
+
         # Put the screen in ITI mode for the remainder of the run
         stims["fix"].color = p.fix_iti_color
         stims["fix"].draw()
@@ -110,8 +119,10 @@ def experiment_loop(p, win, stims, tracker):
 
 
 def save_data(p, log):
-
+    """Write out experiment data at the end of the run."""
     if not p.nolog:
+
+        p.to_json(p.log_stem + "_params.json")
 
         trial_log = pd.DataFrame(log["trials"])
         trial_log.to_csv(p.log_stem + "_trials.csv", index=False)
