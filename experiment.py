@@ -149,12 +149,12 @@ def generate_trials(p, clock):
         now = clock.getTime()
 
         # Schedule the next trial
-        iti = cregg.flexible_values(p.iti_dur, random_state=rng)
+        iti = cregg.flexible_values(p.iti_dur, 1, rng)
         trial_time = now + iti
 
         # Determine the stimulus parameters for this trial
-        pedestal = cregg.flexible_values(p.contrast_pedestal, random_state=rng)
-        delta = cregg.flexible_values(p.contrast_deltas, random_state=rng)
+        pedestal = cregg.flexible_values(p.contrast_pedestal, 1, rng)
+        delta = cregg.flexible_values(p.contrast_deltas, 1, rng)
 
         # Determine the response that will yield positive feedback
         if delta == 0:
@@ -228,9 +228,9 @@ def generate_trials(p, clock):
         yield t_info, p_info
 
 
-def make_pulse_train(p, t_info, random_state=None):
+def make_pulse_train(p, t_info, rng=None):
     """Generate the pulse train for a given trial."""
-    if random_state is None:
+    if rng is None:
         rng = np.random.RandomState()
 
     # Generate vectorized data for more pulses than we would expect
@@ -287,6 +287,7 @@ def make_pulse_train(p, t_info, random_state=None):
         # Intitialize fields to track achieved performance
         onset_time=np.nan,
         offset_time=np.nan,
+        dropped_frames=np.nan,
 
     ))
 
@@ -596,6 +597,7 @@ class TrialEngine(object):
             self.patches.contrast = contrast
 
             # Show the stimulus
+            self.win.nDroppedFrames = 0
             for frame in self.secs_to_flips(info["pulse_dur"]):
                 self.patches.draw()
                 self.targets.draw()
@@ -608,13 +610,15 @@ class TrialEngine(object):
                     self.auditory_fb("fixbreak")
                     return
 
+            # Log out our performance in drawing the stimulus
+            p_info.loc[p, "dropped_frames"] = self.win.nDroppedFrames
+
             # Show the gap screen
             self.targets.draw()
             self.fix.draw()
             flip_time = self.win.flip()
             p_info.loc[p, "offset_time"] = flip_time
             self.tracker.send_message("pulse_offset")
-            # TODO log dropped frames
 
             # Wait for the next pulse
             # TODO we should probably improve timing performance here

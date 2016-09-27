@@ -213,7 +213,7 @@ base = dict(
     feedback_dur=.5,
 
     # Duration of the inter-trial-interval.
-    iti_dur=("truncexpon", (12 - 4) / 2, 4, 2),
+    iti_dur=("truncexpon", (10 - 4) / 2, 4, 2),
 
     # Maximum duration of each run, in seconds
     max_run_dur=600,
