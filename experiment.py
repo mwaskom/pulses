@@ -112,8 +112,8 @@ def save_data(p, logs):
     if not p.nolog:
 
         trial_log, pulse_log = logs
-        pd.DataFrame(trial_log).to_csv(p.log_stem + "_trials.csv")
-        pd.concat(pulse_log).to_csv(p.log_stem + "_pulses.csv")
+        pd.DataFrame(trial_log).to_csv(p.log_stem + "_trials.csv", index=False)
+        pd.concat(pulse_log).to_csv(p.log_stem + "_pulses.csv", index=False)
 
 
 # =========================================================================== #
@@ -123,6 +123,7 @@ def save_data(p, logs):
 
 def generate_trials(p, clock):
     """Yield trial and pulse train info."""
+    # TODO need to find a way to generate constant trials
     # Create an infinite iterator for the stimulus position
     if p.stim_pos_method == "random":
         def position_gen():
@@ -135,7 +136,7 @@ def generate_trials(p, clock):
         raise ValueError("Value for `stim_pos_method` not valid")
 
     # Create an infinite iterator for trial data
-    for t in itertools.count():
+    for t in itertools.count(1):
 
         # Get the current time
         now = clock.getTime()
@@ -252,12 +253,19 @@ def make_pulse_train(p, t_info):
         raise ValueError("Pulse design target not understood")
 
     # Generate the stimulus strength for each pulse
-    contrast = cregg.flexible_values(t_info["contrast"], count)
+    contrast_dist = "norm", t_info["contrast"], p.contrast_sd
+    contrast = cregg.flexible_values(contrast_dist, count)
 
     p_info = pd.DataFrame(dict(
 
-        # Link to the trial data structure
+        # Basic trial information
         trial=t_info["trial"],
+        pulse=np.arange(1, count + 1),
+        signed_delta=t_info["signed_delta"],
+        unsigned_delta=t_info["unsigned_delta"],
+        contrast_mean=t_info["contrast"],
+        contrast_sd=p.contrast_sd,
+        count=count,
 
         # Time of each element of the "pulse" (gap and stim on)
         gap_dur=gap_dur,
@@ -586,7 +594,7 @@ class TrialEngine(object):
                 flip_time = self.win.flip()
                 if not frame:
                     self.tracker.send_message("pulse_onset")
-                    info["onset_time"] = flip_time
+                    p_info.loc[p, "onset_time"] = flip_time
                 if not self.tracker.check_fixation(trial_fix):
                     self.auditory_fb("fixbreak")
                     return
@@ -595,8 +603,9 @@ class TrialEngine(object):
             self.targets.draw()
             self.fix.draw()
             flip_time = self.win.flip()
-            info.loc["offset_time"] = flip_time
+            p_info.loc[p, "offset_time"] = flip_time
             self.tracker.send_message("pulse_offset")
+            # TODO log dropped frames
 
             # Wait for the next pulse
             # TODO we should probably improve timing performance here
