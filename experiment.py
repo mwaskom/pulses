@@ -228,6 +228,7 @@ def generate_trials(p, clock):
         expected_trial_dur = (t_info["pre_targ_dur"]
                               + t_info["post_targ_dur"]
                               + t_info["crit_stim_dur"]
+                              + t_info["pre_stim_dur"]
                               + t_info["pulse_train_dur"]
                               + t_info["post_stim_dur"]
                               + p.feedback_dur
@@ -588,7 +589,7 @@ class TrialEngine(object):
                 return
 
         # Wait for pre-stimulus fixation
-        for frame in self.secs_to_flips(t_info["post_stim_dur"]):
+        for frame in self.secs_to_flips(t_info["pre_stim_dur"]):
             self.targets.draw()
             self.fix.draw()
             flip_time = self.win.flip()
