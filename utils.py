@@ -348,4 +348,6 @@ def show_performance_feedback(win, p, log):
                 "Please try to speed up without sacrificing accuracy!"
             )
 
-    cregg.WaitText(win, lines, p.finish_keys).draw()
+    cregg.WaitText(win, lines,
+                   advance_keys=p.finish_keys,
+                   quit_keys=[]).draw()
