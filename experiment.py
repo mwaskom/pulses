@@ -100,8 +100,6 @@ def experiment_loop(p, win, stims, tracker):
         # Loop over trials
         for t_info, p_info in generate_trials(p, stim_event.clock):
 
-            # TODO update stimulus RNG?
-
             # Execute this trial
             stim_event(t_info, p_info)
 
@@ -109,7 +107,7 @@ def experiment_loop(p, win, stims, tracker):
             trial_log.append(t_info)
             pulse_log.append(p_info)
 
-            # TODO send data to client?
+            # TODO send data to client
 
         # Put the screen in ITI mode for the remainder of the run
         stims["fix"].color = p.fix_iti_color
@@ -152,8 +150,9 @@ def generate_trials(p, clock):
     # Create an infinite iterator for trial data
     for t in itertools.count(1):
 
-        # Get a random state fo rthis trial
-        # TODO need to find a way to generate constant trials
+        # Get a random state for this trial
+        # This will eventually allow us to easily add constant/novar trials
+        # but the code currently does not full support that
         rng = np.random.RandomState()
 
         # Get the current time
