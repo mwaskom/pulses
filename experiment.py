@@ -338,6 +338,22 @@ class TrialEngine(object):
         """Convert durations in seconds to flips."""
         return range(int(round_func(secs * self.win.refresh_hz)))
 
+    def check_fixation(self, fix_window=(0, 0), allow_blinks=False):
+        """Enforce fixation but possibly allow blinks."""
+        if self.tracker.check_fixation(fix_window):
+            # Eye is open and in fixation window
+            return True
+
+        if allow_blinks:
+            if not self.tracker.check_eye_open(new_sample=False):
+                t, _ = self.tracker.last_valid_sample
+                if (self.clock.getTime() - t) < self.p.eye_blink_timeout:
+                    # Eye is closed but blink timeout hasn't elapsed
+                    return True
+
+        # Either we are outside of fixation or eye has closed for too long
+        return False
+
     def wait_for_ready(self):
         """Allow the subject to control the start of the trial."""
         self.fix.color = self.p.fix_ready_color
@@ -364,7 +380,7 @@ class TrialEngine(object):
                             continue
 
             if self.p.eye_response:
-                if self.tracker.check_fixation():
+                if self.check_fixation():
                     return self.clock.getTime()
 
             self.fix.draw()
@@ -393,7 +409,7 @@ class TrialEngine(object):
 
             # Check eye response
             if self.p.eye_response:
-                if not self.tracker.check_fixation(fix_window):
+                if not self.check_fixation(fix_window):
                     had_eye_response = True
                     fix_break_time = self.resp_clock.getTime()
                     break
@@ -550,14 +566,14 @@ class TrialEngine(object):
         for frame in self.secs_to_flips(t_info["pre_targ_dur"]):
             self.fix.draw()
             flip_time = self.win.flip()
-            if not self.tracker.check_fixation():
+            if not self.check_fixation():
                 self.auditory_fb("fixbreak")
                 return
 
         # Recenter fixation window
         if self.p.eye_fix_recenter:
             trial_fix = self.tracker.read_gaze()
-            if not self.tracker.check_fixation(new_sample=False):
+            if not self.check_fixation():
                 self.auditory_fb("fixbreak")
                 return
         else:
@@ -571,7 +587,7 @@ class TrialEngine(object):
             if not frame:
                 self.tracker.send_message("targets_on")
                 t_info["targ_onset"] = flip_time
-            if not self.tracker.check_fixation(trial_fix):
+            if not self.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
                 return
 
@@ -586,7 +602,7 @@ class TrialEngine(object):
             if not frame:
                 self.tracker.send_message("criterion_on")
                 t_info["crit_onset"] = flip_time
-            if not self.tracker.check_fixation(trial_fix):
+            if not self.check_fixation(trial_fix):
                 self.auditory_fb("fixbreak")
                 return
 
@@ -595,7 +611,7 @@ class TrialEngine(object):
             self.targets.draw()
             self.fix.draw()
             flip_time = self.win.flip()
-            if not self.tracker.check_fixation(trial_fix):
+            if not self.check_fixation(trial_fix, allow_blinks=True):
                 self.auditory_fb("fixbreak")
                 return
 
@@ -620,7 +636,7 @@ class TrialEngine(object):
                 if not frame:
                     self.tracker.send_message("pulse_onset")
                     p_info.loc[p, "onset_time"] = flip_time
-                if not self.tracker.check_fixation(trial_fix):
+                if not self.check_fixation(trial_fix):
                     self.auditory_fb("fixbreak")
                     return
 
@@ -636,7 +652,6 @@ class TrialEngine(object):
 
             # Wait for the next pulse
             # TODO we should probably improve timing performance here
-            # TODO what do we do about fixation/blinks
             cregg.wait_check_quit(info["gap_dur"])
 
         # Wait for post-stimulus fixation
@@ -644,7 +659,7 @@ class TrialEngine(object):
             self.targets.draw()
             self.fix.draw()
             flip_time = self.win.flip()
-            if not self.tracker.check_fixation(trial_fix):
+            if not self.check_fixation(trial_fix, allow_blinks=True):
                 self.auditory_fb("fixbreak")
                 return
 

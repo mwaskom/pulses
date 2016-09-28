@@ -7,6 +7,7 @@ moving them in to cregg/new package as wholly general code.
 import os
 import time
 import warnings
+import itertools
 import numpy as np
 import pandas as pd
 from scipy.spatial import distance
@@ -211,6 +212,15 @@ class EyeTracker(object):
         self.close_connection()
         self.move_edf_file()
         self.write_log_data()
+
+    @property
+    def last_valid_sample(self):
+        """Return the timestamp and position of the last valid gaze sample."""
+        samples = itertools.izip(reversed(self.log_timestamps),
+                                 reversed(self.log_positions))
+        for timestamp, gaze in samples:
+            if not np.isnan(gaze).any():
+                return timestamp, gaze
 
 
 class SaccadeTargets(object):
