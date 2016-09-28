@@ -34,11 +34,11 @@ base = dict(
     # Color during the inter trial interval
     fix_iti_color=None,
 
-    # Color that indicates subject should start a self-paced trial
-    fix_ready_color=(1, -1, -1),
+    # Color that indicates the start of the trial
+    fix_ready_color=(.9, .6, -1),
 
     # Color during the stimulus
-    fix_stim_color=(1, -1, -1),
+    fix_stim_color=(.9, .6, -1),
 
     # Color that signals onset of response period
     fix_resp_color=None,
@@ -90,7 +90,7 @@ base = dict(
     eye_target_pos=[(-8, 3), (8, 3)],
 
     # Color of the two saccade targets (can also be a list)
-    eye_target_color=(1, -1, -1),
+    eye_target_color=(.9, .6, -1),
 
     # Duration to wait for eye to enter target window after leaving fix window
     eye_target_wait=.25,
@@ -148,7 +148,7 @@ base = dict(
 
     # On each trial, the criterion stimulus is shown at the pedestal value
     # and then each test stimulus has a contrast that is drawn from a normal
-    # distribution with mean (pedestal + delta)
+    # distribution with mean (pedestal + delta) and the given sd
 
     contrast_pedestal=.5,
     contrast_deltas=[-.256, -.128, -.064, -.032, -.016, -0.,
@@ -207,7 +207,7 @@ base = dict(
     pulse_dur=.2,
 
     # Maximum duration to wait for a response
-    resp_max_wait=2,
+    resp_max_wait=5,
 
     # Duration of feedback
     feedback_dur=.5,
@@ -233,10 +233,10 @@ base = dict(
 
     # Whether and what to change the color of for visual feedback
     # Options are None, "fix", or "target"
-    feedback_visual=None,
+    feedback_visual="target",
 
     # Negative and positive feedback colors
-    feedback_colors=[(1, 0, 0), (0, 1, 0)],
+    feedback_colors=[(1, 0, 0), (0, .75, 0)],
 
     # Data logging parameters
     # -----------------------
@@ -251,7 +251,7 @@ base = dict(
     target_accuracy=.8,
 
     # Target RT used for feedback at end of run
-    target_rt=1,
+    target_rt=None,
 
     # IP address running the online behavioral results client
     client_host="localhost",
@@ -260,3 +260,16 @@ base = dict(
     client_port=6789,
 
 )
+
+
+fast_debugging = deepcopy(base)
+fast_debugging.update(dict(
+
+    max_run_dur=60,
+    iti_dur=1,
+    pre_stim_dur=("truncexpon", (4 - 1) / 1.5, 1, 1.5),
+    pulse_gap=("truncexpon", (4 - 1) / 1.5, 1, 1.5),
+    pulse_train_dur=("truncexpon", (8 - 3) / 2, 3, 2),
+
+))
+

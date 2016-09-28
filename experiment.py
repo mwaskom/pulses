@@ -494,7 +494,10 @@ class TrialEngine(object):
         if self.p.feedback_visual is None:
             self.targets.color = None
         else:
-            fb_color = self.p.feedback_colors[int(t_info["correct"])]
+            if t_info["answered"]:
+                fb_color = self.p.feedback_colors[int(t_info["correct"])]
+            else:
+                fb_color = None
             if self.p.feedback_visual.startswith("fix"):
                 self.fix.color = fb_color
             elif self.p.feedback_visual.startswith("targ"):
