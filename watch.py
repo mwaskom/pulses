@@ -124,7 +124,7 @@ if __name__ == "__main__":
         miss_plot.set_xdata(trials[~ans])
         miss_plot.set_ydata(correct[~ans])
 
-        resp_ax.set(xlim=(-1, trial + 1))
+        resp_ax.set(xlim=(0, trial + 1))
 
         # Redraw the figure
         f.canvas.draw()
