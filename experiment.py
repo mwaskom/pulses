@@ -201,9 +201,10 @@ def generate_trials(p, clock):
 
             # Achieved timing data
             fix_onset=np.nan,
-            resp_onset=np.nan,
             targ_onset=np.nan,
             crit_onset=np.nan,
+            stim_onset=np.nan,
+            resp_onset=np.nan,
             feedback_onset=np.nan,
 
             # Subject response fields
@@ -290,7 +291,7 @@ def make_pulse_train(p, t_info, rng=None):
         # Time of each element of the "pulse" (gap and stim on)
         gap_dur=gap_dur,
         pulse_dur=pulse_dur,
-        pulse_time=(gap_dur + pulse_dur).cumsum() - gap_dur,
+        expected_offset=(pulse_dur + gap_dur).cumsum() - gap_dur,
 
         # Stimulus strength on each pulse
         contrast=contrast,
@@ -636,6 +637,8 @@ class TrialEngine(object):
                 if not frame:
                     self.tracker.send_message("pulse_onset")
                     p_info.loc[p, "onset_time"] = flip_time
+                    if not p:
+                        t_info["stim_onset"] = flip_time
                 if not self.check_fixation(trial_fix):
                     self.auditory_fb("fixbreak")
                     return
@@ -650,9 +653,19 @@ class TrialEngine(object):
             p_info.loc[p, "offset_time"] = flip_time
             self.tracker.send_message("pulse_offset")
 
-            # Wait for the next pulse
-            # TODO we should probably improve timing performance here
-            cregg.wait_check_quit(info["gap_dur"])
+            # Compute the gap duration accounting for any error
+            expected_offset = (info["expected_offset"] + t_info["stim_onset"])
+            timing_error = flip_time - expected_offset
+            # Wait for the gap duration, checking fixation
+
+            for frame in self.secs_to_flips(info["gap_dur"] - timing_error):
+                self.targets.draw()
+                self.fix.draw()
+                self.win.flip()
+                if not self.check_fixation(trial_fix, allow_blinks=True):
+                    t_info["result"] = "fixbreak"
+                    self.auditory_fb("fixbreak")
+                    return
 
         # Wait for post-stimulus fixation
         for frame in self.secs_to_flips(t_info["post_stim_dur"]):
