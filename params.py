@@ -35,10 +35,10 @@ base = dict(
     fix_iti_color=None,
 
     # Color that indicates the start of the trial
-    fix_ready_color=(.9, .6, -1),
+    fix_ready_color=(.8, .6, -.8),
 
     # Color during the stimulus
-    fix_stim_color=(.9, .6, -1),
+    fix_stim_color=(.8, .6, -.8),
 
     # Color that signals onset of response period
     fix_resp_color=None,
@@ -90,7 +90,7 @@ base = dict(
     eye_target_pos=[(-8, 3), (8, 3)],
 
     # Color of the two saccade targets (can also be a list)
-    eye_target_color=(.9, .6, -1),
+    eye_target_color=(.8, .6, -.8),
 
     # Duration to wait for eye to enter target window after leaving fix window
     eye_target_wait=.25,
@@ -239,7 +239,7 @@ base = dict(
     feedback_visual="target",
 
     # Negative and positive feedback colors
-    feedback_colors=[(1, 0, 0), (0, .75, 0)],
+    feedback_colors=[(1, -.7, -.6), (.8, .6, -.8)],
 
     # Data logging parameters
     # -----------------------
