@@ -670,8 +670,8 @@ class TrialEngine(object):
             # Compute the gap duration accounting for any error
             expected_offset = (info["expected_offset"] + t_info["stim_onset"])
             timing_error = flip_time - expected_offset
-            # Wait for the gap duration, checking fixation
 
+            # Wait for the gap duration, checking fixation
             for frame in self.secs_to_flips(info["gap_dur"] - timing_error):
                 self.targets.draw()
                 self.fix.draw()
