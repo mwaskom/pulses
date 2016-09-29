@@ -276,3 +276,13 @@ fast_debugging.update(dict(
 
 ))
 
+
+initial_training = deepcopy(base)
+initial_training.update(dict(
+
+    iti_dur=("truncexpon", 4, 1, 1),
+    pre_stim_dur=("truncexpon", (.8 - .2) / .3, .2, .3),
+    pulse_gap=("truncexpon", (.6 - .1) / .1, .1, .1),
+    pulse_train_dur=("truncexpon", (1.5 - .5) / .6, .5, .6),
+
+))
