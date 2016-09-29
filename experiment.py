@@ -215,6 +215,7 @@ def generate_trials(p, clock):
             eye_response=np.nan,
             key_response=np.nan,
             key=np.nan,
+            result=np.nan,
 
         )
 
@@ -439,6 +440,8 @@ class TrialEngine(object):
                     t_info["response"] = self.resp_keys.index(key_name)
                     t_info["correct"] = (t_info["response"]
                                          == t_info["rewarded_resp"])
+                    result = "correct" if t_info["correct"] else "wrong"
+                    t_info["result"] = result
 
         elif had_eye_response:
 
@@ -499,6 +502,10 @@ class TrialEngine(object):
                 t_info["response"] = current_response
                 t_info["correct"] = (t_info["response"]
                                      == t_info["rewarded_resp"])
+                t_info["result"] = result
+
+            else:
+                t_info["result"] = "nochoice"
 
         t_info["answered"] = not np.isnan(t_info["response"])
 
@@ -559,6 +566,7 @@ class TrialEngine(object):
         fix_time = self.wait_for_ready()
         if fix_time is None:
             self.auditory_fb("nofix")
+            t_info["result"] = "nofix"
             return
         self.tracker.send_message("acquired_fixation")
         t_info["fix_onset"] = fix_time
@@ -568,6 +576,7 @@ class TrialEngine(object):
             self.fix.draw()
             flip_time = self.win.flip()
             if not self.check_fixation():
+                t_info["result"] = "fixbreak"
                 self.auditory_fb("fixbreak")
                 return
 
@@ -575,6 +584,7 @@ class TrialEngine(object):
         if self.p.eye_fix_recenter:
             trial_fix = self.tracker.read_gaze()
             if not self.check_fixation():
+                t_info["result"] = "fixbreak"
                 self.auditory_fb("fixbreak")
                 return
         else:
@@ -589,6 +599,7 @@ class TrialEngine(object):
                 self.tracker.send_message("targets_on")
                 t_info["targ_onset"] = flip_time
             if not self.check_fixation(trial_fix):
+                t_info["result"] = "fixbreak"
                 self.auditory_fb("fixbreak")
                 return
 
@@ -604,6 +615,7 @@ class TrialEngine(object):
                 self.tracker.send_message("criterion_on")
                 t_info["crit_onset"] = flip_time
             if not self.check_fixation(trial_fix):
+                t_info["result"] = "fixbreak"
                 self.auditory_fb("fixbreak")
                 return
 
@@ -613,6 +625,7 @@ class TrialEngine(object):
             self.fix.draw()
             flip_time = self.win.flip()
             if not self.check_fixation(trial_fix, allow_blinks=True):
+                t_info["result"] = "fixbreak"
                 self.auditory_fb("fixbreak")
                 return
 
@@ -640,6 +653,7 @@ class TrialEngine(object):
                     if not p:
                         t_info["stim_onset"] = flip_time
                 if not self.check_fixation(trial_fix):
+                    t_info["result"] = "fixbreak"
                     self.auditory_fb("fixbreak")
                     return
 
@@ -673,6 +687,7 @@ class TrialEngine(object):
             self.fix.draw()
             flip_time = self.win.flip()
             if not self.check_fixation(trial_fix, allow_blinks=True):
+                t_info["result"] = "fixbreak"
                 self.auditory_fb("fixbreak")
                 return
 
