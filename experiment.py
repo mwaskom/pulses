@@ -502,6 +502,7 @@ class TrialEngine(object):
                 t_info["response"] = current_response
                 t_info["correct"] = (t_info["response"]
                                      == t_info["rewarded_resp"])
+                result = "correct" if t_info["correct"] else "wrong"
                 t_info["result"] = result
 
             else:
