@@ -239,7 +239,7 @@ base = dict(
     feedback_visual="target",
 
     # Negative and positive feedback colors
-    feedback_colors=[(1, -.7, -.6), (.8, .6, -.8)],
+    feedback_colors=[(1, -.7, -.6), (-.8, .5, -.8)],
 
     # Data logging parameters
     # -----------------------
