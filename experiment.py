@@ -107,7 +107,8 @@ def experiment_loop(p, win, stims, tracker):
             trial_log.append(t_info)
             pulse_log.append(p_info)
 
-            # TODO send data to client
+            # Send data to client for online monitoring
+            cregg.send_trial_data(p, t_info)
 
         # Put the screen in ITI mode for the remainder of the run
         stims["fix"].color = p.fix_iti_color
