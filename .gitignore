@@ -1,4 +1,5 @@
 data/
+stimuli
 *.pyc
 *.sw{o,p}
 *.ipynb
