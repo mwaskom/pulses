@@ -300,6 +300,7 @@ def make_pulse_train(p, t_info, rng=None):
         contrast=contrast,
 
         # Intitialize fields to track achieved performance
+        occurred=False,
         onset_time=np.nan,
         offset_time=np.nan,
         dropped_frames=np.nan,
@@ -652,17 +653,20 @@ class TrialEngine(object):
                 self.targets.draw()
                 self.fix.draw()
                 flip_time = self.win.flip()
+
                 if not frame:
                     self.tracker.send_message("pulse_onset")
                     p_info.loc[p, "onset_time"] = flip_time
-                    if not p:
+                    if info["pulse"] == 1:
                         t_info["stim_onset"] = flip_time
+
                 if not self.check_fixation(trial_fix):
                     t_info["result"] = "fixbreak"
                     self.auditory_fb("fixbreak")
                     return
 
             # Log out our performance in drawing the stimulus
+            p_info.loc[p, "occurred"] = True
             p_info.loc[p, "dropped_frames"] = self.win.nDroppedFrames
 
             # Show the gap screen
