@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial import distance
 
-from psychopy import core, event
+from psychopy import core, event, logging
 import cregg
 
 from utils import (EyeTracker, SaccadeTargets, GazeStim,
@@ -78,6 +78,7 @@ def experiment_loop(p, win, stims, tracker):
     tracker.win = win
     tracker.clock = stim_event.clock
     stim_event.tracker = tracker
+    logging.defaultClock =  stim_event.clock
 
     # Initialize the experiment log
     trial_log = []
