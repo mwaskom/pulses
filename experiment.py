@@ -213,8 +213,8 @@ def generate_trials(p, clock):
             correct=np.nan,
             answered=False,
             rt=np.nan,
-            eye_response=np.nan,
-            key_response=np.nan,
+            eye_response=False,
+            key_response=False,
             key=np.nan,
             result=np.nan,
 
@@ -438,6 +438,7 @@ class TrialEngine(object):
                 if key_name in self.resp_keys:
                     t_info["rt"] = key_time
                     t_info["key"] = key_name
+                    t_info["key_response"] = True
                     t_info["response"] = self.resp_keys.index(key_name)
                     t_info["correct"] = (t_info["response"]
                                          == t_info["rewarded_resp"])
@@ -500,6 +501,7 @@ class TrialEngine(object):
             if valid_response:
 
                 t_info["rt"] = fix_break_time
+                t_info["eye_response"] = True
                 t_info["response"] = current_response
                 t_info["correct"] = (t_info["response"]
                                      == t_info["rewarded_resp"])
