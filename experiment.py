@@ -177,6 +177,8 @@ def generate_trials(p, clock):
         trial_info = dict(
 
             # Basic trial info
+            session=p.date,
+            run=p.run,
             trial=t,
 
             # Stimulus parameters
@@ -184,7 +186,7 @@ def generate_trials(p, clock):
             signed_delta=delta,
             unsigned_delta=np.abs(delta),
             pct_delta=np.abs(delta) * 100,
-            contrast=pedestal + delta,
+            contrast_mu=pedestal + delta,
             stim_position=next(stim_positions),
             rewarded_resp=rewarded_resp,
 
@@ -277,27 +279,22 @@ def make_pulse_train(p, t_info, rng=None):
         raise ValueError("Pulse design target not understood")
 
     # Generate the stimulus strength for each pulse
-    contrast_dist = "norm", t_info["contrast"], p.contrast_sd
+    contrast_dist = "norm", t_info["contrast_mu"], p.contrast_sd
     contrast = cregg.flexible_values(contrast_dist, count, rng)
 
     p_info = pd.DataFrame(dict(
 
         # Basic trial information
+        session=p.date,
+        run=p.run,
         trial=t_info["trial"],
-        pulse=np.arange(1, count + 1),
-        signed_delta=t_info["signed_delta"],
-        unsigned_delta=t_info["unsigned_delta"],
-        contrast_mean=t_info["contrast"],
-        contrast_sd=p.contrast_sd,
-        count=count,
 
-        # Time of each element of the "pulse" (gap and stim on)
+        # Pulse information
+        pulse=np.arange(1, count + 1),
+        contrast=contrast,
         gap_dur=gap_dur,
         pulse_dur=pulse_dur,
         expected_offset=(pulse_dur + gap_dur).cumsum() - gap_dur,
-
-        # Stimulus strength on each pulse
-        contrast=contrast,
 
         # Intitialize fields to track achieved performance
         occurred=False,
