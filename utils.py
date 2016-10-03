@@ -293,6 +293,37 @@ class GazeStim(GratingStim):
         super(GazeStim, self).draw()
 
 
+class SpatialCue(object):
+
+    def __init__(self, win, p, target_positions):
+
+        self.win = win
+        self.p = p
+        self.target_positions = target_positions
+
+        self.stim = visual.Line(win,
+                                start=(0, 0),
+                                lineWidth=5,
+                                lineColor=p.fix_stim_color)
+
+    @property
+    def position(self):
+
+        return self._position
+
+    @position.setter
+    def position(self, pos):
+
+        self._position = pos
+        target = self.target_positions[pos]
+        direction = target / np.linalg.norm(target)
+        self.stim.end = direction * self.p.cue_length
+
+    def draw(self):
+
+        self.stim.draw()
+
+
 def show_performance_feedback(win, p, log):
 
     if p.nolog:

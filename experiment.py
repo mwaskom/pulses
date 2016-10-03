@@ -10,7 +10,7 @@ from scipy.spatial import distance
 from psychopy import core, event, logging
 import cregg
 
-from utils import (EyeTracker, SaccadeTargets, GazeStim,
+from utils import (EyeTracker, SaccadeTargets, GazeStim, SpatialCue,
                    show_performance_feedback)
 from stimuli import StimArray
 
@@ -46,6 +46,9 @@ def main(arglist):
 
     # Initialize the saccade targets
     stims["targets"] = SaccadeTargets(win, p)
+
+    # Initialize the stimulus position cue
+    stims["cue"] = SpatialCue(win, p, p.stim_positions)
 
     # Initialize the gaze stimulus
     if p.eye_response and p.eye_show_gaze:
@@ -194,6 +197,7 @@ def generate_trials(p, clock):
             iti=iti,
             trial_time=trial_time,
             pre_targ_dur=cregg.flexible_values(p.pre_targ_dur, 1, rng),
+            cue_dur=cregg.flexible_values(p.cue_dur, 1, rng),
             post_targ_dur=cregg.flexible_values(p.post_targ_dur, 1, rng),
             crit_stim_dur=cregg.flexible_values(p.crit_stim_dur, 1, rng),
             pre_stim_dur=cregg.flexible_values(p.pre_stim_dur, 1, rng),
@@ -320,6 +324,7 @@ class TrialEngine(object):
         self.p = p
 
         self.fix = stims.get("fix", None)
+        self.cue = stims.get("cue", None)
         self.patches = stims.get("patches", None)
         self.targets = stims.get("targets", None)
         self.criterion = stims.get("criterion", None)
@@ -593,7 +598,22 @@ class TrialEngine(object):
         else:
             trial_fix = (0, 0)
 
-        # Show response targets and wait for post-target period
+        # Show response targets and cue
+        self.cue.position = t_info["stim_position"]
+        for frame in self.secs_to_flips(t_info["post_targ_dur"]):
+            self.targets.draw()
+            self.cue.draw()
+            self.fix.draw()
+            flip_time = self.win.flip()
+            if not frame:
+                self.tracker.send_message("targets_on")
+                t_info["targ_onset"] = flip_time
+            if not self.check_fixation(trial_fix):
+                t_info["result"] = "fixbreak"
+                self.auditory_fb("fixbreak")
+                return
+
+        # Show only targets and wait for post-target period
         for frame in self.secs_to_flips(t_info["post_targ_dur"]):
             self.targets.draw()
             self.fix.draw()

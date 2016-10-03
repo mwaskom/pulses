@@ -145,6 +145,8 @@ base = dict(
     # The number of individual gratings that are averaged to create each stim
     stim_gratings=1,
 
+    # Length of the cue line
+    cue_length=.4,
 
     # Stimulus contrast parameters
     # ----------------------------
@@ -172,8 +174,11 @@ base = dict(
     # Duration to wait after fixation before showing targets
     pre_targ_dur=("truncexpon", 4, .2, .2),
 
-    # Duration to wait after showing targets
-    post_targ_dur=("truncexpon", 4, .2, .2),
+    # Duration to show the cue
+    cue_dur=.5,
+
+    # Duration to wait while showing targets and cue
+    post_targ_dur=.6,
 
     # Duration of criterion stimulus
     crit_stim_dur=.2,
