@@ -296,6 +296,7 @@ def make_pulse_train(p, t_info, rng=None):
         # Pulse information
         pulse=np.arange(1, count + 1),
         contrast=contrast,
+        orientation=np.nan,
         gap_dur=gap_dur,
         pulse_dur=pulse_dur,
         expected_offset=(pulse_dur + gap_dur).cumsum() - gap_dur,
@@ -613,19 +614,6 @@ class TrialEngine(object):
                 self.auditory_fb("fixbreak")
                 return
 
-        # Show only targets and wait for post-target period
-        for frame in self.secs_to_flips(t_info["post_targ_dur"]):
-            self.targets.draw()
-            self.fix.draw()
-            flip_time = self.win.flip()
-            if not frame:
-                self.tracker.send_message("targets_on")
-                t_info["targ_onset"] = flip_time
-            if not self.check_fixation(trial_fix):
-                t_info["result"] = "fixbreak"
-                self.auditory_fb("fixbreak")
-                return
-
         # Show criterion stimulus
         self.criterion.reset_animation()
         self.criterion.contrast = t_info["pedestal"]
@@ -657,6 +645,8 @@ class TrialEngine(object):
 
             # Reset the stimulus object
             self.patches.reset_animation()
+            ori = self.patches.orientation[t_info["stim_position"]]
+            p_info.loc[p, "orientation"] = ori
 
             # Set the contrast for this pulse
             contrast = [0, 0]
