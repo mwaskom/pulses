@@ -195,12 +195,15 @@ base = dict(
     # selects the other parmater that determines the design.  The value should
     # be either "duration" or "count". Depending on this parameter, some of the
     # parameters below are ignored.
-    pulse_design_target="duration",
+    pulse_design_target="count",
 
-    # Duration of each pulse train
+    # Duration of each pulse train, when targeting duration
     pulse_train_dur=("truncexpon", (16 - 6) / 4, 6, 4),
 
-    # Number of pulses on each trial
+    # Maximum duration of a valid pulse train, when targeting count
+    pulse_train_max=16,
+
+    # Number of pulses on each trial, when targeting count
     # This can be truncated (not using scipy because there is no built-in
     # truncated geometric distribution), and the probability of single pulse
     # trials can be controlled seperately.

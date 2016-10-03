@@ -81,7 +81,7 @@ def experiment_loop(p, win, stims, tracker):
     tracker.win = win
     tracker.clock = stim_event.clock
     stim_event.tracker = tracker
-    logging.defaultClock =  stim_event.clock
+    logging.defaultClock = stim_event.clock
 
     # Initialize the experiment log
     trial_log = []
@@ -142,6 +142,7 @@ def save_data(p, log):
 def generate_trials(p, clock):
     """Yield trial and pulse train info."""
     # Create an infinite iterator for the stimulus position
+    # This will need to be handled differently if we want novar trials
     if p.stim_pos_method == "random":
         def position_gen():
             while True:
@@ -254,14 +255,14 @@ def make_pulse_train(p, t_info, rng=None):
     if rng is None:
         rng = np.random.RandomState()
 
-    # Generate vectorized data for more pulses than we would expect
-    n_gen = 20
-    gap_dur = cregg.flexible_values(p.pulse_gap, n_gen, rng)
-    pulse_dur = cregg.flexible_values(p.pulse_dur, n_gen, rng)
-
     if p.pulse_design_target == "duration":
 
-        # Target the entire duration of the pulse train
+        # Generate vectorized data for more pulses than we would expect
+        n_gen = 20
+        gap_dur = cregg.flexible_values(p.pulse_gap, n_gen, rng)
+        pulse_dur = cregg.flexible_values(p.pulse_dur, n_gen, rng)
+
+        # Randomly sample the duration of the pulse train
         train_dur = cregg.flexible_values(p.pulse_train_dur, 1, rng)
         count = 1 + np.argmax((gap_dur + pulse_dur).cumsum() > train_dur)
         gap_dur = gap_dur[:count]
@@ -269,15 +270,23 @@ def make_pulse_train(p, t_info, rng=None):
 
     elif p.pulse_design_target == "count":
 
-        # Target the number of pulses
-        if np.random.rand() < p.pulse_design_target:
+        # Randomly sample the pulse count for this trial
+        if rng.rand() < p.pulse_single_prob:
+            # Special case single pulse trials
             count = 1
         else:
             count = cregg.flexible_values(p.pulse_count, 1, rng,
                                           max=p.pulse_count_max)
-        gap_dur = gap_dur[:count]
-        pulse_dur = pulse_dur[:count]
-        train_dur = gap_dur.sum() + pulse_dur.sum()
+
+        # Account for the duration of each pulse
+        pulse_dur = cregg.flexible_values(p.pulse_dur, count, rng)
+        total_pulse_dur = np.sum(pulse_dur)
+
+        # Randomly sample gap durations with a constraint on trial duration
+        train_dur = np.inf
+        while train_dur > p.pulse_train_max:
+            gap_dur = cregg.flexible_values(p.pulse_gap, count, rng)
+            train_dur = np.sum(gap_dur) + total_pulse_dur
 
     else:
         raise ValueError("Pulse design target not understood")
@@ -299,7 +308,7 @@ def make_pulse_train(p, t_info, rng=None):
         orientation=np.nan,
         gap_dur=gap_dur,
         pulse_dur=pulse_dur,
-        expected_offset=(pulse_dur + gap_dur).cumsum() - gap_dur,
+        expected_offset=np.cumsum(pulse_dur + gap_dur) - gap_dur,
 
         # Intitialize fields to track achieved performance
         occurred=False,
