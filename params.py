@@ -128,7 +128,11 @@ base = dict(
     stim_sf=2,
     stim_mask="gauss",
     stim_positions=[(-4.5, -2.18), (4.5, -2.18)],
-    stim_crit_position=[(0, 5)],
+
+    # Parameters that are specific to the criterion stimulus
+    # Others are inherited from the stimulus paramters above
+    crit_position=[(0, 0)],
+    crit_radius=1.5,
 
     # How the stimulus position is determined on each trial, if there are
     # multiple possible stimulus positions.

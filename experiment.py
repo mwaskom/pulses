@@ -42,7 +42,9 @@ def main(arglist):
 
     # Initialize the main stimulus arrays
     stims["patches"] = StimArray(win, p)
-    stims["criterion"] = StimArray(win, p, positions=p.stim_crit_position)
+    stims["criterion"] = StimArray(win, p,
+                                   positions=p.crit_position,
+                                   radius=p.crit_radius)
 
     # Initialize the saccade targets
     stims["targets"] = SaccadeTargets(win, p)
