@@ -127,7 +127,7 @@ base = dict(
     stim_tex="sin",
     stim_sf=2,
     stim_mask="gauss",
-    stim_positions=[(-4.5, -2.18), (4.5, -2.18)],
+    stim_positions=[(-5.6, -2.0), (5.6, -2.0)],
 
     # Parameters that are specific to the criterion stimulus
     # Others are inherited from the stimulus paramters above
