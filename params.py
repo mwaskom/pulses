@@ -149,7 +149,7 @@ base = dict(
     stim_gratings=1,
 
     # Length of the cue line
-    cue_length=.4,
+    cue_length=.33,
 
     # Stimulus contrast parameters
     # ----------------------------

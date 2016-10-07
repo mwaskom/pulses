@@ -590,6 +590,7 @@ class TrialEngine(object):
 
         # Trial onset
         self.fix.color = self.p.fix_ready_color
+        self.cue.position = t_info["stim_position"]
         self.tracker.send_message("trial_{}".format(t_info["trial"]))
         self.tracker.send_message("fixation_on")
         fix_time = self.wait_for_ready()
@@ -602,6 +603,7 @@ class TrialEngine(object):
 
         # Pre target period
         for frame in self.secs_to_flips(t_info["pre_targ_dur"]):
+            self.cue.draw()
             self.fix.draw()
             flip_time = self.win.flip()
             if not self.check_fixation():
@@ -620,7 +622,6 @@ class TrialEngine(object):
             trial_fix = (0, 0)
 
         # Show response targets and cue
-        self.cue.position = t_info["stim_position"]
         for frame in self.secs_to_flips(t_info["post_targ_dur"]):
             self.targets.draw()
             self.cue.draw()
@@ -640,6 +641,7 @@ class TrialEngine(object):
         for frame in self.secs_to_flips(t_info["crit_stim_dur"]):
             self.criterion.draw()
             self.targets.draw()
+            self.cue.draw()
             self.fix.draw()
             flip_time = self.win.flip()
             if not frame:
@@ -653,6 +655,7 @@ class TrialEngine(object):
         # Wait for pre-stimulus fixation
         for frame in self.secs_to_flips(t_info["pre_stim_dur"]):
             self.targets.draw()
+            self.cue.draw()
             self.fix.draw()
             flip_time = self.win.flip()
             if not self.check_fixation(trial_fix):
@@ -678,6 +681,7 @@ class TrialEngine(object):
             for frame in self.secs_to_flips(info["pulse_dur"]):
                 self.patches.draw()
                 self.targets.draw()
+                self.cue.draw()
                 self.fix.draw()
                 flip_time = self.win.flip()
 
@@ -698,6 +702,7 @@ class TrialEngine(object):
 
             # Show the gap screen
             self.targets.draw()
+            self.cue.draw()
             self.fix.draw()
             flip_time = self.win.flip()
             p_info.loc[p, "offset_time"] = flip_time
@@ -711,6 +716,7 @@ class TrialEngine(object):
             for frame in self.secs_to_flips(info["gap_dur"] - timing_error):
                 self.targets.draw()
                 self.fix.draw()
+                self.cue.draw()
                 self.win.flip()
                 if not self.check_fixation(trial_fix):
                     t_info["result"] = "fixbreak"
