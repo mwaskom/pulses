@@ -314,6 +314,7 @@ def make_pulse_train(p, t_info, rng=None):
 
         # Intitialize fields to track achieved performance
         occurred=False,
+        blink=False,
         onset_time=np.nan,
         offset_time=np.nan,
         dropped_frames=np.nan,
@@ -697,6 +698,9 @@ class TrialEngine(object):
                     t_info["result"] = "fixbreak"
                     self.auditory_fb("fixbreak")
                     return
+
+                blink = not self.tracker.check_eye_open(new_sample=False)
+                p_info.loc[p, "blink"] &= blink
 
             # Log out our performance in drawing the stimulus
             p_info.loc[p, "occurred"] = True
