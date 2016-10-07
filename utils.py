@@ -350,11 +350,6 @@ def show_performance_feedback(win, p, log):
              .format(mean_acc * 100))
         )
 
-        lines.append(
-            ("Our average participant is correct on {:.0f}% of trials"
-             .format(p.target_accuracy * 100))
-        )
-
         if mean_acc < p.target_accuracy:
             lines.append(
                 "Please try to by more accurate without sacrificing speed!"
