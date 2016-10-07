@@ -105,7 +105,7 @@ base = dict(
     eye_fix_recenter=True,
 
     # Allow blink for this length of time
-    eye_blink_timeout=.5,
+    eye_blink_timeout=.75,
 
     # Allow for drifts outside of fixation this length of time
     eye_fixbreak_timeout=.1,
