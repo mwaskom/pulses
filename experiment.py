@@ -351,21 +351,32 @@ class TrialEngine(object):
         self.clock = core.Clock()
         self.resp_clock = core.Clock()
 
+        self.most_recent_fixation = np.nan
+
     def secs_to_flips(self, secs, round_func=np.floor):
         """Convert durations in seconds to flips."""
         return range(int(round_func(secs * self.win.refresh_hz)))
 
-    def check_fixation(self, fix_window=(0, 0), allow_blinks=False):
+    def check_fixation(self, fix_window=(0, 0), allow_blinks=True):
         """Enforce fixation but possibly allow blinks."""
+        now = self.clock.getTime()
         if self.tracker.check_fixation(fix_window):
             # Eye is open and in fixation window
+            self.most_recent_fixation = self.clock.getTime()
             return True
 
         if allow_blinks:
-            if not self.tracker.check_eye_open(new_sample=False):
+
+            if self.tracker.check_eye_open(new_sample=False):
+                # Eye has drifted outside of fixation, maybe at start of blink
+                t = self.most_recent_fixation
+                if (now - t) < self.p.eye_fixbreak_timeout:
+                    return True
+
+            else:
+                # Eye is closed (or otherwise not providing valid data)
                 t, _ = self.tracker.last_valid_sample
-                if (self.clock.getTime() - t) < self.p.eye_blink_timeout:
-                    # Eye is closed but blink timeout hasn't elapsed
+                if (now - t) < self.p.eye_blink_timeout:
                     return True
 
         # Either we are outside of fixation or eye has closed for too long
@@ -426,7 +437,7 @@ class TrialEngine(object):
 
             # Check eye response
             if self.p.eye_response:
-                if not self.check_fixation(fix_window):
+                if not self.check_fixation(fix_window, allow_blinks=False):
                     had_eye_response = True
                     fix_break_time = self.resp_clock.getTime()
                     break
@@ -644,7 +655,7 @@ class TrialEngine(object):
             self.targets.draw()
             self.fix.draw()
             flip_time = self.win.flip()
-            if not self.check_fixation(trial_fix, allow_blinks=True):
+            if not self.check_fixation(trial_fix):
                 t_info["result"] = "fixbreak"
                 self.auditory_fb("fixbreak")
                 return
@@ -701,7 +712,7 @@ class TrialEngine(object):
                 self.targets.draw()
                 self.fix.draw()
                 self.win.flip()
-                if not self.check_fixation(trial_fix, allow_blinks=True):
+                if not self.check_fixation(trial_fix):
                     t_info["result"] = "fixbreak"
                     self.auditory_fb("fixbreak")
                     return
@@ -711,7 +722,7 @@ class TrialEngine(object):
             self.targets.draw()
             self.fix.draw()
             flip_time = self.win.flip()
-            if not self.check_fixation(trial_fix, allow_blinks=True):
+            if not self.check_fixation(trial_fix):
                 t_info["result"] = "fixbreak"
                 self.auditory_fb("fixbreak")
                 return

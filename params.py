@@ -104,8 +104,11 @@ base = dict(
     # If True, recenter the fixation window before stimulus onset
     eye_fix_recenter=True,
 
-    # Allow blink for this length of time before quitting
-    eye_blink_timeout=.3,
+    # Allow blink for this length of time
+    eye_blink_timeout=.5,
+
+    # Allow for drifts outside of fixation this length of time
+    eye_fixbreak_timeout=.1,
 
     # Radius of the fixation window
     eye_fix_window=1,
