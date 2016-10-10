@@ -355,6 +355,7 @@ class TrialEngine(object):
         self.resp_clock = core.Clock()
 
         self.most_recent_fixation = np.nan
+        self.most_recent_blink = np.nan
 
     def secs_to_flips(self, secs, round_func=np.floor):
         """Convert durations in seconds to flips."""
@@ -371,14 +372,18 @@ class TrialEngine(object):
         if allow_blinks:
 
             if self.tracker.check_eye_open(new_sample=False):
-                # Eye has drifted outside of fixation, maybe at start of blink
-                t = self.most_recent_fixation
-                if (now - t) < self.p.eye_fixbreak_timeout:
+                # Eye is outside of fixation, maybe at start or end of blink
+                last_fix = self.most_recent_fixation
+                last_blink = self.most_recent_blink
+                if (now - last_fix) < self.p.eye_fixbreak_timeout:
+                    return True
+                elif (now - last_blink) < self.p.eye_fixbreak_timeout:
                     return True
 
             else:
                 # Eye is closed (or otherwise not providing valid data)
                 t, _ = self.tracker.last_valid_sample
+                self.most_recent_blink = t
                 if (now - t) < self.p.eye_blink_timeout:
                     return True
 
