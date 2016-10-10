@@ -611,7 +611,6 @@ class TrialEngine(object):
 
         # Pre target period
         for frame in self.secs_to_flips(t_info["pre_targ_dur"]):
-            self.cue.draw()
             self.fix.draw()
             flip_time = self.win.flip()
             if not self.check_fixation():
