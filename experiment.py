@@ -130,10 +130,14 @@ def save_data(p, log):
         p.to_json(p.log_stem + "_params.json")
 
         trial_log = pd.DataFrame(log["trials"])
-        trial_log.to_csv(p.log_stem + "_trials.csv", index=False)
+        trial_log_fname = p.log_stem + "_trials.csv"
+        cregg.archive_old_versions(trial_log_fname)
+        trial_log.to_csv(trial_log_fname, index=False)
 
         pulse_log = pd.concat(log["pulses"])
-        pulse_log.to_csv(p.log_stem + "_pulses.csv", index=False)
+        pulse_log_fname = p.log_stem + "_pulses.csv"
+        cregg.archive_old_versions(pulse_log_fname)
+        pulse_log.to_csv(pulse_log_fname, index=False)
 
 
 # =========================================================================== #

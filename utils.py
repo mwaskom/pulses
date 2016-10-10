@@ -184,6 +184,9 @@ class EyeTracker(object):
         """Move the Eyelink edf data to the right location."""
         edf_src_fname = "eyedat.EDF"
         edf_trg_fname = self.log_stem + ".edf"
+
+        cregg.archive_old_versions(edf_trg_fname)
+
         if os.path.exists(edf_src_fname):
             edf_mtime = os.stat(edf_src_fname).st_mtime
             age = time.time() - edf_mtime
@@ -205,7 +208,9 @@ class EyeTracker(object):
                               index=self.log_timestamps,
                               columns=["x", "y"])
 
-        log_df.to_csv(self.log_stem + ".csv")
+        log_fname = self.log_stem + ".csv"
+        cregg.archive_old_versions(log_fname)
+        log_df.to_csv(log_fname)
 
     def shutdown(self):
         """Handle all of the things that need to happen when ending a run."""
