@@ -160,7 +160,7 @@ class EyeTracker(object):
             gaze = self.read_gaze(log=log)
         else:
             gaze = self.log_positions[-1]
-        if not np.isnan(gaze).any():
+        if np.isfinite(gaze).all():
             fix_distance = distance.euclidean(pos, gaze)
             if fix_distance < self.fix_window_radius:
                 return True
@@ -172,7 +172,7 @@ class EyeTracker(object):
             gaze = self.read_gaze(log=log)
         else:
             gaze = self.log_positions[-1]
-        return not np.isnan(gaze).any()
+        return np.isfinite(gaze).all()
 
     def close_connection(self):
         """Close down the connection to Eyelink and save the eye data."""
@@ -219,7 +219,7 @@ class EyeTracker(object):
         samples = itertools.izip(reversed(self.log_timestamps),
                                  reversed(self.log_positions))
         for timestamp, gaze in samples:
-            if not np.isnan(gaze).any():
+            if np.isfinite(gaze).all():
                 return timestamp, gaze
 
 
@@ -284,11 +284,11 @@ class GazeStim(GratingStim):
 
         gaze = self.tracker.read_gaze(log=False)
 
-        if np.isnan(gaze).any():
-            self.opacity = 0
-        else:
+        if np.isfinite(gaze).all():
             self.pos = gaze
             self.opacity = 1
+        else:
+            self.opacity = 0
 
         super(GazeStim, self).draw()
 
