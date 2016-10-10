@@ -185,7 +185,7 @@ class EyeTracker(object):
         edf_src_fname = "eyedat.EDF"
         edf_trg_fname = self.log_stem + ".edf"
 
-        cregg.archive_old_versions(edf_trg_fname)
+        cregg.archive_old_version(edf_trg_fname)
 
         if os.path.exists(edf_src_fname):
             edf_mtime = os.stat(edf_src_fname).st_mtime
@@ -209,7 +209,7 @@ class EyeTracker(object):
                               columns=["x", "y"])
 
         log_fname = self.log_stem + ".csv"
-        cregg.archive_old_versions(log_fname)
+        cregg.archive_old_version(log_fname)
         log_df.to_csv(log_fname)
 
     def shutdown(self):
