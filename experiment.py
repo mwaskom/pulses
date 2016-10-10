@@ -53,7 +53,7 @@ def main(arglist):
     stims["cue"] = SpatialCue(win, p, p.stim_positions)
 
     # Initialize the gaze stimulus
-    if p.eye_response and (p.eye_mouse_stimulate or p.eye_show_gaze):
+    if p.eye_response and (p.eye_mouse_simulate or p.eye_show_gaze):
         GazeStim(win, tracker)
 
     # Ensure that the output directory exists
