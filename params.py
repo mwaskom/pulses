@@ -22,6 +22,9 @@ base = dict(
     # Name of monitor spec used when `-fmri` flag is used
     fmri_monitor_name="cbi_projector",
 
+    # Apply a horizontal flip when in fmri mode to account for mirror
+    fmri_mirror_horizontal=True,
+
     # Mean luminance of the display (in cd/m^2)
     mean_luminance=25,
 
