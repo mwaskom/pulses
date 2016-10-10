@@ -263,7 +263,7 @@ base = dict(
     # -----------------------
 
     # Template string for naming log files with data from the run
-    log_template="data/{subject}/{mode}_{date}_{run:02d}",
+    log_template="data/{subject}/{date}_{mode}_{run:02d}",
 
     # Communication
     # -------------
