@@ -357,7 +357,7 @@ def show_performance_feedback(win, p, log):
 
         if mean_acc < p.target_accuracy:
             lines.append(
-                "Please try to by more accurate without sacrificing speed!"
+                "Please try to by more accurate in the next block!"
             )
         else:
             lines.append(
