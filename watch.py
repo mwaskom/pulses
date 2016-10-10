@@ -16,7 +16,8 @@ if __name__ == "__main__":
     _, mode = sys.argv
     p = cregg.Params(mode)
 
-    deltas = pd.Series(p.contrast_deltas, name="pct_delta") * 100
+    deltas = pd.Series(np.unique(np.abs(p.contrast_deltas)),
+                       name="pct_delta") * 100
 
     # Initialize the figure object
     sns.set(context="paper", font_scale=1.2, color_codes=True)

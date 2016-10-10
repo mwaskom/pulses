@@ -159,15 +159,18 @@ def generate_trials(p, clock):
     else:
         raise ValueError("Value for `stim_pos_method` not valid")
 
-    # Create a generator function to balance stimulus sign over short runs
+    # Create a generator function to balance stimulus strength over short runs
     # Note also that the RNG used here is unlinked to the trial rng
-    def pseudorandom_signs():
-        sign_pool = np.repeat([-1, 1], 6)
+    def pseudorandom_deltas():
+        grouped_deltas = np.split(np.array(p.contrast_deltas), 4)
+        group_pool = np.repeat(range(4), 4)
         while True:
-            signs = list(np.random.permutation(sign_pool))
-            while signs:
-                yield signs.pop()
-    sign_generator = pseudorandom_signs()
+            scrambled_groups = list(np.random.permutation(group_pool))
+            while scrambled_groups:
+                group = scrambled_groups.pop()
+                delta = np.random.choice(grouped_deltas[group])
+                yield delta
+    delta_generator = pseudorandom_deltas()
 
     # Create an infinite iterator for trial data
     for t in itertools.count(1):
@@ -186,8 +189,7 @@ def generate_trials(p, clock):
 
         # Determine the stimulus parameters for this trial
         pedestal = cregg.flexible_values(p.contrast_pedestal, 1, rng)
-        sign = next(sign_generator)
-        delta = sign * cregg.flexible_values(p.contrast_deltas, 1, rng)
+        delta = next(delta_generator)
 
         # Determine the response that will yield positive feedback
         if delta == 0:
@@ -234,9 +236,9 @@ def generate_trials(p, clock):
             feedback_onset=np.nan,
 
             # Subject response fields
+            answered=False,
             response=np.nan,
             correct=np.nan,
-            answered=False,
             rt=np.nan,
             eye_response=False,
             key_response=False,
