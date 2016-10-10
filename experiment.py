@@ -159,6 +159,16 @@ def generate_trials(p, clock):
     else:
         raise ValueError("Value for `stim_pos_method` not valid")
 
+    # Create a generator function to balance stimulus sign over short runs
+    # Note also that the RNG used here is unlinked to the trial rng
+    def pseudorandom_signs():
+        sign_pool = np.repeat([-1, 1], 6)
+        while True:
+            signs = list(np.random.permutation(sign_pool))
+            while signs:
+                yield signs.pop()
+    sign_generator = pseudorandom_signs()
+
     # Create an infinite iterator for trial data
     for t in itertools.count(1):
 
@@ -176,7 +186,8 @@ def generate_trials(p, clock):
 
         # Determine the stimulus parameters for this trial
         pedestal = cregg.flexible_values(p.contrast_pedestal, 1, rng)
-        delta = cregg.flexible_values(p.contrast_deltas, 1, rng)
+        sign = next(sign_generator)
+        delta = sign * cregg.flexible_values(p.contrast_deltas, 1, rng)
 
         # Determine the response that will yield positive feedback
         if delta == 0:
