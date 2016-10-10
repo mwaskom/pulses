@@ -87,7 +87,7 @@ base = dict(
     eye_mouse_simulate=True,
 
     # If True, show the gaze position with a small stimulus
-    eye_show_gaze=True,
+    eye_show_gaze=False,
 
     # Locations of the two saccade targets
     eye_target_pos=[(-8, 3), (8, 3)],
