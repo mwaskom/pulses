@@ -69,7 +69,7 @@ base = dict(
 
     # Listen for this key to be sent by the scanner at the start of the run
     # Only relevant when running in `-fmri` mode
-    trigger_keys=["quoteleft"],
+    trigger_keys=["quoteleft", "grave"],
 
     # Keys corresponding to left and right responses in normal mode
     resp_keys=["lshift", "rshift"],
