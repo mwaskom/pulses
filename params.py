@@ -194,7 +194,7 @@ base = dict(
     crit_stim_dur=.2,
 
     # Gap between the criterion stimulus and the pulse train
-    pre_stim_dur=("truncexpon", (8 - 2) / 3, 2, 3),
+    pre_stim_dur=("truncexpon", (4 - 2) / 1, 2, 1),
 
     # Gap between the pulse train and the response cue
     post_stim_dur=0,
@@ -234,7 +234,7 @@ base = dict(
     feedback_dur=.5,
 
     # Duration of the inter-trial-interval.
-    iti_dur=("truncexpon", (10 - 4) / 2, 4, 2),
+    iti_dur=("truncexpon", 4, 1, 1),
 
     # Maximum duration of each run, in seconds
     max_run_dur=600,
@@ -291,13 +291,43 @@ fast_debugging.update(dict(
 
 ))
 
+training_a = deepcopy(base)
+training_a.update(dict(
 
-initial_training = deepcopy(base)
-initial_training.update(dict(
-
-    iti_dur=("truncexpon", 4, 1, 1),
-    pre_stim_dur=("truncexpon", (4 - 1) / 2, 1, 2),
-    pulse_gap=("truncexpon", (2 - .25) / .75, .25, .75),
+    pulse_gap=("truncexpon", (2 - .5) / .75, .5, .75),
     pulse_train_max=4,
+
+))
+
+training_b = deepcopy(base)
+training_b.update(dict(
+
+    pulse_gap=("truncexpon", (4 - 1) / 1.5, 1, 1.5),
+    pulse_train_max=8,
+
+))
+
+training_c = deepcopy(base)
+training_c.update(dict(
+
+    pulse_gap=("truncexpon", (6 - 1.5) / 2.25, 1.5, 2.25),
+    pulse_train_max=12,
+
+))
+
+training_d = deepcopy(base)
+training_d.update(dict(
+
+    pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
+    pulse_train_max=16,
+
+))
+
+behavior = deepcopy(training_d)
+
+scanning = deepcopy(behavior)
+scanning.update(dict(
+
+    iti_dur=("truncexpon", (10 - 4) / 2, 4, 2),
 
 ))
