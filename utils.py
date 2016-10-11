@@ -356,6 +356,11 @@ def show_performance_feedback(win, p, log):
         )
 
         if mean_acc < p.target_accuracy:
+            mean_resp = df.response.mean()
+            lines.append(
+                ("You answered 'higher' on {:.0f}% of trials"
+                 .format(mean_resp * 100))
+            )
             lines.append(
                 "Please try to by more accurate in the next block!"
             )
@@ -365,29 +370,6 @@ def show_performance_feedback(win, p, log):
             )
 
         lines.append("")
-
-    if p.target_rt is not None:
-
-        mean_rt = df.rt.mean()
-
-        lines.append(
-            ("You spent {:.2f} seconds per trial"
-             .format(mean_rt))
-        )
-
-        lines.append(
-            ("Our average participant spends {:.2f} seconds per trial"
-             .format(p.target_rt))
-        )
-
-        if mean_rt < p.target_rt:
-            lines.append(
-                "Great job! Keep it up!"
-            )
-        else:
-            lines.append(
-                "Please try to speed up without sacrificing accuracy!"
-            )
 
     cregg.WaitText(win, lines,
                    advance_keys=p.finish_keys,

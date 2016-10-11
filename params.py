@@ -271,9 +271,6 @@ base = dict(
     # Target accuracy used for feedback at end of run
     target_accuracy=.8,
 
-    # Target RT used for feedback at end of run
-    target_rt=None,
-
     # IP address running the online behavioral results client
     client_host="localhost",
 
