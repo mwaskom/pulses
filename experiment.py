@@ -165,11 +165,8 @@ def generate_trials(p, clock):
         grouped_deltas = np.split(np.array(p.contrast_deltas), 4)
         group_pool = np.repeat(range(4), 4)
         while True:
-            scrambled_groups = list(np.random.permutation(group_pool))
-            while scrambled_groups:
-                group = scrambled_groups.pop()
-                delta = np.random.choice(grouped_deltas[group])
-                yield delta
+            for group in np.random.permutation(group_pool):
+                yield np.random.choice(grouped_deltas[group])
     delta_generator = pseudorandom_deltas()
 
     # Create an infinite iterator for trial data
