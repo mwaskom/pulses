@@ -640,7 +640,7 @@ class TrialEngine(object):
                     self.auditory_fb("fixbreak")
                     return
             else:
-                trial_fix = self.tracker.last_valid_sample
+                _, trial_fix = self.tracker.last_valid_sample
         else:
             trial_fix = (0, 0)
 
