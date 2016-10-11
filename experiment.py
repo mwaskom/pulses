@@ -459,7 +459,7 @@ class TrialEngine(object):
 
             # Check eye response
             if self.p.eye_response:
-                if not self.check_fixation(fix_window, allow_blinks=False):
+                if not self.check_fixation(fix_window):
                     had_eye_response = True
                     fix_break_time = self.resp_clock.getTime()
                     break
