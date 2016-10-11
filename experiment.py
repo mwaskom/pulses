@@ -634,11 +634,13 @@ class TrialEngine(object):
 
         # Recenter fixation window
         if self.p.eye_fix_recenter:
-            trial_fix = self.tracker.read_gaze()
-            if not self.check_fixation():
-                t_info["result"] = "fixbreak"
-                self.auditory_fb("fixbreak")
-                return
+            while not self.check_fixation(allow_blinks=False):
+                if not self.check_fixation(allow_blinks=True):
+                    t_info["result"] = "fixbreak"
+                    self.auditory_fb("fixbreak")
+                    return
+            else:
+                trial_fix = self.tracker.last_valid_sample
         else:
             trial_fix = (0, 0)
 
