@@ -114,7 +114,7 @@ base = dict(
     eye_fixbreak_timeout=.1,
 
     # Radius of the fixation window
-    eye_fix_window=1,
+    eye_fix_window=1.5,
 
     # Radius of the target window
     eye_targ_window=2.5,
