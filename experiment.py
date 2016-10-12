@@ -310,7 +310,8 @@ def make_pulse_train(p, t_info, rng=None):
 
     # Generate the stimulus strength for each pulse
     contrast_dist = "norm", t_info["contrast_mu"], p.contrast_sd
-    contrast = cregg.flexible_values(contrast_dist, count, rng)
+    contrast = cregg.flexible_values(contrast_dist, count, rng,
+                                     min=0, max=1)
 
     p_info = pd.DataFrame(dict(
 
