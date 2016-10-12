@@ -237,6 +237,7 @@ def generate_trials(p, clock):
             response=np.nan,
             correct=np.nan,
             rt=np.nan,
+            stim_blink=False,
             eye_response=False,
             key_response=False,
             key=np.nan,
@@ -748,6 +749,9 @@ class TrialEngine(object):
                     t_info["result"] = "fixbreak"
                     self.auditory_fb("fixbreak")
                     return
+
+        # Determine if there were any stimulus blinks
+        t_info["stim_blink"] = p_info["blink"].any()
 
         # Wait for post-stimulus fixation
         for frame in self.secs_to_flips(t_info["post_stim_dur"]):
