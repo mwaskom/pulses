@@ -108,6 +108,7 @@ def experiment_loop(p, win, stims, tracker):
 
             # Execute this trial
             stim_event(t_info, p_info)
+            tracker.send_message("trial_{}_end".format(t_info["trial"]))
 
             # Record the result of the trial
             trial_log.append(t_info)
@@ -615,7 +616,7 @@ class TrialEngine(object):
         # Trial onset
         self.fix.color = self.p.fix_ready_color
         self.cue.position = t_info["stim_position"]
-        self.tracker.send_message("trial_{}".format(t_info["trial"]))
+        self.tracker.send_message("trial_{}_start".format(t_info["trial"]))
         self.tracker.send_message("fixation_on")
         fix_time = self.wait_for_ready()
         if fix_time is None:
