@@ -154,15 +154,18 @@ class EyeTracker(object):
 
         return gaze
 
-    def check_fixation(self, pos=(0, 0), new_sample=True, log=True):
+    def check_fixation(self, pos=(0, 0), radius=None,
+                       new_sample=True, log=True):
         """Return True if eye is in the fixation window."""
         if new_sample:
             gaze = self.read_gaze(log=log)
         else:
             gaze = self.log_positions[-1]
+        if radius is None:
+            radius = self.fix_window_radius
         if np.isfinite(gaze).all():
             fix_distance = distance.euclidean(pos, gaze)
-            if fix_distance < self.fix_window_radius:
+            if fix_distance < radius:
                 return True
         return False
 
