@@ -146,7 +146,7 @@ base = dict(
     stim_drift_speed=0,
 
     # Speed each grating should rotate in deg/s
-    stim_rotation_speed=15,
+    stim_rotation_speed=45,
 
     # Whether the drift direction of each grating is allowed to vary
     # Setting to True adds more variability, but can introduce global motion
