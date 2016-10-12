@@ -53,7 +53,7 @@ def main(arglist):
     stims["cue"] = SpatialCue(win, p, p.stim_positions)
 
     # Initialize the gaze stimulus
-    if p.eye_response and (p.eye_mouse_simulate or p.eye_show_gaze):
+    if p.eye_monitor and (p.eye_mouse_simulate or p.eye_show_gaze):
         GazeStim(win, tracker)
 
     # Ensure that the output directory exists
@@ -417,7 +417,7 @@ class TrialEngine(object):
             if self.clock.getTime() > timeout:
                 return None
 
-            if self.p.key_response:
+            if self.p.key_monitor:
                 listen_keys = self.p.ready_keys + self.p.quit_keys
                 keys = event.getKeys(keyList=listen_keys)
                 for key in keys:
@@ -431,8 +431,8 @@ class TrialEngine(object):
                         else:
                             continue
 
-            if self.p.eye_response:
-                if self.check_fixation():
+            if self.p.eye_monitor:
+                if self.check_fixation(allow_blinks=False):
                     return self.clock.getTime()
 
             self.fix.draw()
@@ -452,7 +452,7 @@ class TrialEngine(object):
         for frame in self.secs_to_flips(self.p.resp_max_wait):
 
             # Check keyboard responses
-            if self.p.key_response:
+            if self.p.key_monitor:
                 keys = event.getKeys(self.break_keys,
                                      timeStamped=self.resp_clock)
                 if keys:
@@ -460,7 +460,7 @@ class TrialEngine(object):
                     break
 
             # Check eye response
-            if self.p.eye_response:
+            if self.p.eye_monitor:
                 if not self.check_fixation(fix_window):
                     had_eye_response = True
                     fix_break_time = self.resp_clock.getTime()

@@ -50,7 +50,7 @@ base = dict(
     # -----------------------
 
     # If True, listen to the keyboard for "fixation" and responses
-    key_response = True,
+    key_monitor = True,
 
     # Pressing any of these keys will usually quit the experiment nicely,
     # unless we are in precise timing mode (shortly before stimulus onset)
@@ -81,7 +81,7 @@ base = dict(
     # -------------------------
 
     # If True, use an eyetracker for fixation and response
-    eye_response=True,
+    eye_monitor=True,
 
     # If True, simulate the eyetracker with the mousepad
     eye_mouse_simulate=True,
