@@ -238,7 +238,7 @@ def generate_trials(p, clock):
             response=np.nan,
             correct=np.nan,
             rt=np.nan,
-            stim_blink=False,
+            stim_blink=np.nan,
             eye_response=False,
             key_response=False,
             key=np.nan,
@@ -723,7 +723,7 @@ class TrialEngine(object):
                     return
 
                 blink = not self.tracker.check_eye_open(new_sample=False)
-                p_info.loc[p, "blink"] &= blink
+                p_info.loc[p, "blink"] |= blink
 
             # Log out our performance in drawing the stimulus
             p_info.loc[p, "occurred"] = True
