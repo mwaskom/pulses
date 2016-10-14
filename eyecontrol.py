@@ -109,7 +109,7 @@ class EyeControlApp(QMainWindow):
         self.update_button = QPushButton("Update")
         self.update_button.clicked.connect(self.send_params)
 
-        # --- Control GUI Layout
+        # --- Layout
 
         controls = QHBoxLayout()
 
@@ -134,7 +134,36 @@ class EyeControlApp(QMainWindow):
 
     def create_plot_objects(self):
 
-        pass
+        gaze_color = (.3, .45, .7)
+        gaze_rgba = np.zeros((10, 4))
+        gaze_rgba[:, :3] = gaze_color
+        gaze_rgba[:, -1] = np.linspace(1, .1, 10)
+
+        # Gaze data points
+        x, y = self.gaze_data.T
+        self.gaze = self.ax.scatter(x, y,
+                                    c=gaze_rgba, s=20,
+                                    zorder=3,
+                                    linewidth=0,
+                                    animated=True)
+
+        # Fixation window
+        radius = self.fix_slider.value() / 10
+        self.fix_window = plt.Circle((0, 0), radius,
+                                     facecolor="none",
+                                     linewidth=.8,
+                                     edgecolor=".3",
+                                     animated=True)
+        self.ax.add_artist(self.fix_window)
+
+        # Fixation point and saccade targets
+        # TODO get from params file
+        point_locs = np.array([(0, 0), (-8, 3), (8, 3)])
+        point_rgba = [(.9, .8, .1, 1)]
+        x, y = point_locs.T
+        self.points = self.ax.scatter(x, y,
+                                      c=point_rgba, s=50,
+                                      linewidth=0)
 
     def create_client(self):
 
@@ -143,7 +172,7 @@ class EyeControlApp(QMainWindow):
     def create_timers(self):
 
         self.timer = QTimer(self)
-        self.timer.timeout.connect(self.update)
+        self.timer.timeout.connect(self.update_plot)
         self.timer.start(self.poll_dur)
 
 
