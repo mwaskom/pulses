@@ -26,7 +26,32 @@ class EyeControlApp(QMainWindow):
 
 class EyeControlSocketThread(threading.Thread):
 
-    pass
+    ADDRESS_INFO = ("localhost", 50001)
+
+    def __init__(self):
+
+        super(EyeControlSocketThread, self).__init__()
+        self.alive = threading.Event()
+        self.alive.set()
+
+    def join(self, timeout=None):
+
+        self.alive.clear()
+        threading.Thread.join(self, timeout)
+
+
+class EyeControlClientThread(EyeControlSocketThread):
+
+    def __init__(self, gaze_q, param_q):
+
+        super(EyeControlClientThread, self).__init__()
+
+
+class EyeControlServerThread(EyeControlSocketThread):
+
+    def __init__(self, gaze_q, param_q):
+
+        super(EyeControlServerThread, self).__init__()
 
 
 def main():
