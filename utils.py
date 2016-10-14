@@ -53,7 +53,7 @@ class EyeTracker(object):
     def __init__(self, p):
 
         # Extract relevant parameters
-        self.monitor_eye = p.eye_response
+        self.monitor_eye = p.eye_monitor
         self.simulate = p.eye_mouse_simulate
 
         # Determine the position and size of the fixation window
