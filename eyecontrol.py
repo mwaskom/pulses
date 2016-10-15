@@ -40,7 +40,37 @@ class EyeControlApp(QMainWindow):
 
     def update_plot(self):
 
-        pass
+        # Read a new datapoint from the queue
+        null_data = np.array([np.nan, np.nan])
+        try:
+            data = self.gaze_q.get(block=True, timeout=.005)
+            if data.size == 2:
+                new_point = np.fromstring(data)
+            else:
+                new_point = null_data
+        except queue.Empty:
+            new_point = null_data
+
+        # Update the data array
+        self.data[1:] = self.data[:-1]
+        self.data[0] = new_point
+
+        # Capture the static background
+        # This is done here because the figure gets resized at some point
+        # during app/frame setup and it messes up the background capture
+        if self.background is None:
+            self.fig.canvas.draw()
+            self.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
+
+        # Update the dynamic plot objects
+        self.gaze.set_offsets(self.data)
+        self.fix_window.set_radius(self.fix_slider.value() / 10)
+
+        # Re-draw the plot
+        self.fig.canvas.restore_region(self.background)
+        self.ax.draw_artist(self.gaze)
+        self.ax.draw_artist(self.fix_window)
+        self.canvas.blit(self.ax.bbox)
 
     def update_labels(self):
 
@@ -167,7 +197,8 @@ class EyeControlApp(QMainWindow):
 
     def create_client(self):
 
-        pass
+        self.client = EyeControlClientThread(self.gaze_q, self.param_q)
+        self.client.start()
 
     def create_timers(self):
 
