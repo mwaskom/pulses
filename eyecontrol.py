@@ -41,15 +41,25 @@ class EyeControlApp(QMainWindow):
     def update_plot(self):
 
         # Read a new datapoint from the queue
-        try:
-            data = self.gaze_q.get(block=True, timeout=.005)
-            new_point = np.fromstring(data)
-        except queue.Empty:
-            new_point = np.array([np.nan, np.nan])
+        new_data = []
+        while True:
+            try:
+                data = self.gaze_q.get(block=True, timeout=.005)
+                new_point = np.fromstring(data)
+                new_data.append(new_point)
+            except queue.Empty:
+                if not new_data:
+                    new_data.append(np.array([np.nan, np.nan]))
+                break
 
         # Update the data array
-        self.gaze_data[1:] = self.gaze_data[:-1]
-        self.gaze_data[0] = new_point
+        new_data = np.vstack(new_data)
+        if len(new_data) > 10:
+            self.gaze_data = new_data[-10:]
+        else:
+            n = len(new_data)
+            self.gaze_data[:-n] = self.gaze_data[n:]
+            self.gaze_data[-n:] = new_data
 
         # Capture the static background
         # This is done here because the figure gets resized at some point
@@ -163,7 +173,7 @@ class EyeControlApp(QMainWindow):
         gaze_color = (.3, .45, .7)
         gaze_rgba = np.zeros((10, 4))
         gaze_rgba[:, :3] = gaze_color
-        gaze_rgba[:, -1] = np.linspace(1, .1, 10)
+        gaze_rgba[:, -1] = np.linspace(.1, 1, 10)
 
         # Gaze data points
         x, y = self.gaze_data.T
