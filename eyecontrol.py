@@ -311,10 +311,47 @@ class EyeControlClientThread(EyeControlSocketThread):
 
 class EyeControlServerThread(EyeControlSocketThread):
 
-    def __init__(self, gaze_q, param_q):
+    def __init__(self, gaze_q, param_q, cmd_q):
 
         super(EyeControlServerThread, self).__init__()
 
+        self.gaze_q = gaze_q
+        self.param_q = param_q
+        self.cmd_q = cmd_q
+
+        self.server = socket.socket()
+        self.server.bind(("localhost", 50001))
+        self.server.listen(2)
+
+    def run(self):
+
+        clientsocket, _ = self.server.accept()
+        clientsocket.settimeout(.2)
+
+        try:
+            while self.alive.isSet():
+
+                try:
+                    _ = self.cmd_q.get(block=False)
+                    clientsocket.sendall("updateparameters")
+                    try:
+                        new_params = clientsocket.recv(24)
+                        new_params = np.fromstring(new_params)
+                        self.param_q.put(new_params)
+                    except socket.timeout:
+                        pass
+                except queue.Empty:
+                    pass
+
+                try:
+                    data = self.gaze_q.get(block=False)
+                    data = np.array(data).tostring()
+                    clientsocket.sendall(data)
+                except queue.Empty:
+                    pass
+
+        finally:
+            self.server.close()
 
 def main():
 
