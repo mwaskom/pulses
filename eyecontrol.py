@@ -43,6 +43,10 @@ class EyeControlApp(QMainWindow):
 
     def update_plot(self):
 
+        # Try to open the socket, if it isn't open
+        if self.client is None:
+            self.create_client()
+
         # Read a new datapoint from the queue
         new_data = []
         while True:
@@ -240,8 +244,13 @@ class EyeControlApp(QMainWindow):
 
     def create_client(self):
 
-        self.client = EyeControlClientThread(self.gaze_q, self.param_q)
-        self.client.start()
+        try:
+            self.client = EyeControlClientThread(self.gaze_q, self.param_q)
+        except socket.error:
+            self.client = None
+
+        if self.client is not None:
+            self.client.start()
 
     def create_timers(self):
 
