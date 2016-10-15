@@ -41,33 +41,29 @@ class EyeControlApp(QMainWindow):
     def update_plot(self):
 
         # Read a new datapoint from the queue
-        null_data = np.array([np.nan, np.nan])
         try:
             data = self.gaze_q.get(block=True, timeout=.005)
-            if data.size == 2:
-                new_point = np.fromstring(data)
-            else:
-                new_point = null_data
+            new_point = np.fromstring(data)
         except queue.Empty:
-            new_point = null_data
+            new_point = np.array([np.nan, np.nan])
 
         # Update the data array
-        self.data[1:] = self.data[:-1]
-        self.data[0] = new_point
+        self.gaze_data[1:] = self.gaze_data[:-1]
+        self.gaze_data[0] = new_point
 
         # Capture the static background
         # This is done here because the figure gets resized at some point
         # during app/frame setup and it messes up the background capture
-        if self.background is None:
+        if self.axes_background is None:
             self.fig.canvas.draw()
-            self.background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
+            self.axes_background = self.fig.canvas.copy_from_bbox(self.ax.bbox)
 
         # Update the dynamic plot objects
-        self.gaze.set_offsets(self.data)
+        self.gaze.set_offsets(self.gaze_data)
         self.fix_window.set_radius(self.fix_slider.value() / 10)
 
         # Re-draw the plot
-        self.fig.canvas.restore_region(self.background)
+        self.fig.canvas.restore_region(self.axes_background)
         self.ax.draw_artist(self.gaze)
         self.ax.draw_artist(self.fix_window)
         self.canvas.blit(self.ax.bbox)
@@ -228,6 +224,33 @@ class EyeControlClientThread(EyeControlSocketThread):
     def __init__(self, gaze_q, param_q):
 
         super(EyeControlClientThread, self).__init__()
+
+        self.gaze_q = gaze_q
+        self.param_q = param_q
+
+        self.socket = socket.socket()
+        self.socket.connect(self.ADDRESS_INFO)
+        self.socket.settimeout(.005)
+
+    def run(self):
+
+        while self.alive.isSet():
+
+            try:
+                data = self.socket.recv(16)
+            except socket.timeout:
+                continue
+
+            if data == "updateparameters":
+                try:
+                    new_params = self.param_q.get(block=False)
+                    self.socket.sendall(new_params)
+
+                except queue.Empty:
+                    pass
+
+            else:
+                self.gaze_q.put(data)
 
 
 class EyeControlServerThread(EyeControlSocketThread):
