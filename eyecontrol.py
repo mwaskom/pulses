@@ -1,6 +1,6 @@
 from __future__ import division
 import sys
-import queue
+import Queue
 import socket
 import threading
 
@@ -30,8 +30,8 @@ class EyeControlApp(QMainWindow):
         self.gaze_data = np.zeros((10, 2)) * np.nan
         self.axes_background = None
 
-        self.gaze_q = queue.Queue()
-        self.param_q = queue.Queue()
+        self.gaze_q = Queue.Queue()
+        self.param_q = Queue.Queue()
 
         # TODO read this from a params file
         self.current_params = dict(fix_radius=2, x_offset=0, y_offset=0)
@@ -54,7 +54,7 @@ class EyeControlApp(QMainWindow):
                 data = self.gaze_q.get(block=False)
                 new_point = np.fromstring(data)
                 new_data.append(new_point)
-            except queue.Empty:
+            except Queue.Empty:
                 if not new_data:
                     new_data.append(np.array([np.nan, np.nan]))
                 break
@@ -302,7 +302,7 @@ class EyeControlClientThread(EyeControlSocketThread):
                     new_params = self.param_q.get(block=False)
                     self.socket.sendall(new_params)
 
-                except queue.Empty:
+                except Queue.Empty:
                     pass
 
             else:
@@ -340,14 +340,14 @@ class EyeControlServerThread(EyeControlSocketThread):
                         self.param_q.put(new_params)
                     except socket.timeout:
                         pass
-                except queue.Empty:
+                except Queue.Empty:
                     pass
 
                 try:
                     data = self.gaze_q.get(block=False)
                     data = np.array(data).tostring()
                     clientsocket.sendall(data)
-                except queue.Empty:
+                except Queue.Empty:
                     pass
 
         finally:
