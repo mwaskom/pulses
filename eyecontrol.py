@@ -33,6 +33,9 @@ class EyeControlApp(QMainWindow):
         self.gaze_q = queue.Queue()
         self.param_q = queue.Queue()
 
+        # TODO read this from a params file
+        self.current_params = dict(fix_radius=2, x_offset=0, y_offset=0)
+
         self.create_main_frame()
         self.create_plot_objects()
         self.create_client()
@@ -44,7 +47,7 @@ class EyeControlApp(QMainWindow):
         new_data = []
         while True:
             try:
-                data = self.gaze_q.get(block=True, timeout=.005)
+                data = self.gaze_q.get(block=False)
                 new_point = np.fromstring(data)
                 new_data.append(new_point)
             except queue.Empty:
@@ -78,20 +81,48 @@ class EyeControlApp(QMainWindow):
         self.ax.draw_artist(self.fix_window)
         self.canvas.blit(self.ax.bbox)
 
-    def update_labels(self):
+    def update_fix_label(self):
 
         fix_value = self.fix_slider.value() / 10
         self.fix_label.setText("Fix window: {:.1f}".format(fix_value))
+        self.fix_label.setStyleSheet("color: red")
+
+    def update_x_label(self):
 
         x_value = self.x_slider.value() / 10
         self.x_label.setText("x offset: {:.1f}".format(x_value))
+        self.x_label.setStyleSheet("color: red")
+
+    def update_y_label(self):
 
         y_value = self.y_slider.value() / 10
         self.y_label.setText("y window: {:.1f}".format(y_value))
+        self.y_label.setStyleSheet("color: red")
 
-    def send_params(self):
+    def update_params(self):
 
-        pass
+        self.current_params["fix_label"] = self.fix_slider.value() / 10
+        self.current_params["x_offset"] = self.x_slider.value() / 10
+        self.current_params["y_offset"] = self.y_slider.value() / 10
+
+        param_data = np.array([self.current_params["fix_label"],
+                               self.current_params["x_offset"],
+                               self.current_params["y_offset"]])
+        self.param_q.put(param_data.tostring())
+
+        self.fix_label.setStyleSheet("color: black")
+        self.x_label.setStyleSheet("color: black")
+        self.y_label.setStyleSheet("color: black")
+
+    def reset_params(self):
+
+        self.fix_slider.setValue(int(self.current_params["fix_radius"] * 10))
+        self.x_slider.setValue(int(self.current_params["x_offset"] * 10))
+        self.y_slider.setValue(int(self.current_params["y_offset"] * 10))
+
+        self.fix_label.setStyleSheet("color: black")
+        self.x_label.setStyleSheet("color: black")
+        self.y_label.setStyleSheet("color: black")
 
     def create_main_frame(self):
 
@@ -121,29 +152,32 @@ class EyeControlApp(QMainWindow):
         self.fix_label = QLabel("Fix window: 2.0")
         self.fix_slider = QSlider(Qt.Horizontal)
         self.fix_slider.setRange(0, 50)
-        self.fix_slider.setValue(25)
+        self.fix_slider.setValue(int(self.current_params["fix_radius"] * 10))
         self.fix_slider.setTickPosition(QSlider.TicksBelow)
         self.fix_slider.setTracking(True)
-        self.fix_slider.valueChanged.connect(self.update_labels)
+        self.fix_slider.valueChanged.connect(self.update_fix_label)
 
         self.x_label = QLabel("x offset: 0.0")
         self.x_slider = QSlider(Qt.Horizontal)
         self.x_slider.setRange(-40, 40)
-        self.x_slider.setValue(0)
+        self.x_slider.setValue(int(self.current_params["x_offset"] * 10))
         self.x_slider.setTickPosition(QSlider.TicksBelow)
         self.x_slider.setTracking(True)
-        self.x_slider.valueChanged.connect(self.update_labels)
+        self.x_slider.valueChanged.connect(self.update_x_label)
 
         self.y_label = QLabel("y offset: 0.0")
         self.y_slider = QSlider(Qt.Horizontal)
         self.y_slider.setRange(-40, 40)
-        self.y_slider.setValue(0)
+        self.y_slider.setValue(int(self.current_params["y_offset"] * 10))
         self.y_slider.setTickPosition(QSlider.TicksBelow)
         self.y_slider.setTracking(True)
-        self.y_slider.valueChanged.connect(self.update_labels)
+        self.y_slider.valueChanged.connect(self.update_y_label)
 
         self.update_button = QPushButton("Update")
-        self.update_button.clicked.connect(self.send_params)
+        self.update_button.clicked.connect(self.update_params)
+
+        self.reset_button = QPushButton("Reset")
+        self.reset_button.clicked.connect(self.reset_params)
 
         # --- Layout
 
@@ -159,7 +193,10 @@ class EyeControlApp(QMainWindow):
             vbox.setAlignment(w, Qt.AlignVCenter)
             controls.addLayout(vbox)
 
-        controls.addWidget(self.update_button)
+        vbox = QVBoxLayout()
+        vbox.addWidget(self.update_button)
+        vbox.addWidget(self.reset_button)
+        controls.addLayout(vbox)
 
         vbox = QVBoxLayout()
         vbox.addWidget(self.canvas)
@@ -184,7 +221,7 @@ class EyeControlApp(QMainWindow):
                                     animated=True)
 
         # Fixation window
-        radius = self.fix_slider.value() / 10
+        radius = self.current_params["fix_radius"]
         self.fix_window = plt.Circle((0, 0), radius,
                                      facecolor="none",
                                      linewidth=.8,
