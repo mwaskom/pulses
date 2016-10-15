@@ -26,8 +26,8 @@ class EyeControlApp(QMainWindow):
         QMainWindow.__init__(self, parent)
         self.setWindowTitle("Eye Control")
 
-        self.poll_dur = 100
-        self.gaze_data = np.zeros((10, 2))
+        self.poll_dur = 50
+        self.gaze_data = np.zeros((10, 2)) * np.nan
         self.axes_background = None
 
         self.gaze_q = queue.Queue()
