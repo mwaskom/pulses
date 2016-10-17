@@ -31,6 +31,7 @@ class EyeControlApp(QMainWindow):
         self.gaze_data = np.zeros((10, 2))
         self.axes_background = None
 
+
         self.client = None
         self.gaze_q = Queue.Queue()
         self.param_q = Queue.Queue()
@@ -62,8 +63,14 @@ class EyeControlApp(QMainWindow):
                     new_data.append(np.array([np.nan, np.nan]))
                 break
 
+        # Compute offsets different from what we are getting from the server
+        local_offsets = np.array([
+            self.x_slider.value() / 10 - self.current_params["x_offset"],
+            self.y_slider.value() / 10 - self.current_params["y_offset"]
+            ])
+
         # Update the data array
-        new_data = np.vstack(new_data)
+        new_data = np.vstack(new_data) + local_offsets
         if len(new_data) > 10:
             self.gaze_data = new_data[-10:]
         else:

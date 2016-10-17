@@ -64,7 +64,7 @@ class EyeTracker(object):
         self.fix_window_radius = p.eye_fix_window
 
         # Initialize the offsets with default values
-        self.offsets = np.array([0, 0])
+        self.offsets = (0, 0)
 
         # Set up a base for log file names
         self.log_stem = p.log_stem + "_eyedat"
@@ -138,7 +138,7 @@ class EyeTracker(object):
         if not self.simulate:
             self.tracker.sendMessage(msg)
 
-    def read_gaze(self, in_degrees=True, log=True):
+    def read_gaze(self, in_degrees=True, log=True, apply_offsets=True):
         """Read a sample of gaze position and convert coordinates."""
         timestamp = self.clock.getTime()
 
@@ -165,13 +165,15 @@ class EyeTracker(object):
         if log:
             self.log_timestamps.append(timestamp)
             self.log_positions.append(gaze)
-            self.log_offsets.append(tuple(self.offsets))
+            self.log_offsets.append(self.offsets)
 
         # Apply the offsets
-        gaze = tuple(self.offsets + gaze)
+        if apply_offsets:
+            gaze = tuple(np.add(self.offsets, gaze))
 
         # Put in the queue to send to the client
-        self.gaze_q.put(gaze)
+        if log:
+            self.gaze_q.put(gaze)
 
         return gaze
 
@@ -204,7 +206,7 @@ class EyeTracker(object):
         try:
             params = self.param_q.get(timeout=.15)
             self.fix_window_radius = params[0]
-            self.offsets = params[1:]
+            self.offsets = tuple(params[1:])
         except Queue.Empty:
             pass
 
@@ -323,7 +325,7 @@ class GazeStim(GratingStim):
 
     def draw(self):
 
-        gaze = self.tracker.read_gaze(log=False)
+        gaze = self.tracker.read_gaze(log=False, apply_offsets=False)
 
         if np.isfinite(gaze).all():
             self.pos = gaze
