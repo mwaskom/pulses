@@ -101,6 +101,7 @@ def experiment_loop(p, win, stims, tracker):
                                 exit_func=save_data):
 
         tracker.start_run()
+        tracker.server.start()
         stim_event.clock.reset()
 
         # Loop over trials

@@ -6,6 +6,7 @@ moving them in to cregg/new package as wholly general code.
 """
 import os
 import time
+import Queue
 import warnings
 import itertools
 import numpy as np
@@ -15,6 +16,8 @@ from psychopy import visual, iohub
 from psychopy.visual.grating import GratingStim
 from psychopy.tools.monitorunittools import pix2deg
 import cregg
+
+from eyecontrol import EyeControlServerThread
 
 
 class EyeTracker(object):
@@ -71,6 +74,14 @@ class EyeTracker(object):
         # Configure and launch iohub
         self.setup_iohub()
         self.run_calibration()
+
+        # Launch a thread to send data to the client
+        self.gaze_q = Queue.Queue()
+        self.param_q = Queue.Queue()
+        self.cmd_q = Queue.Queue()
+        self.server = EyeControlServerThread(self.gaze_q,
+                                             self.param_q,
+                                             self.cmd_q)
 
     def setup_iohub(self):
         """Initialize iohub with relevant configuration details.
@@ -151,6 +162,9 @@ class EyeTracker(object):
         if log:
             self.log_timestamps.append(timestamp)
             self.log_positions.append(gaze)
+
+        # Put in the queue to send to the client
+        self.gaze_q.put(gaze)
 
         return gaze
 

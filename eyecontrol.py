@@ -27,9 +27,10 @@ class EyeControlApp(QMainWindow):
         self.setWindowTitle("Eye Control")
 
         self.poll_dur = 50
-        self.gaze_data = np.zeros((10, 2)) * np.nan
+        self.gaze_data = np.zeros((10, 2))
         self.axes_background = None
 
+        self.client = None
         self.gaze_q = Queue.Queue()
         self.param_q = Queue.Queue()
 
@@ -53,7 +54,8 @@ class EyeControlApp(QMainWindow):
             try:
                 data = self.gaze_q.get(block=False)
                 new_point = np.fromstring(data)
-                new_data.append(new_point)
+                if new_point.size == 2:
+                    new_data.append(new_point)
             except Queue.Empty:
                 if not new_data:
                     new_data.append(np.array([np.nan, np.nan]))
@@ -240,17 +242,16 @@ class EyeControlApp(QMainWindow):
         x, y = point_locs.T
         self.points = self.ax.scatter(x, y,
                                       c=point_rgba, s=50,
-                                      linewidth=0)
+                                      edgecolor=point_rgba)
 
     def create_client(self):
 
         try:
-            self.client = EyeControlClientThread(self.gaze_q, self.param_q)
-        except socket.error:
-            self.client = None
-
-        if self.client is not None:
+            self.client = EyeControlClientThread(self.gaze_q,
+                                                 self.param_q)
             self.client.start()
+        except socket.error:
+            pass
 
     def create_timers(self):
 
