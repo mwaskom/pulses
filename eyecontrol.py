@@ -10,6 +10,7 @@ matplotlib.use("Qt4Agg")
 
 from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
+from matplotlib.colors import rgb2hex
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,6 +22,9 @@ from PyQt4.QtGui import (QApplication, QMainWindow,
 
 
 class EyeControlApp(QMainWindow):
+
+    RED = (.75, .3, .3)
+    BLUE = (.3, .45, .7)
 
     def __init__(self, parent=None):
 
@@ -95,23 +99,28 @@ class EyeControlApp(QMainWindow):
         self.ax.draw_artist(self.fix_window)
         self.canvas.blit(self.ax.bbox)
 
-    def update_fix_label(self):
+    def update_fix_radius(self):
 
         fix_value = self.fix_slider.value() / 10
         self.fix_label.setText("Fix window: {:.1f}".format(fix_value))
-        self.fix_label.setStyleSheet("color: red")
+        self.fix_label.setStyleSheet("color: " + rgb2hex(self.RED))
+        self.fix_window.set_edgecolor(self.RED)
 
-    def update_x_label(self):
+    def update_x_offset(self):
 
         x_value = self.x_slider.value() / 10
         self.x_label.setText("x offset: {:.1f}".format(x_value))
-        self.x_label.setStyleSheet("color: red")
+        self.x_label.setStyleSheet("color: " + rgb2hex(self.RED))
+        self.gaze.set_edgecolor(self.RED)
+        self.gaze.set_linewidth(.5)
 
-    def update_y_label(self):
+    def update_y_offset(self):
 
         y_value = self.y_slider.value() / 10
-        self.y_label.setText("y window: {:.1f}".format(y_value))
-        self.y_label.setStyleSheet("color: red")
+        self.y_label.setText("y offset: {:.1f}".format(y_value))
+        self.y_label.setStyleSheet("color: " + rgb2hex(self.RED))
+        self.gaze.set_edgecolor(self.RED)
+        self.gaze.set_linewidth(.5)
 
     def update_params(self):
 
@@ -128,6 +137,10 @@ class EyeControlApp(QMainWindow):
         self.x_label.setStyleSheet("color: black")
         self.y_label.setStyleSheet("color: black")
 
+        self.fix_window.set_edgecolor(".3")
+        self.gaze.set_edgecolor(self.BLUE)
+        self.gaze.set_linewidth(0)
+
     def reset_params(self):
 
         self.fix_slider.setValue(int(self.current_params["fix_radius"] * 10))
@@ -137,6 +150,10 @@ class EyeControlApp(QMainWindow):
         self.fix_label.setStyleSheet("color: black")
         self.x_label.setStyleSheet("color: black")
         self.y_label.setStyleSheet("color: black")
+
+        self.fix_window.set_edgecolor(".3")
+        self.gaze.set_edgecolor(self.BLUE)
+        self.gaze.set_linewidth(0)
 
     def create_main_frame(self):
 
@@ -169,7 +186,7 @@ class EyeControlApp(QMainWindow):
         self.fix_slider.setValue(int(self.current_params["fix_radius"] * 10))
         self.fix_slider.setTickPosition(QSlider.TicksBelow)
         self.fix_slider.setTracking(True)
-        self.fix_slider.valueChanged.connect(self.update_fix_label)
+        self.fix_slider.valueChanged.connect(self.update_fix_radius)
 
         self.x_label = QLabel("x offset: 0.0")
         self.x_slider = QSlider(Qt.Horizontal)
@@ -177,7 +194,7 @@ class EyeControlApp(QMainWindow):
         self.x_slider.setValue(int(self.current_params["x_offset"] * 10))
         self.x_slider.setTickPosition(QSlider.TicksBelow)
         self.x_slider.setTracking(True)
-        self.x_slider.valueChanged.connect(self.update_x_label)
+        self.x_slider.valueChanged.connect(self.update_x_offset)
 
         self.y_label = QLabel("y offset: 0.0")
         self.y_slider = QSlider(Qt.Horizontal)
@@ -185,7 +202,7 @@ class EyeControlApp(QMainWindow):
         self.y_slider.setValue(int(self.current_params["y_offset"] * 10))
         self.y_slider.setTickPosition(QSlider.TicksBelow)
         self.y_slider.setTracking(True)
-        self.y_slider.valueChanged.connect(self.update_y_label)
+        self.y_slider.valueChanged.connect(self.update_y_offset)
 
         self.update_button = QPushButton("Update")
         self.update_button.clicked.connect(self.update_params)
@@ -221,9 +238,8 @@ class EyeControlApp(QMainWindow):
 
     def create_plot_objects(self):
 
-        gaze_color = (.3, .45, .7)
         gaze_rgba = np.zeros((10, 4))
-        gaze_rgba[:, :3] = gaze_color
+        gaze_rgba[:, :3] = self.BLUE
         gaze_rgba[:, -1] = np.linspace(.1, 1, 10)
 
         # Gaze data points
@@ -239,6 +255,7 @@ class EyeControlApp(QMainWindow):
         self.fix_window = plt.Circle((0, 0), radius,
                                      facecolor="none",
                                      linewidth=.8,
+                                     linestyle="--",
                                      edgecolor=".3",
                                      animated=True)
         self.ax.add_artist(self.fix_window)
@@ -250,6 +267,7 @@ class EyeControlApp(QMainWindow):
         x, y = point_locs.T
         self.points = self.ax.scatter(x, y,
                                       c=point_rgba, s=50,
+                                      linewidth=0,
                                       edgecolor=point_rgba)
 
     def create_client(self):
