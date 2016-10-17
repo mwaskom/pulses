@@ -58,6 +58,7 @@ class EyeTracker(object):
         # Extract relevant parameters
         self.monitor_eye = p.eye_monitor
         self.simulate = p.eye_mouse_simulate
+        self.writelog = not p.nolog
 
         # Determine the position and size of the fixation window
         self.fix_window_radius = p.eye_fix_window
@@ -232,8 +233,10 @@ class EyeTracker(object):
     def shutdown(self):
         """Handle all of the things that need to happen when ending a run."""
         self.close_connection()
-        self.move_edf_file()
-        self.write_log_data()
+        if self.writelog:
+            self.move_edf_file()
+            self.write_log_data()
+        self.server.join(timeout=2)
 
     @property
     def last_valid_sample(self):

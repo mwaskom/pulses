@@ -1,8 +1,9 @@
 from __future__ import division
 import sys
-import Queue
+import time
 import socket
 import threading
+import Queue
 
 import matplotlib
 matplotlib.use("Qt4Agg")
@@ -291,24 +292,28 @@ class EyeControlClientThread(EyeControlSocketThread):
 
     def run(self):
 
-        while self.alive.isSet():
+        try:
+            while self.alive.isSet():
 
-            try:
-                data = self.socket.recv(16)
-            except socket.timeout:
-                continue
+                    try:
+                        data = self.socket.recv(16)
+                    except socket.timeout:
+                        time.sleep(.01)
+                        continue
 
-            if data == "updateparameters":
-                try:
-                    new_params = self.param_q.get(block=False)
-                    self.socket.sendall(new_params)
+                    if data == "updateparameters":
+                        try:
+                            new_params = self.param_q.get(block=False)
+                            self.socket.sendall(new_params)
 
-                except Queue.Empty:
-                    pass
+                        except Queue.Empty:
+                            pass
 
-            else:
-                self.gaze_q.put(data)
+                    else:
+                        self.gaze_q.put(data)
 
+        finally:
+            self.socket.close()
 
 class EyeControlServerThread(EyeControlSocketThread):
 
@@ -321,8 +326,11 @@ class EyeControlServerThread(EyeControlSocketThread):
         self.cmd_q = cmd_q
 
         self.server = socket.socket()
+        self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server.bind(("localhost", 50001))
         self.server.listen(2)
+
+        self.daemon = True
 
     def run(self):
 
@@ -349,6 +357,7 @@ class EyeControlServerThread(EyeControlSocketThread):
                     data = np.array(data).tostring()
                     clientsocket.sendall(data)
                 except Queue.Empty:
+                    time.sleep(.01)
                     pass
 
         finally:
