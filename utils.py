@@ -63,14 +63,16 @@ class EyeTracker(object):
         # Determine the position and size of the fixation window
         self.fix_window_radius = p.eye_fix_window
 
+        # Initialize the offsets with default values
+        self.offsets = np.array([0, 0])
+
         # Set up a base for log file names
-        # TODO this won't work if cregg is updated to use date in template
-        # Also in general it doesn't play great with cregg
         self.log_stem = p.log_stem + "_eyedat"
 
         # Initialize lists for the logged data
         self.log_timestamps = []
         self.log_positions = []
+        self.log_offsets = []
 
         # Configure and launch iohub
         self.setup_iohub()
@@ -163,6 +165,10 @@ class EyeTracker(object):
         if log:
             self.log_timestamps.append(timestamp)
             self.log_positions.append(gaze)
+            self.log_offsets.append(tuple(self.offsets))
+
+        # Apply the offsets
+        gaze = tuple(self.offsets + gaze)
 
         # Put in the queue to send to the client
         self.gaze_q.put(gaze)
@@ -175,7 +181,7 @@ class EyeTracker(object):
         if new_sample:
             gaze = self.read_gaze(log=log)
         else:
-            gaze = self.log_positions[-1]
+            gaze = np.array(self.log_positions[-1]) + self.log_offsets[-1]
         if radius is None:
             radius = self.fix_window_radius
         if np.isfinite(gaze).all():
@@ -191,6 +197,16 @@ class EyeTracker(object):
         else:
             gaze = self.log_positions[-1]
         return np.isfinite(gaze).all()
+
+    def update_params(self):
+        """Update params by reading data from client."""
+        self.cmd_q.put("_")
+        try:
+            params = self.param_q.get(timeout=.15)
+            self.fix_window_radius = params[0]
+            self.offsets = params[1:]
+        except Queue.Empty:
+            pass
 
     def close_connection(self):
         """Close down the connection to Eyelink and save the eye data."""
@@ -222,9 +238,9 @@ class EyeTracker(object):
 
     def write_log_data(self):
         """Save the low temporal resolution eye tracking data."""
-        log_df = pd.DataFrame(self.log_positions,
+        log_df = pd.DataFrame(np.c_[self.log_positions, self.log_offsets],
                               index=self.log_timestamps,
-                              columns=["x", "y"])
+                              columns=["x", "y", "x_offset", "y_offset"])
 
         log_fname = self.log_stem + ".csv"
         cregg.archive_old_version(log_fname)

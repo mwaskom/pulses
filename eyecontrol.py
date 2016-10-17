@@ -108,11 +108,11 @@ class EyeControlApp(QMainWindow):
 
     def update_params(self):
 
-        self.current_params["fix_label"] = self.fix_slider.value() / 10
+        self.current_params["fix_radius"] = self.fix_slider.value() / 10
         self.current_params["x_offset"] = self.x_slider.value() / 10
         self.current_params["y_offset"] = self.y_slider.value() / 10
 
-        param_data = np.array([self.current_params["fix_label"],
+        param_data = np.array([self.current_params["fix_radius"],
                                self.current_params["x_offset"],
                                self.current_params["y_offset"]])
         self.param_q.put(param_data.tostring())
