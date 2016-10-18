@@ -352,7 +352,7 @@ class EyeControlServerThread(EyeControlSocketThread):
 
         self.server = socket.socket()
         self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.server.bind(("localhost", 50001))
+        self.server.bind(self.ADDRESS_INFO)
         self.server.listen(2)
 
         self.daemon = True
