@@ -15,7 +15,7 @@ from matplotlib.colors import rgb2hex
 import numpy as np
 import matplotlib.pyplot as plt
 
-from PyQt4.QtCore import (Qt, QTimer,)
+from PyQt4.QtCore import Qt, QTimer
 from PyQt4.QtGui import (QApplication, QMainWindow,
                          QWidget, QSlider, QPushButton, QLabel,
                          QVBoxLayout, QHBoxLayout)
@@ -34,7 +34,6 @@ class EyeControlApp(QMainWindow):
         self.poll_dur = 50
         self.gaze_data = np.zeros((10, 2))
         self.axes_background = None
-
 
         self.client = None
         self.gaze_q = Queue.Queue()
@@ -340,6 +339,7 @@ class EyeControlClientThread(EyeControlSocketThread):
         finally:
             self.socket.close()
 
+
 class EyeControlServerThread(EyeControlSocketThread):
 
     def __init__(self, gaze_q, param_q, cmd_q):
@@ -387,6 +387,7 @@ class EyeControlServerThread(EyeControlSocketThread):
 
         finally:
             self.server.close()
+
 
 def main():
 
