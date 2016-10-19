@@ -17,8 +17,6 @@ from psychopy.visual.grating import GratingStim
 from psychopy.tools.monitorunittools import pix2deg
 import cregg
 
-from eyecontrol import EyeControlServerThread
-
 
 class EyeTracker(object):
     """Object for managing eyetracking using iohub.
@@ -53,7 +51,7 @@ class EyeTracker(object):
     this class or in an independent class/function.
 
     """
-    def __init__(self, p):
+    def __init__(self, p, server):
 
         # Extract relevant parameters
         self.monitor_eye = p.eye_monitor
@@ -79,12 +77,10 @@ class EyeTracker(object):
         self.run_calibration()
 
         # Launch a thread to send data to the client
-        self.gaze_q = Queue.Queue()
-        self.param_q = Queue.Queue()
-        self.cmd_q = Queue.Queue()
-        self.server = EyeControlServerThread(self.gaze_q,
-                                             self.param_q,
-                                             self.cmd_q)
+        self.server = server
+        self.cmd_q = server.cmd_q
+        self.gaze_q = server.gaze_q
+        self.param_q = server.param_q
 
     def setup_iohub(self):
         """Initialize iohub with relevant configuration details.
