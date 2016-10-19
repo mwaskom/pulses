@@ -403,9 +403,8 @@ class TrialEngine(object):
 
             else:
                 # Eye is closed (or otherwise not providing valid data)
-                t, _ = self.tracker.last_valid_sample
-                self.most_recent_blink = t
-                if (now - t) < self.p.eye_blink_timeout:
+                self.most_recent_blink = now
+                if (now - self.most_recent_fixation) < self.p.eye_blink_timeout:
                     return True
 
         # Either we are outside of fixation or eye has closed for too long
