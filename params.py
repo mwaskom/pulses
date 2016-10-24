@@ -272,7 +272,7 @@ base = dict(
     target_accuracy=.8,
 
     # IP address running the online behavioral results client
-    client_host="localhost",
+    client_host="192.168.100.2",
 
     # Port used to talk to the online behavioral results client
     client_port=6789,
