@@ -287,7 +287,7 @@ class EyeControlApp(QMainWindow):
 
 class EyeControlSocketThread(threading.Thread):
 
-    ADDRESS_INFO = ("localhost", 50001)
+    ADDRESS_INFO = ("192.168.100.1", 50001)
 
     def __init__(self):
 
