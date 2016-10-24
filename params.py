@@ -105,7 +105,7 @@ base = dict(
     eye_target_size=.5,
 
     # If True, recenter the fixation window before stimulus onset
-    eye_fix_recenter=True,
+    eye_fix_recenter=False,
 
     # Allow blink for this length of time
     eye_blink_timeout=.8,
