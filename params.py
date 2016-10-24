@@ -105,7 +105,7 @@ base = dict(
     eye_target_size=.5,
 
     # If True, recenter the fixation window before stimulus onset
-    eye_fix_recenter=True,
+    eye_fix_recenter=False,
 
     # Allow blink for this length of time
     eye_blink_timeout=.8,
@@ -114,7 +114,7 @@ base = dict(
     eye_fixbreak_timeout=.1,
 
     # Radius of the fixation window
-    eye_fix_window=1.5,
+    eye_fix_window=2,
 
     # Radius of the target window
     eye_targ_window=2.5,
@@ -272,7 +272,7 @@ base = dict(
     target_accuracy=.8,
 
     # IP address running the online behavioral results client
-    client_host="localhost",
+    client_host="192.168.100.2",
 
     # Port used to talk to the online behavioral results client
     client_port=6789,

@@ -2,6 +2,7 @@ from __future__ import division, print_function
 import os
 import sys
 import itertools
+import Queue
 
 import numpy as np
 import pandas as pd
@@ -13,6 +14,8 @@ import cregg
 from utils import (EyeTracker, SaccadeTargets, GazeStim, SpatialCue,
                    show_performance_feedback)
 from stimuli import StimArray
+
+from eyecontrol import EyeControlServerThread
 
 import warnings
 warnings.simplefilter("ignore", FutureWarning)
@@ -30,8 +33,14 @@ def main(arglist):
     p = cregg.Params(mode)
     p.set_by_cmdline(arglist)
 
+    # Boot up the server to send data to the control computer
+    cmd_q = Queue.Queue()
+    gaze_q = Queue.Queue()
+    param_q = Queue.Queue()
+    server = EyeControlServerThread(gaze_q, param_q, cmd_q)
+
     # Initialize the connection to the eyetracker
-    tracker = EyeTracker(p)
+    tracker = EyeTracker(p, server)
 
     # Open up the stimulus window
     win = cregg.launch_window(p)
@@ -63,7 +72,7 @@ def main(arglist):
             os.makedirs(log_dir)
 
     # Execute the experiment function
-    experiment_loop(p, win, stims, tracker)
+    experiment_loop(p, win, stims, tracker, server)
 
 
 # =========================================================================== #
@@ -71,7 +80,7 @@ def main(arglist):
 # =========================================================================== #
 
 
-def experiment_loop(p, win, stims, tracker):
+def experiment_loop(p, win, stims, tracker, server):
     """Outer loop for the experiment."""
 
     # Initialize the trial controller
@@ -101,6 +110,7 @@ def experiment_loop(p, win, stims, tracker):
                                 exit_func=save_data):
 
         tracker.start_run()
+        tracker.server.start()
         stim_event.clock.reset()
 
         # Loop over trials
@@ -116,6 +126,9 @@ def experiment_loop(p, win, stims, tracker):
 
             # Send data to client for online monitoring
             cregg.send_trial_data(p, t_info)
+
+            # Check for new parameters from the client
+            tracker.update_params()
 
         # Put the screen in ITI mode for the remainder of the run
         stims["fix"].color = p.fix_iti_color
@@ -399,9 +412,8 @@ class TrialEngine(object):
 
             else:
                 # Eye is closed (or otherwise not providing valid data)
-                t, _ = self.tracker.last_valid_sample
-                self.most_recent_blink = t
-                if (now - t) < self.p.eye_blink_timeout:
+                self.most_recent_blink = now
+                if (now - self.most_recent_fixation) < self.p.eye_blink_timeout:
                     return True
 
         # Either we are outside of fixation or eye has closed for too long

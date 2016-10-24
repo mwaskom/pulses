@@ -6,6 +6,7 @@ moving them in to cregg/new package as wholly general code.
 """
 import os
 import time
+import Queue
 import warnings
 import itertools
 import numpy as np
@@ -50,27 +51,36 @@ class EyeTracker(object):
     this class or in an independent class/function.
 
     """
-    def __init__(self, p):
+    def __init__(self, p, server):
 
         # Extract relevant parameters
         self.monitor_eye = p.eye_monitor
         self.simulate = p.eye_mouse_simulate
+        self.writelog = not p.nolog
 
         # Determine the position and size of the fixation window
         self.fix_window_radius = p.eye_fix_window
 
+        # Initialize the offsets with default values
+        self.offsets = (0, 0)
+
         # Set up a base for log file names
-        # TODO this won't work if cregg is updated to use date in template
-        # Also in general it doesn't play great with cregg
         self.log_stem = p.log_stem + "_eyedat"
 
         # Initialize lists for the logged data
         self.log_timestamps = []
         self.log_positions = []
+        self.log_offsets = []
 
         # Configure and launch iohub
         self.setup_iohub()
         self.run_calibration()
+
+        # Launch a thread to send data to the client
+        self.server = server
+        self.cmd_q = server.cmd_q
+        self.gaze_q = server.gaze_q
+        self.param_q = server.param_q
 
     def setup_iohub(self):
         """Initialize iohub with relevant configuration details.
@@ -124,7 +134,7 @@ class EyeTracker(object):
         if not self.simulate:
             self.tracker.sendMessage(msg)
 
-    def read_gaze(self, in_degrees=True, log=True):
+    def read_gaze(self, in_degrees=True, log=True, apply_offsets=True):
         """Read a sample of gaze position and convert coordinates."""
         timestamp = self.clock.getTime()
 
@@ -151,6 +161,15 @@ class EyeTracker(object):
         if log:
             self.log_timestamps.append(timestamp)
             self.log_positions.append(gaze)
+            self.log_offsets.append(self.offsets)
+
+        # Apply the offsets
+        if apply_offsets:
+            gaze = tuple(np.add(self.offsets, gaze))
+
+        # Put in the queue to send to the client
+        if log:
+            self.gaze_q.put(gaze)
 
         return gaze
 
@@ -160,7 +179,7 @@ class EyeTracker(object):
         if new_sample:
             gaze = self.read_gaze(log=log)
         else:
-            gaze = self.log_positions[-1]
+            gaze = np.array(self.log_positions[-1]) + self.log_offsets[-1]
         if radius is None:
             radius = self.fix_window_radius
         if np.isfinite(gaze).all():
@@ -176,6 +195,16 @@ class EyeTracker(object):
         else:
             gaze = self.log_positions[-1]
         return np.isfinite(gaze).all()
+
+    def update_params(self):
+        """Update params by reading data from client."""
+        self.cmd_q.put("_")
+        try:
+            params = self.param_q.get(timeout=.15)
+            self.fix_window_radius = params[0]
+            self.offsets = tuple(params[1:])
+        except Queue.Empty:
+            pass
 
     def close_connection(self):
         """Close down the connection to Eyelink and save the eye data."""
@@ -207,9 +236,9 @@ class EyeTracker(object):
 
     def write_log_data(self):
         """Save the low temporal resolution eye tracking data."""
-        log_df = pd.DataFrame(self.log_positions,
+        log_df = pd.DataFrame(np.c_[self.log_positions, self.log_offsets],
                               index=self.log_timestamps,
-                              columns=["x", "y"])
+                              columns=["x", "y", "x_offset", "y_offset"])
 
         log_fname = self.log_stem + ".csv"
         cregg.archive_old_version(log_fname)
@@ -218,8 +247,10 @@ class EyeTracker(object):
     def shutdown(self):
         """Handle all of the things that need to happen when ending a run."""
         self.close_connection()
-        self.move_edf_file()
-        self.write_log_data()
+        if self.writelog:
+            self.move_edf_file()
+            self.write_log_data()
+        self.server.join(timeout=2)
 
     @property
     def last_valid_sample(self):
@@ -290,7 +321,7 @@ class GazeStim(GratingStim):
 
     def draw(self):
 
-        gaze = self.tracker.read_gaze(log=False)
+        gaze = self.tracker.read_gaze(log=False, apply_offsets=False)
 
         if np.isfinite(gaze).all():
             self.pos = gaze
