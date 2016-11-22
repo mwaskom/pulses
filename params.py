@@ -81,7 +81,7 @@ base = dict(
     eye_monitor=True,
 
     # If True, simulate the eyetracker with the mousepad
-    eye_mouse_simulate=True,
+    eye_mouse_simulate=False,
 
     # If True, show the gaze position with a small stimulus
     eye_show_gaze=False,
@@ -266,7 +266,7 @@ base = dict(
     target_accuracy=.8,
 
     # IP address running the online behavioral results client
-    client_host="localhost",
+    client_host="192.168.100.2",
 
     # Port used to talk to the online behavioral results client
     client_port=6789,
