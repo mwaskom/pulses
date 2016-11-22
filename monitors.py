@@ -30,9 +30,9 @@ cbi_projector = dict(name="cbi_projector",
                      distance=58,
                      size=[1024, 768],
                      refresh_hz=60,
-                     max_luminance=73.0,
+                     max_luminance=83.9,
                      gamma=3.329,
                      notes=("Size/distance prameters are taken from CBI "
-                            "intranet page. Calibration is from 9/7/2016 "
+                            "intranet page. Calibration is from 11/22/2016 "
                             "and was performed with two ND filters: "
-                            "1.2B + 0.9A"))
+                            "1.2B + 1.2A"))
