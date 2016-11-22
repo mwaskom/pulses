@@ -4,9 +4,9 @@ mlw_mbair = dict(name='mlw-mbair',
                  size=[1440, 900],
                  distance=45,
                  refresh_hz=60,
-                 max_luminance=100.52,
-                 gamma=2.0721,
-                 notes="Calibration info is made up")
+                 max_luminance=259.1,
+                 gamma=2.13,
+                 notes="Calibrated is likely not exact, done in bright room")
 
 kianilab_ps1 = dict(name="kianilab-ps1",
                     width=40,
