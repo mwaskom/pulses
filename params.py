@@ -328,3 +328,33 @@ scanning.update(dict(
     iti_dur=("truncexpon", (10 - 4) / 2, 4, 2),
 
 ))
+
+
+# Set of parameters for passive visual stimulation
+# to facilitate measurement of CRF in visual cortex
+crf_test = deepcopy(base)
+crf_test.update(dict(
+
+    iti_dur=("truncexpon", 6 / 2, 0, 2),
+
+    pulse_gap=4,
+    pulse_single_prob=1,
+
+    crit_stim_dur=0,
+    pre_targ_dur=0,
+    post_targ_dur=0,
+    pre_stim_dur=0,
+
+    feedback_sounds=None,
+    feedback_visual=None,
+
+    fix_iti_color=(.8, .6, -.8),
+    eye_target_color=None,
+
+    cue_length=0,
+    resp_max_wait=0,
+    feedback_dur=0,
+
+    eye_fix_window=5,
+
+))
