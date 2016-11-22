@@ -184,9 +184,6 @@ base = dict(
     # Duration to wait after fixation before showing targets
     pre_targ_dur=("truncexpon", 4, .2, .2),
 
-    # Duration to show the cue
-    cue_dur=.5,
-
     # Duration to wait while showing targets and cue
     post_targ_dur=.6,
 

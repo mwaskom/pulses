@@ -228,7 +228,6 @@ def generate_trials(p, clock):
             iti=iti,
             trial_time=trial_time,
             pre_targ_dur=cregg.flexible_values(p.pre_targ_dur, 1, rng),
-            cue_dur=cregg.flexible_values(p.cue_dur, 1, rng),
             post_targ_dur=cregg.flexible_values(p.post_targ_dur, 1, rng),
             crit_stim_dur=cregg.flexible_values(p.crit_stim_dur, 1, rng),
             pre_stim_dur=cregg.flexible_values(p.pre_stim_dur, 1, rng),
