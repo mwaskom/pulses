@@ -638,6 +638,7 @@ class TrialEngine(object):
         t_info["fix_onset"] = fix_time
 
         # Pre target period
+        self.fix.color = self.p.fix_stim_color
         for frame in self.secs_to_flips(t_info["pre_targ_dur"]):
             self.fix.draw()
             flip_time = self.win.flip()
