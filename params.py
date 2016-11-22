@@ -332,20 +332,21 @@ scanning.update(dict(
 crf_test = deepcopy(base)
 crf_test.update(dict(
 
-    iti_dur=("truncexpon", 6 / 2, 0, 2),
-
-    pulse_gap=4,
     pulse_single_prob=1,
 
     crit_stim_dur=0,
     pre_targ_dur=0,
     post_targ_dur=0,
-    pre_stim_dur=0,
+    pre_stim_dur=("uniform", .5, 1),
+    pulse_gap=("uniform", .5, 1),
+    iti_dur=("truncexpon", (8 - 2) / 2, 2, 2),
 
     feedback_sounds=None,
     feedback_visual=None,
 
-    fix_iti_color=(.8, .6, -.8),
+    fix_iti_color=(0, 0, 0),
+    fix_stim_color=(.8, .6, -.8),
+    fix_resp_color=(.8, .6, -.8),
     eye_target_color=None,
 
     cue_length=0,
