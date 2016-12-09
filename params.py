@@ -231,7 +231,7 @@ base = dict(
     iti_dur=("truncexpon", 4, 1, 1),
 
     # Maximum duration of each run, in seconds
-    max_run_dur=600,
+    max_run_dur=540,
 
     # Temporal resolution of the acquisition
     tr=1.5,
