@@ -334,19 +334,22 @@ crf_test.update(dict(
 
     pulse_single_prob=1,
 
+    contrast_sd=0,
+
     crit_stim_dur=0,
     pre_targ_dur=0,
     post_targ_dur=0,
-    pre_stim_dur=("uniform", .5, 1),
-    pulse_gap=("uniform", .5, 1),
-    iti_dur=("truncexpon", (8 - 2) / 2, 2, 2),
+    pre_stim_dur=.25,
+    pulse_gap=.25,
+    iti_dur=("truncexpon", (8 - 3) / 2, 3, 2),
 
     feedback_sounds=None,
     feedback_visual=None,
 
-    fix_iti_color=(0, 0, 0),
-    fix_stim_color=(.8, .6, -.8),
-    fix_resp_color=(.8, .6, -.8),
+    fix_ready_color=1,
+    fix_iti_color=1,
+    fix_stim_color=1,
+    fix_resp_color=1,
     eye_target_color=None,
 
     cue_length=0,
