@@ -1,5 +1,6 @@
 from __future__ import division
 import itertools
+import json
 
 import numpy as np
 import pandas as pd
@@ -177,3 +178,37 @@ def generate_pulse_train(exp, t_info):
     ))
 
     return p_info
+
+
+def run_trial(exp, info):
+
+    t_info, p_info = info
+
+
+def serialize_trial_info(exp, info):
+
+    t_info, _ = info
+    return t_info.to_json()
+
+
+def save_data(exp, info):
+
+    if exp.trial_data and exp.p.save_data:
+
+        trial_data = [t_data for t_data, _ in exp.trial_data]
+        pulse_data = [p_data for _, p_data in exp.pulse_data]
+
+        data = pd.DataFrame(trial_data)
+        out_data_fname = exp.output_stem + "_trials.csv"
+        data.to_csv(out_data_fname, index=False)
+
+        data = pd.concat(pulse_data)
+        out_data_fname = exp.output_stem + "_pulses.csv"
+        data.to_csv(out_data_fname, index=False)
+
+        out_json_fname = exp.output_stem + "_params.json"
+        with open(out_json_fname, "w") as fid:
+            json.dump(exp.p, fid, sort_keys=True, indent=4)
+
+
+
