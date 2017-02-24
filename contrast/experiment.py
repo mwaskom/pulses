@@ -295,6 +295,8 @@ def run_trial(exp, info):
     # Determine if there were any stimulus blinks
     t_info["stim_blink"] = p_info["blink"].any()
 
+    # ~~~ Response period
+
     # Collect the response
     res = exp.wait_until(AcquireTarget(exp, t_info.target),
                          timeout=exp.p.wait_resp,
