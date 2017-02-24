@@ -21,10 +21,12 @@ base = dict(
     monitor_eye=True,
     monitor_key=False,
 
+    eye_response = True,  # TODO do we mean this to be monitor_eye?
+    eye_fixation = True,  # TODO do we mean this to be monitor_eye?
     eye_simulate=True,
     eye_fixbreak_timeout=.5,
     eye_blink_timeout=.5,
-    eye_target_wait=.25,
+    eye_target_wait=.5,
     eye_target_hold=.25,
 
     dist_means=[-1.1, -0.9],
@@ -40,7 +42,7 @@ base = dict(
     stim_gratings=8,
 
     noise_mask="circle",
-    noise_contrast=.1,
+    noise_contrast=.2,
     noise_opacity=.5,
     noise_resolution=20,
     noise_hz=5,
@@ -55,7 +57,8 @@ base = dict(
     pulse_count_max=5,
     pulse_single_prob=.1,
     pulse_dur=.2,
-    pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
+    #pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
+    pulse_gap=("truncexpon", (2 - .5) / .75, .5, .75),
     pulse_train_max=16,
 
     run_duration=540,

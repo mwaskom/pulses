@@ -54,7 +54,8 @@ def generate_trials(exp):
         wait_iti = flexible_values(exp.p.wait_iti)
 
         # Determine the stimulus parameters for this trial
-        gen_dist = flexible_values(list(range(exp.p.dist_means)))
+        stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))
+        gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
         gen_mean = exp.p.dist_means[gen_dist]
         gen_sd = exp.p.dist_sds[gen_dist]
         target = exp.p.dist_targets[gen_dist]
@@ -68,11 +69,15 @@ def generate_trials(exp):
             trial=t,
 
             # Stimulus parameters
-            stim_pos=flexible_values(exp.p.stim_pos),
+            stim_pos=stim_pos,
             gen_dist=gen_dist,
             gen_mean=gen_mean,
             gen_sd=gen_sd,
             target=target,
+
+            # Noise parameters
+            noise_contrast=flexible_values(exp.p.noise_contrast),
+            noise_opacity=flexible_values(exp.p.noise_opacity),
 
             # Pulse info (filled in below)
             pulse_count=np.nan,
@@ -110,7 +115,7 @@ def generate_trials(exp):
 
         expected_trial_dur = (t_info["wait_pre_stim"]
                               + t_info["pulse_train_dur"]
-                              + exp.p.wait_feedback,
+                              + exp.p.wait_feedback
                               + 2)  # Account for fix/response delay
 
         # TODO we need some way to enforce minimum delay
@@ -186,18 +191,22 @@ def run_trial(exp, info):
     t_info, p_info = info
 
     # ~~~ Set trial-constant attributes of the stimuli
-    exp.s.pattern.pos = t_info.stim_pos
-    exp.s.noise.pos = t_info.stim_pos
+    stim_pos = exp.p.stim_pos[t_info.stim_pos]
+    exp.s.pattern.pos = stim_pos
+    exp.s.noise.pos = stim_pos
+    exp.s.noise.contrast = t_info.noise_contrast
+    exp.s.noise.opacity = t_info.noise_opacity
 
     # ~~~ Inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color
-    exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.iti)
+    exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
     exp.s.fix.color = exp.p.fix_ready_color
     res = exp.wait_until(AcquireFixation(exp),
                          timeout=exp.p.wait_fix,
                          draw="fix")
+
     if res is None:
         t_info["result"] = "nofix"
         exp.sounds.nofix.play()
@@ -243,7 +252,7 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            flip_time = exp.draw(["fix", "targets", "noise", "stim"])
+            flip_time = exp.draw(["fix", "targets", "pattern", "noise"])
 
             if not frame:
 
@@ -281,7 +290,7 @@ def run_trial(exp, info):
 
             flip_time = exp.draw(["fix", "targets", "noise"])
             if not frame:
-                info.loc[p, "offset_time"] = flip_time
+                p_info.loc[p, "offset_time"] = flip_time
 
     # Determine if there were any stimulus blinks
     t_info["stim_blink"] = p_info["blink"].any()
@@ -303,7 +312,7 @@ def run_trial(exp, info):
     exp.s.targets.color = exp.p.target_color
 
     # Prepare for the inter-trial interval
-    exp.s.fix_color = exp.p.fix_iti_color
+    exp.s.fix.color = exp.p.fix_iti_color
     exp.draw("fix")
 
     return t_info, p_info
@@ -313,12 +322,12 @@ def serialize_trial_info(exp, info):
     t_info, _ = info
     return t_info.to_json()
 
-def save_data(exp, info):
+def save_data(exp):
 
     if exp.trial_data and exp.p.save_data:
 
         trial_data = [t_data for t_data, _ in exp.trial_data]
-        pulse_data = [p_data for _, p_data in exp.pulse_data]
+        pulse_data = [p_data for _, p_data in exp.trial_data]
 
         data = pd.DataFrame(trial_data)
         out_data_fname = exp.output_stem + "_trials.csv"
