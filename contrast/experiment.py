@@ -1,3 +1,4 @@
+from __future__ import division
 import itertools
 
 import numpy as np
@@ -106,11 +107,12 @@ def generate_trials(exp):
                                      + p_info["pulse_dur"].sum())
 
         expected_trial_dur = (t_info["wait_pre_stim"]
-                              + t_info["wait_pre_stim"]
                               + t_info["pulse_train_dur"]
                               + exp.p.wait_feedback,
                               + 2)  # Account for fix/response delay
 
+        # TODO we need some way to enforce minimum delay
+        # at end of fMRI runs
         if (now + expected_trial_dur) > exp.p.run_duration:
             raise StopIteration
 
@@ -122,11 +124,10 @@ def generate_pulse_train(exp, t_info):
     rng = np.random.RandomState()
 
     # Randomly sample the pulse count for this trial
-    if rng.rand() < p.pulse_single_prob:
-        # Special case single pulse trials
+    if rng.rand() < exp.p.pulse_single_prob:
         count = 1
     else:
-        count = flexible_values(exp.p.pulse_count, 1, rng,
+        count = flexible_values(exp.p.pulse_count, random_state=rng,
                                 max=exp.p.pulse_count_max)
 
     # Account for the duration of each pulse
@@ -137,6 +138,12 @@ def generate_pulse_train(exp, t_info):
     train_dur = np.inf
     while train_dur > exp.p.pulse_train_max:
         gap_dur = flexible_values(exp.p.pulse_gap, count, rng)
+
+        # TODO is this the best way to sync the pulse onsets with the
+        # updates to the noise frames?
+        noise_frame = 1 / exp.p.noise_hz
+        gap_dur = (gap_dur / noise_frame).round() * noise_frame
+
         train_dur = np.sum(gap_dur) + total_pulse_dur
 
     # Generate the stimulus strength for each pulse
@@ -144,7 +151,6 @@ def generate_pulse_train(exp, t_info):
     contrast_dist = "norm", t_info["gen_mean"], t_info["gen_sd"]
     log_contrast = flexible_values(contrast_dist, count, rng,
                                    max=np.log10(max_contrast))
-    contrast = 10 ** log_contrast
 
     p_info = pd.DataFrame(dict(
 
@@ -157,11 +163,11 @@ def generate_pulse_train(exp, t_info):
         # Pulse information
         pulse=np.arange(1, count + 1),
         log_contrast=log_contrast,
-        contrast=contrast,
+        contrast=10 ** log_contrast,
         gap_dur=gap_dur,
         pulse_dur=pulse_dur,
 
-        # Intitialize fields to track achieved performance
+        # Achieved performance
         occurred=False,
         blink=False,
         onset_time=np.nan,
