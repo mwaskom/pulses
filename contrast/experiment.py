@@ -68,6 +68,7 @@ def generate_trials(exp):
             trial=t,
 
             # Stimulus parameters
+            stim_pos=flexible_values(exp.p.stim_pos),
             gen_dist=gen_dist,
             gen_mean=gen_mean,
             gen_sd=gen_sd,
@@ -183,6 +184,45 @@ def generate_pulse_train(exp, t_info):
 def run_trial(exp, info):
 
     t_info, p_info = info
+
+    # ~~~ Set trial-constant attributes of the stimuli
+    exp.s.pattern.pos = t_info.stim_pos
+    exp.s.noise.pos = t_info.stim_pos
+
+    # ~~~ Inter-trial interval
+    exp.s.fix.color = exp.p.fix_iti_color
+    exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.iti)
+
+    # ~~~ Trial onset
+    exp.s.fix.color = exp.p.fix_ready_color
+    res = exp.wait_until(AcquireFixation(exp),
+                         timeout=exp.p.wait_fix,
+                         draw="fix")
+    if res is None:
+        t_info["result"] = "nofix"
+        exp.sounds.nofix.play()
+        return t_info, p_info
+
+    # ~~~ Pre-stimulus period
+    exp.s.fix.color = exp.p.fix_trial_color
+    noise_modulus = exp.win.framerate / exp.p.noise_hz
+    prestim_frames = exp.frame_range(seconds=t_info.wait_pre_stim,
+                                     yield_skipped=True)
+
+    for frame, skipped in prestim_frames:
+
+        update_noise = (not frame % noise_modulus
+                        or not np.mod(skipped, noise_modulus).all())
+        if update_noise:
+            exp.s.noise.update()
+
+        if not exp.check_fixation(allow_blinks=True):
+            exp.sounds.fixbreak.play()
+            exp.flicker("fix")
+            t_info["result"] = "fixbreak"
+            return t_info, p_info
+
+        exp.draw("noise")
 
 
 def serialize_trial_info(exp, info):
