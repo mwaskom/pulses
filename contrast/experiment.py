@@ -252,7 +252,11 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            flip_time = exp.draw(["fix", "targets", "pattern", "noise"])
+            if exp.p.noise_during_stim:
+                stims = ["fix", "targets", "pattern", "noise"]
+            else:
+                stims = ["fix", "targets", "pattern"]
+            flip_time = exp.draw(stims)
 
             if not frame:
 

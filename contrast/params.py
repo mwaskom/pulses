@@ -46,6 +46,7 @@ base = dict(
     noise_opacity=.5,
     noise_resolution=20,
     noise_hz=5,
+    noise_during_stim=True,
 
     wait_iti=1,
     wait_fix=5,
