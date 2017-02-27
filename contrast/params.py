@@ -21,8 +21,8 @@ base = dict(
     monitor_eye=True,
     monitor_key=False,
 
-    eye_response = True,  # TODO do we mean this to be monitor_eye?
-    eye_fixation = True,  # TODO do we mean this to be monitor_eye?
+    eye_response = True,
+    eye_fixation = True,
     eye_fixbreak_timeout=.25,
     eye_blink_timeout=.5,
     eye_target_wait=.5,
@@ -34,7 +34,7 @@ base = dict(
 
     stim_pos=[(-5.6, -2.0), (5.6, -2.0)],
     stim_radius=3,
-    stim_sf=3,
+    stim_sf=2,
     stim_tex="sin",
     stim_mask="raisedCos",
     stim_size=6,
