@@ -29,7 +29,7 @@ base = dict(
     eye_target_hold=.25,
 
     dist_means=[-1.1, -0.9],
-    dist_sds=[.075, .075],
+    dist_sds=[.15, .15],
     dist_targets=[0, 1],
 
     stim_pos=[(-5.6, -2.0), (5.6, -2.0)],
