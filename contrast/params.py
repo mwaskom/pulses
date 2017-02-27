@@ -23,7 +23,7 @@ base = dict(
 
     eye_response = True,  # TODO do we mean this to be monitor_eye?
     eye_fixation = True,  # TODO do we mean this to be monitor_eye?
-    eye_fixbreak_timeout=.5,
+    eye_fixbreak_timeout=.25,
     eye_blink_timeout=.5,
     eye_target_wait=.5,
     eye_target_hold=.25,
