@@ -42,8 +42,6 @@ base = dict(
 
     noise_mask="circle",
     noise_contrast=.1,
-    noise_stim_opacity=.5,
-    noise_gap_opacity=1,
     noise_resolution=20,
     noise_hz=5,
     noise_during_stim=True,

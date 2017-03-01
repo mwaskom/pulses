@@ -212,7 +212,6 @@ def run_trial(exp, info):
 
     # ~~~ Pre-stimulus period
     exp.s.fix.color = exp.p.fix_trial_color
-    exp.s.noise.opacity = exp.p.noise_gap_opacity
     noise_modulus = exp.win.framerate / exp.p.noise_hz
     prestim_frames = exp.frame_range(seconds=t_info.wait_pre_stim,
                                      yield_skipped=True)
@@ -252,7 +251,6 @@ def run_trial(exp, info):
                 return t_info, p_info
 
             if exp.p.noise_during_stim:
-                exp.s.noise.opacity = exp.p.noise_stim_opacity
                 stims = ["fix", "targets", "pattern", "noise"]
             else:
                 stims = ["fix", "targets", "pattern"]
@@ -275,7 +273,6 @@ def run_trial(exp, info):
         p_info.loc[p, "dropped_frames"] = exp.win.nDroppedFrames
 
         # Show the noise field during the pulse gap
-        exp.s.noise.opacity = exp.p.noise_gap_opacity
         gap_frames = exp.frame_range(seconds=info.gap_dur,
                                      yield_skipped=True)
 
