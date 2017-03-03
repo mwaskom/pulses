@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from visigoth.tools import AcquireFixation, AcquireTarget, flexible_values
+from visigoth import AcquireFixation, AcquireTarget, flexible_values
 from visigoth.stimuli import Point, Points, Pattern, GaussianNoise
 
 
@@ -13,6 +13,7 @@ def create_stimuli(exp):
 
     # Fixation point
     fix = Point(exp.win,
+                exp.p.fix_pos,
                 exp.p.fix_radius,
                 exp.p.fix_trial_color)
 

@@ -6,27 +6,15 @@ base = dict(
     display_name="laptop",
     display_luminance=35,
 
-    fix_radius=.15,
-    fix_window=2,
-
-    fix_iti_color=None,
-    fix_ready_color=yellow,
-    fix_trial_color=yellow,
-
     target_pos=[(-8, 4), (8, 4)],
-    target_color=yellow,
-    target_radius=.25,
-    target_window=5,
 
     monitor_eye=True,
-    monitor_key=False,
 
-    eye_response = True,
     eye_fixation = True,
+    eye_response = True,
+
     eye_fixbreak_timeout=.25,
     eye_blink_timeout=.5,
-    eye_target_wait=.5,
-    eye_target_hold=.25,
 
     dist_means=[-1.1, -0.9],
     dist_sds=[.15, .15],
@@ -59,6 +47,8 @@ base = dict(
     #pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
     pulse_gap=("truncexpon", (2 - .5) / .75, .5, .75),
     pulse_train_max=16,
+
+    perform_acc_target=.8,
 
     run_duration=540,
 
