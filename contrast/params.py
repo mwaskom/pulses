@@ -14,7 +14,7 @@ base = dict(
     eye_fixbreak_timeout=.25,
     eye_blink_timeout=.5,
 
-    dist_means=[-1.1, -0.9],
+    dist_means=[-1.08, -0.92],
     dist_sds=[.15, .15],
     dist_targets=[0, 1],
 
@@ -29,7 +29,7 @@ base = dict(
     noise_mask="circle",
     noise_contrast=.1,
     noise_resolution=20,
-    noise_hz=5,
+    noise_hz=7.5,
     noise_during_stim=True,
 
     wait_iti=1,
@@ -41,7 +41,7 @@ base = dict(
     pulse_count=("geom", .5, 1),
     pulse_count_max=5,
     pulse_single_prob=.1,
-    pulse_dur=.2,
+    pulse_dur=1 / 7.5,
     #pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
     pulse_gap=("truncexpon", (2 - .5) / .75, .5, .75),
     pulse_train_max=16,
