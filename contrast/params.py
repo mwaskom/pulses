@@ -14,7 +14,7 @@ base = dict(
     eye_fixbreak_timeout=.25,
     eye_blink_timeout=.5,
 
-    dist_means=[-1.08, -0.92],
+    dist_means=[-1.1, -0.9],
     dist_sds=[.15, .15],
     dist_targets=[0, 1],
 
@@ -27,7 +27,7 @@ base = dict(
     stim_gratings=8,
 
     noise_mask="circle",
-    noise_contrast=.1,
+    noise_contrast=.15,
     noise_resolution=20,
     noise_hz=7.5,
     noise_during_stim=True,
