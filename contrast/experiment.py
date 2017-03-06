@@ -327,6 +327,15 @@ def serialize_trial_info(exp, info):
     t_info, _ = info
     return t_info.to_json()
 
+def compute_performance(self):
+
+    if self.trial_data:
+        data = pd.DataFrame([t for t, _ in self.trial_data])
+        mean_acc = data["correct"].mean()
+        return mean_acc, None
+    else:
+        return None, None
+
 def save_data(exp):
 
     if exp.trial_data and exp.p.save_data:
