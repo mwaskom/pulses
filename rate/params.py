@@ -35,7 +35,7 @@ base = dict(
     wait_resp=5,
     wait_feedback=.5,
 
-    train_dur=6,
+    train_dur=("truncexpon", (16 - 4) / 3, 4, 3),
     pulse_dur=.1333,
 
     perform_acc_target=.8,

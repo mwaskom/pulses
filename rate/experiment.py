@@ -121,6 +121,7 @@ def generate_trials(exp):
 
         yield t_info, p_info
 
+
 def generate_pulse_train(exp, t_info):
     """Generate the pulse train for a given trial."""
     rng = np.random.RandomState()
@@ -132,13 +133,15 @@ def generate_pulse_train(exp, t_info):
     sample_pulses = 100
     params = exp.p.dist_params[t_info.gen_dist]
     gap_dur = flexible_values(params, sample_pulses, rng)
+    noise_frame = 1 / exp.p.noise_hz
+    gap_dur = (gap_dur / noise_frame).round() * noise_frame
 
     # Sample corresponding pulse durations
     pulse_dur = flexible_values(exp.p.pulse_dur, sample_pulses, rng)
 
     # Trim pulses to approximate train length
     cum_dur = (pulse_dur + gap_dur).cumsum()
-    count = np.searchsorted(cum_dur > train_dur)
+    count = np.searchsorted(cum_dur > train_dur, .5)
     pulse_dur = pulse_dur[count]
     gap_dur = gap_dur[count]
 
@@ -172,10 +175,152 @@ def generate_pulse_train(exp, t_info):
 
     return p_info
 
+
+def run_trial(exp, info):
+
+    # TODO mostly copied this straight from the contrast version
+    # should take a little time to think about how to not duplicate code!
+
+    t_info, p_info = info
+
+    # ~~~ Set trial-constant attributes of the stimuli
+    stim_pos = exp.p.stim_pos[t_info.stim_pos]
+    exp.s.pattern.pos = stim_pos
+    exp.s.noise.pos = stim_pos
+    exp.s.noise.contrast = t_info.noise_contrast
+
+    # ~~~ Inter-trial interval
+    exp.s.fix.color = exp.p.fix_iti_color
+    exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
+
+    # ~~~ Trial onset
+    exp.s.fix.color = exp.p.fix_ready_color
+    res = exp.wait_until(AcquireFixation(exp),
+                         timeout=exp.p.wait_fix,
+                         draw="fix")
+
+    if res is None:
+        t_info["result"] = "nofix"
+        exp.sounds.nofix.play()
+        return t_info, p_info
+
+    # ~~~ Pre-stimulus period
+    exp.s.fix.color = exp.p.fix_trial_color
+    noise_modulus = exp.win.framerate / exp.p.noise_hz
+    prestim_frames = exp.frame_range(seconds=t_info.wait_pre_stim,
+                                     yield_skipped=True)
+
+    for frame, skipped in prestim_frames:
+
+        update_noise = (not frame % noise_modulus
+                        or not np.mod(skipped, noise_modulus).all())
+        if update_noise:
+            exp.s.noise.update()
+
+        if not exp.check_fixation(allow_blinks=True):
+            exp.sounds.fixbreak.play()
+            exp.flicker("fix")
+            t_info["result"] = "fixbreak"
+            return t_info, p_info
+
+        exp.draw(["fix", "targets", "noise"])
+
+    # ~~~ Stimulus period
+    for p, info in p_info.iterrows():
+
+        # Update the pattern
+        exp.s.pattern.contrast = info.contrast
+        exp.s.pattern.randomize_phases()
+
+        # Update the noise
+        exp.s.noise.update()
+
+        # Show each frame of the stimulus
+        for frame in exp.frame_range(seconds=info.pulse_dur):
+
+            if not exp.check_fixation(allow_blinks=True):
+                exp.sounds.fixbreak.play()
+                exp.flicker("fix")
+                t_info["result"] = "fixbreak"
+                return t_info, p_info
+
+            if exp.p.noise_during_stim:
+                stims = ["fix", "targets", "pattern", "noise"]
+            else:
+                stims = ["fix", "targets", "pattern"]
+            flip_time = exp.draw(stims)
+
+            if not frame:
+
+                exp.tracker.send_message("pulse_onset")
+                p_info.loc[p, "occured"] = True
+                p_info.loc[p, "onset_time"] = flip_time
+
+                if info["pulse"] == 1:
+                    t_info["stim_onset"] = flip_time
+
+            blink = not exp.tracker.check_eye_open(new_sample=False)
+            p_info.loc[p, "blink"] |= blink
+
+        # This counter is reset at beginning of frame_range
+        # so it should could to frames dropped during the stim
+        p_info.loc[p, "dropped_frames"] = exp.win.nDroppedFrames
+
+        # Show the noise field during the pulse gap
+        gap_frames = exp.frame_range(seconds=info.gap_dur,
+                                     yield_skipped=True)
+
+        # TODO just copied this from above; abstract it out?
+        for frame, skipped in gap_frames:
+
+            update_noise = (not frame % noise_modulus
+                            or not np.mod(skipped, noise_modulus).all())
+            if update_noise:
+                exp.s.noise.update()
+
+            if not exp.check_fixation(allow_blinks=True):
+                exp.sounds.fixbreak.play()
+                exp.flicker("fix")
+                t_info["result"] = "fixbreak"
+                return t_info, p_info
+
+            flip_time = exp.draw(["fix", "targets", "noise"])
+            if not frame:
+                p_info.loc[p, "offset_time"] = flip_time
+
+    # Determine if there were any stimulus blinks
+    t_info["stim_blink"] = p_info["blink"].any()
+
+    # ~~~ Response period
+
+    # Collect the response
+    res = exp.wait_until(AcquireTarget(exp, t_info.target),
+                         timeout=exp.p.wait_resp,
+                         draw="targets")
+
+    if res is None:
+        t_info["result"] = "fixbreak"
+    else:
+        t_info.update(pd.Series(res))
+
+    # Give feedback
+    exp.sounds[t_info.result].play()
+    exp.show_feedback("targets", t_info.result, t_info.response)
+    exp.wait_until(timeout=exp.p.wait_feedback, draw=["targets"])
+    exp.s.targets.color = exp.p.target_color
+
+    # Prepare for the inter-trial interval
+    exp.s.fix.color = exp.p.fix_iti_color
+    exp.draw("fix")
+
+    return t_info, p_info
+
+
 def serialize_trial_info(exp, info):
 
     t_info, _ = info
     return t_info.to_json()
+
 
 def save_data(exp):
 
