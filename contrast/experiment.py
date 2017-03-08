@@ -91,9 +91,8 @@ def generate_trials(exp):
 
             # Achieved timing data
             onset_fix=np.nan,
-            onset_targ=np.nan,
-            onset_stim=np.nan,
-            onset_resp=np.nan,
+            onset_noise=np.nan,
+            onset_response=np.nan,
             onset_feedback=np.nan,
 
             # Subject response fields
@@ -177,8 +176,8 @@ def generate_pulse_train(exp, t_info):
         # Achieved performance
         occurred=False,
         blink=False,
-        onset_time=np.nan,
-        offset_time=np.nan,
+        pulse_onset=np.nan,
+        pulse_offset=np.nan,
         dropped_frames=np.nan,
 
     ))
@@ -201,6 +200,7 @@ def run_trial(exp, info):
     exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
+    t_info["onset_fix"] = exp.clock.getTime()
     exp.s.fix.color = exp.p.fix_ready_color
     res = exp.wait_until(AcquireFixation(exp),
                          timeout=exp.p.wait_fix,
@@ -230,7 +230,10 @@ def run_trial(exp, info):
             t_info["result"] = "fixbreak"
             return t_info, p_info
 
-        exp.draw(["fix", "targets", "noise"])
+        flip_time = exp.draw(["fix", "targets", "noise"])
+
+        if not frame:
+            t_info["onset_noise"] = flip_time
 
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
@@ -261,7 +264,7 @@ def run_trial(exp, info):
 
                 exp.tracker.send_message("pulse_onset")
                 p_info.loc[p, "occured"] = True
-                p_info.loc[p, "onset_time"] = flip_time
+                p_info.loc[p, "pulse_onset"] = flip_time
 
                 if info["pulse"] == 1:
                     t_info["stim_onset"] = flip_time
@@ -293,7 +296,7 @@ def run_trial(exp, info):
 
             flip_time = exp.draw(["fix", "targets", "noise"])
             if not frame:
-                p_info.loc[p, "offset_time"] = flip_time
+                p_info.loc[p, "pulse_offset"] = flip_time
 
     # Determine if there were any stimulus blinks
     t_info["stim_blink"] = p_info["blink"].any()
@@ -301,6 +304,7 @@ def run_trial(exp, info):
     # ~~~ Response period
 
     # Collect the response
+    t_info["onset_response"] = exp.clock.getTime()
     res = exp.wait_until(AcquireTarget(exp, t_info.target),
                          timeout=exp.p.wait_resp,
                          draw="targets")
@@ -311,6 +315,7 @@ def run_trial(exp, info):
         t_info.update(pd.Series(res))
 
     # Give feedback
+    t_info["onset_feedback"] = exp.clock.getTime()
     exp.sounds[t_info.result].play()
     exp.show_feedback("targets", t_info.result, t_info.response)
     exp.wait_until(timeout=exp.p.wait_feedback, draw=["targets"])
