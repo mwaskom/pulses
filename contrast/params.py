@@ -32,7 +32,7 @@ base = dict(
     noise_hz=7.5,
     noise_during_stim=True,
 
-    wait_iti=1,
+    wait_iti=2,
     wait_fix=5,
     wait_pre_stim=1,
     wait_resp=5,
