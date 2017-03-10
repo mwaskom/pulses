@@ -14,7 +14,7 @@ base = dict(
     fix_dimness=.33,
     fix_duration=("expon", 2, 2),
 
-    key_names = [1, 2],
+    key_names = ["1", "2"],
 
     eye_fixation=True,
 
@@ -39,11 +39,9 @@ base = dict(
     noise_hz=7.5,
     noise_during_stim=True,
 
-    wait_iti=2,
+    wait_iti=("truncexpon", (8 - 2) / 3, 2, 3),
     wait_fix=5,
-    wait_pre_stim=1,
-    wait_resp=5,
-    wait_feedback=.5,
+    wait_pre_stim=("truncexpon", (8 - 2) / 3, 2, 3),
 
     pulse_count=("geom", .5, 1),
     pulse_count_max=5,

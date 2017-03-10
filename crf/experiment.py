@@ -5,7 +5,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from psychopy.core import Clock
+from psychopy import core, event
 from visigoth import AcquireFixation, flexible_values
 from visigoth.stimuli import Point, Pattern, GaussianNoise
 
@@ -261,7 +261,7 @@ def run_trial(exp, info):
         exp.sounds.nofix.play()
         return t_info, p_info
 
-    trial_clock = Clock()
+    trial_clock = core.Clock()
 
     # ~~~ Pre-stimulus period
     noise_modulus = exp.win.framerate / exp.p.noise_hz
@@ -358,5 +358,9 @@ def run_trial(exp, info):
 
     # Determine if there were any stimulus blinks
     t_info["stim_blink"] = p_info["blink"].any()
+
+    # Compute accuracy on the fixation task
+    fix_info = f_gen.info
+    key_presses = event.getKeys(exp.p.key_names, trial_clock)
 
     return t_info, p_info, f_gen.info
