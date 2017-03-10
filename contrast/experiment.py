@@ -39,7 +39,7 @@ def create_stimuli(exp):
                       pos=(0, 0)
                       )
 
-    return dict(fix=fix, targets=targets, pattern=pattern, noise=noise)
+    return locals()
 
 
 def generate_trials(exp):
