@@ -40,6 +40,7 @@ base = dict(
     noise_hz=7.5,
     noise_during_stim=True,
 
+    wait_pre_run=0,
     wait_iti=("truncexpon", (8 - 2) / 3, 2, 3),
     wait_fix=5,
     wait_pre_stim=("truncexpon", (8 - 2) / 3, 2, 3),
@@ -56,5 +57,12 @@ base = dict(
     run_duration=540,
 
     output_template="data/{subject}/{session}/crf_{time}",
+
+)
+
+scan = base.copy()
+scan.update(
+
+    wait_pre_run=6 * 1.5,
 
 )
