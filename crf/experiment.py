@@ -62,6 +62,7 @@ class FixGenerator(object):
         info["session"] = t_info.session
         info["run"] = t_info.run
         info["trial"] = t_info.trial
+        info["detected"] = False
 
         return info
 
@@ -137,21 +138,20 @@ def generate_trials(exp):
             # Timing parameters
             wait_iti=wait_iti,
             wait_pre_stim=flexible_values(exp.p.wait_pre_stim),
-            wait_resp=flexible_values(exp.p.wait_resp),
-            wait_feedback=flexible_values(exp.p.wait_feedback),
 
             # Achieved timing data
             onset_fix=np.nan,
             onset_noise=np.nan,
-            onset_response=np.nan,
-            onset_feedback=np.nan,
 
-            # Subject response fields
+            # Necessary (but unused) fields to let the remote work
             result=np.nan,
             responded=False,
             response=np.nan,
             correct=np.nan,
             rt=np.nan,
+
+
+            # Track blinks for modeling
             stim_blink=np.nan,
 
         )
@@ -165,9 +165,7 @@ def generate_trials(exp):
                                      + p_info["pulse_dur"].sum())
 
         expected_trial_dur = (t_info["wait_pre_stim"]
-                              + t_info["pulse_train_dur"]
-                              + exp.p.wait_feedback
-                              + 2)  # Account for fix/response delay
+                              + t_info["pulse_train_dur"])
 
         # TODO we need some way to enforce minimum delay
         # at end of fMRI runs
@@ -361,6 +359,52 @@ def run_trial(exp, info):
 
     # Compute accuracy on the fixation task
     fix_info = f_gen.info
-    key_presses = event.getKeys(exp.p.key_names, trial_clock)
+    key_presses = event.getKeys(exp.p.key_names, timeStamped=trial_clock)
+    for i, info in fix_info.iterrows():
+        for key, time in key_presses:
+            if (time - info.time) < exp.p.key_timeout:
+                if exp.p.key_names.index(key) == info.type:
+                    fix_info.loc[i, "detected"] = True
+                    break
 
-    return t_info, p_info, f_gen.info
+    return t_info, p_info, fix_info
+
+
+def serialize_trial_info(exp, info):
+
+    t_info, _, _ = info
+    return t_info.to_json()
+
+
+def compute_performance(self):
+
+    if self.trial_data:
+        data = pd.concat([f for _, _, f in self.trial_data])
+        mean_acc = data["detected"].mean()
+        return mean_acc, None
+    else:
+        return None, None
+
+def save_data(exp):
+
+    if exp.trial_data and exp.p.save_data:
+
+        trial_data = [t_data for t_data, _, _ in exp.trial_data]
+        pulse_data = [p_data for _, p_data, _ in exp.trial_data]
+        ftask_data = [f_data for _, _, f_data in exp.trial_data]
+
+        data = pd.DataFrame(trial_data)
+        out_data_fname = exp.output_stem + "_trials.csv"
+        data.to_csv(out_data_fname, index=False)
+
+        data = pd.concat(pulse_data)
+        out_data_fname = exp.output_stem + "_pulses.csv"
+        data.to_csv(out_data_fname, index=False)
+
+        data = pd.concat(ftask_data)
+        out_data_fname = exp.output_stem + "_detect.csv"
+        data.to_csv(out_data_fname, index=False)
+
+        out_json_fname = exp.output_stem + "_params.json"
+        with open(out_json_fname, "w") as fid:
+            json.dump(exp.p, fid, sort_keys=True, indent=4)

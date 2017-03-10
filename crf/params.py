@@ -14,7 +14,8 @@ base = dict(
     fix_dimness=.33,
     fix_duration=("expon", 2, 2),
 
-    key_names = ["1", "2"],
+    key_names=["1", "2"],
+    key_timeout=.75,
 
     eye_fixation=True,
 
