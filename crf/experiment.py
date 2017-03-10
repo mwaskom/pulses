@@ -38,9 +38,10 @@ class FixGenerator(object):
             current_color = colors[idx]
             yield current_color
 
-    def update_fix(self, now):
+    def update(self, now):
 
-        if now > self.next_change:
+        if (now > self.next_change
+            and (self.t_info.trial_dur - now) > self.exp.p.key_timeout):
 
             self.next_change = now + flexible_values(self.exp.p.fix_duration)
             change_type = flexible_values([0, 1])
@@ -163,6 +164,8 @@ def generate_trials(exp):
         t_info["pulse_count"] = len(p_info)
         t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
                                      + p_info["pulse_dur"].sum())
+        t_info["trial_dur"] = (t_info["wait_pre_stim"]
+                               + t_info["pulse_train_dur"])
 
         expected_trial_dur = (t_info["wait_pre_stim"]
                               + t_info["pulse_train_dur"])
@@ -279,7 +282,7 @@ def run_trial(exp, info):
             t_info["result"] = "fixbreak"
             return t_info, p_info, f_gen.info
 
-        f_gen.update_fix(trial_clock.getTime())
+        f_gen.update(trial_clock.getTime())
 
         flip_time = exp.draw(["fix", "noise"])
 
@@ -306,7 +309,7 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info, f_gen.info
 
-            f_gen.update_fix(trial_clock.getTime())
+            f_gen.update(trial_clock.getTime())
 
             if exp.p.noise_during_stim:
                 stims = ["fix", "pattern", "noise"]
@@ -348,7 +351,7 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            f_gen.update_fix(trial_clock.getTime())
+            f_gen.update(trial_clock.getTime())
 
             flip_time = exp.draw(["fix", "noise"])
             if not frame:
