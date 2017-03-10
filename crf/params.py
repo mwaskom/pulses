@@ -4,12 +4,19 @@ base = dict(
     display_name="laptop",
     display_luminance=35,
 
-    target_pos=[(-10, 5), (10, 5)],
+    target_pos=None,
 
     monitor_eye=True,
 
+    fix_colors=[[ 0.9, -0.1,  0.1],
+                [-0.4,  0.4, -0.6],
+                [-0.5,  0.3,  0.9]],
+    fix_dimness=.33,
+    fix_duration=("expon", 2, 2),
+
+    key_names = [1, 2],
+
     eye_fixation=True,
-    eye_response=True,
 
     eye_fixbreak_timeout=.25,
     eye_blink_timeout=.5,
@@ -42,14 +49,13 @@ base = dict(
     pulse_count_max=5,
     pulse_single_prob=.1,
     pulse_dur=1 / 7.5,
-    #pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
-    pulse_gap=("truncexpon", (2 - .5) / .75, .5, .75),
+    pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
     pulse_train_max=16,
 
     perform_acc_target=.8,
 
     run_duration=540,
 
-    output_template="data/{subject}/{session}/contrast_{time}",
+    output_template="data/{subject}/{session}/crf_{time}",
 
 )
