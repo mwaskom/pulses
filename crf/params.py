@@ -64,5 +64,6 @@ scan = base.copy()
 scan.update(
 
     wait_pre_run=6 * 1.5,
+    trigger=["quoteleft", "grave"],
 
 )
