@@ -63,6 +63,8 @@ base = dict(
 scan = base.copy()
 scan.update(
 
+    display_name="cbi-projector",
+
     wait_pre_run=6 * 1.5,
     trigger=["quoteleft", "grave"],
 
