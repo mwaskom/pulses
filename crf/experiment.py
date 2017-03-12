@@ -40,8 +40,9 @@ class FixGenerator(object):
 
     def update(self, now):
 
-        if (now > self.next_change
-            and (self.t_info.trial_dur - now) > self.exp.p.key_timeout):
+        time_for_change = now > self.next_change
+        remaining = self.t_info.trial_dur - now
+        if time_for_change and (remaining > self.exp.p.key_timeout):
 
             self.next_change = now + flexible_values(self.exp.p.fix_duration)
             change_type = flexible_values([0, 1])
@@ -56,7 +57,7 @@ class FixGenerator(object):
     @property
     def info(self):
 
-        info =  pd.DataFrame(self.changes)
+        info = pd.DataFrame(self.changes)
         t_info = self.t_info
 
         info["subject"] = t_info.subject
@@ -292,7 +293,6 @@ def run_trial(exp, info):
         if not frame:
             t_info["onset_noise"] = flip_time
 
-
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
 
@@ -393,6 +393,7 @@ def compute_performance(self):
         return mean_acc, None
     else:
         return None, None
+
 
 def save_data(exp):
 
