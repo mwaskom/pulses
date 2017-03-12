@@ -385,10 +385,7 @@ def serialize_trial_info(exp, info):
 def compute_performance(self):
 
     if self.trial_data:
-        if len(self.trial_data) > 1:
-            _, _, data = self.trial_data[0]
-        else:
-            data = pd.concat([f for _, _, f in self.trial_data])
+        data = pd.concat([f for _, _, f in self.trial_data])
         mean_acc = data["detected"].mean()
         return mean_acc, None
     else:
