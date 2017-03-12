@@ -105,7 +105,10 @@ def generate_trials(exp):
         now = exp.clock.getTime()
 
         # Schedule the next trial
-        wait_iti = flexible_values(exp.p.wait_iti)
+        if t == 1:
+            wait_iti = 0
+        else:
+            wait_iti = flexible_values(exp.p.wait_iti)
 
         # Determine the stimulus parameters for this trial
         stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))
