@@ -65,7 +65,9 @@ scan.update(
 
     display_name="cbi-projector",
 
-    wait_pre_run=6 * 1.5,
+    key_names=["4", "3"],
     trigger=["quoteleft", "grave"],
+
+    wait_pre_run=6 * 1.5,
 
 )
