@@ -264,7 +264,7 @@ def run_trial(exp, info):
     if res is None:
         t_info["result"] = "nofix"
         exp.sounds.nofix.play()
-        return t_info, p_info
+        return t_info, p_info, f_gen.info
 
     trial_clock = core.Clock()
 
@@ -352,7 +352,7 @@ def run_trial(exp, info):
                 exp.sounds.fixbreak.play()
                 exp.flicker("fix")
                 t_info["result"] = "fixbreak"
-                return t_info, p_info
+                return t_info, p_info, f_gen.info
 
             f_gen.update(trial_clock.getTime())
 
