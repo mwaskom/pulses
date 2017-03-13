@@ -20,4 +20,5 @@ cbi-projector:
   resolution: [1024, 768]
   refresh_hz: 60
   gamma: 2.64
-  max_luminance: 83.9
+  max_luminance: 111.3
+  notes: calibrated 03/11/2017 with 1.2b and 0.9a filters
