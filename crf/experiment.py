@@ -323,7 +323,7 @@ def run_trial(exp, info):
             if not frame:
 
                 exp.tracker.send_message("pulse_onset")
-                p_info.loc[p, "occured"] = True
+                p_info.loc[p, "occurred"] = True
                 p_info.loc[p, "pulse_onset"] = flip_time
 
                 if info["pulse"] == 1:
