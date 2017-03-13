@@ -13,6 +13,7 @@ base = dict(
                 [-0.5,  0.3,  0.9]],
     fix_dimness=.33,
     fix_duration=("expon", 2, 2),
+    fix_window=4,
 
     key_names=["1", "2"],
     key_timeout=1,
