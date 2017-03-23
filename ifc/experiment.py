@@ -44,7 +44,6 @@ def create_stimuli(exp):
 def generate_trials(exp):
     """Yield trial and pulse train info."""
 
-    # Create an infinite iterator for trial data
     for _ in exp.trial_count():
 
         if exp.clock.getTime() > exp.p.run_duration:
@@ -53,12 +52,11 @@ def generate_trials(exp):
         target = flexible_values([0, 1])
         pedestal = flexible_values(exp.p.contrast_pedestal)
         delta = flexible_values(exp.p.contrast_delta)
+
         if target == 0:
-            contrast_1 = pedestal + delta
-            contrast_2 = pedestal
+            contrast_1, contrast_2 = pedestal + delta, pedestal
         elif target == 1:
-            contrast_1 = pedestal
-            contrast_2 = pedestal + delta
+            contrast_1, contrast_2 = pedestal, pedestal + delta
 
         trial_info = exp.trial_info(
 
@@ -148,3 +146,13 @@ def run_trial(exp, t_info):
     exp.draw([])
 
     return t_info
+
+
+def compute_performance(exp):
+
+    mean_acc, mean_rt = None, None
+    if exp.trial_data:
+        data = pd.DataFrame(exp.trial_data).query("delta > 0")
+        if data.size:
+            mean_acc = data.correct.mean()
+    return mean_acc, mean_rt
