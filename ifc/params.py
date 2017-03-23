@@ -24,7 +24,7 @@ base = dict(
     noise_mask="circle",
     noise_resolution=20,
     noise_hz=5,
-    noise_contrast=[0, .05, .1, .2, .4],
+    noise_contrast=[.05, .1, .2],
 
     wait_iti=2,
     wait_fix=5,
