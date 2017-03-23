@@ -91,16 +91,15 @@ def run_trial(exp, t_info):
         exp.sounds.nofix.play()
         return t_info
 
-    durations = [exp.p.wait_pre_stim,
-                 exp.p.wait_stim,
-                 exp.p.wait_inter_stim,
-                 exp.p.wait_stim,
-                 exp.p.wait_post_stim]
-    contrasts = [None, t_info.contrast_1, None, t_info.contrast_2, None]
-
+    # ~~~ Stimulus period
     noise_modulus = exp.win.framerate / exp.p.noise_hz
+    periods = [(exp.p.wait_pre_stim, None),
+               (exp.p.wait_stim, t_info.contrast_1),
+               (exp.p.wait_inter_stim, None),
+               (exp.p.wait_stim, t_info.contrast_2),
+               (exp.p.wait_post_stim, None)]
 
-    for duration, contrast in zip(durations, contrasts):
+    for duration, contrast in periods:
 
         frames = exp.frame_range(seconds=duration,
                                  yield_skipped=True)
@@ -131,9 +130,6 @@ def run_trial(exp, t_info):
             exp.draw(stims)
 
     # ~~~ Response period
-
-    # Collect the response
-    t_info["onset_response"] = exp.clock.getTime()
     res = exp.wait_until(AcquireTarget(exp, t_info.target),
                          timeout=exp.p.wait_resp,
                          draw="targets")
@@ -144,7 +140,6 @@ def run_trial(exp, t_info):
         t_info.update(pd.Series(res))
 
     # Give feedback
-    t_info["onset_feedback"] = exp.clock.getTime()
     exp.sounds[t_info.result].play()
     exp.show_feedback("targets", t_info.result, t_info.response)
     exp.wait_until(timeout=exp.p.wait_feedback, draw=["targets"])
