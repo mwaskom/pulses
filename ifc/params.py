@@ -11,7 +11,7 @@ base = dict(
     target_pos=[(-8, 4), (8, 4)],
 
     contrast_pedestal=-1,
-    contrast_delta=[0, .05, .1, .15, .2, .25, .3],
+    contrast_delta=[0, .04, .08, .12, .16, .20, .24],
 
     stim_pos=(0, 4),
     stim_radius=3,
@@ -24,7 +24,7 @@ base = dict(
     noise_mask="circle",
     noise_resolution=20,
     noise_hz=5,
-    noise_contrast=[.05, .1, .2],
+    noise_contrast=[.05, .10, .15, .20],
 
     wait_iti=2,
     wait_fix=5,

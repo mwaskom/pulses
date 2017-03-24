@@ -154,5 +154,5 @@ def compute_performance(exp):
     if exp.trial_data:
         data = pd.DataFrame(exp.trial_data).query("delta > 0")
         if data.size:
-            mean_acc = data.correct.mean()
+            mean_acc = data.correct.astype(float).mean()
     return mean_acc, mean_rt
