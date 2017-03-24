@@ -11,7 +11,7 @@ base = dict(
     target_pos=[(-8, 4), (8, 4)],
 
     contrast_pedestal=-1,
-    contrast_delta=[0, .04, .08, .12, .16, .20, .24],
+    contrast_delta=[0, .03, .06, .09, .12, .25, .18, .21],
 
     stim_pos=(0, 4),
     stim_radius=3,
