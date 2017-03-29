@@ -13,7 +13,7 @@ base = dict(
     contrast_pedestal=-1,
     contrast_delta=[0, .03, .06, .09, .12, .15, .18],
 
-    stim_pos=(0, 4),
+    stim_pos=(0, 6),
     stim_radius=3,
     stim_sf=2,
     stim_tex="sin",
