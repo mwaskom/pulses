@@ -66,6 +66,7 @@ def generate_trials(exp):
             contrast_1=contrast_1,
             contrast_2=contrast_2,
             noise_contrast=flexible_values(exp.p.noise_contrast),
+            stim_sf=flexible_values(exp.p.stim_sf),
         )
 
         yield trial_info
@@ -75,6 +76,10 @@ def run_trial(exp, t_info):
 
     # ~~~ Set trial-constant attributes of the stimuli
     exp.s.noise.contrast = t_info.noise_contrast
+
+    # Note: spatial frequency is not currently exposed at top level but it
+    # should be (ideally with a more general solution to attributed access)
+    exp.s.pattern.array.sfs = t_info.stim_sf
 
     # ~~~ Inter-trial interval
     exp.wait_until(exp.iti_end, draw=[], iti_duration=exp.p.wait_iti)

@@ -15,7 +15,7 @@ base = dict(
 
     stim_pos=(0, 6),
     stim_radius=3,
-    stim_sf=2,
+    stim_sf=[2, 6],
     stim_tex="sin",
     stim_mask="raisedCos",
     stim_size=6,
@@ -24,7 +24,7 @@ base = dict(
     noise_mask="circle",
     noise_resolution=20,
     noise_hz=5,
-    noise_contrast=[.05, .10, .15, .20],
+    noise_contrast=0,
 
     wait_iti=2,
     wait_fix=5,
