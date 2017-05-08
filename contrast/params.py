@@ -33,7 +33,7 @@ base = dict(
     noise_mask="circle",
     noise_contrast=0,
     noise_resolution=20,
-    noise_hz=7.5,
+    noise_hz=.2,
     noise_during_stim=True,
 
     wait_iti=2,
@@ -45,7 +45,7 @@ base = dict(
     pulse_count=("geom", .5, 1),
     pulse_count_max=5,
     pulse_single_prob=.1,
-    pulse_dur=1 / 7.5,
+    pulse_dur=.2,
     #pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
     pulse_gap=("truncexpon", (2 - .5) / .75, .5, .75),
     pulse_train_max=16,
