@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from visigoth import AcquireFixation, AcquireTarget, flexible_values
-from visigoth.stimuli import Point, Points, Pattern, GaussianNoise
+from visigoth.stimuli import Point, Points, LineCue, Pattern, GaussianNoise
 
 
 def create_stimuli(exp):
@@ -16,6 +16,12 @@ def create_stimuli(exp):
                 exp.p.fix_pos,
                 exp.p.fix_radius,
                 exp.p.fix_trial_color)
+
+    # Spatial cue
+    cue = LineCue(exp.win,
+                  exp.p.cue_extent,
+                  exp.p.cue_width,
+                  exp.p.cue_color)
 
     # Saccade targets
     targets = Points(exp.win,
@@ -191,12 +197,13 @@ def run_trial(exp, info):
 
     # ~~~ Set trial-constant attributes of the stimuli
     stim_pos = exp.p.stim_pos[t_info.stim_pos]
+    exp.s.cue.pos = stim_pos
     exp.s.pattern.pos = stim_pos
     exp.s.noise.pos = stim_pos
     exp.s.noise.contrast = t_info.noise_contrast
 
     # ~~~ Inter-trial interval
-    exp.s.fix.color = exp.p.fix_iti_color
+    exp.s.fix.color = exp.p.fix_iti_color  # TODO no fix during ITI
     exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
@@ -230,7 +237,7 @@ def run_trial(exp, info):
             t_info["result"] = "fixbreak"
             return t_info, p_info
 
-        flip_time = exp.draw(["fix", "targets", "noise"])
+        flip_time = exp.draw(["fix", "cue", "targets", "noise"])
 
         if not frame:
             t_info["onset_noise"] = flip_time
@@ -255,9 +262,9 @@ def run_trial(exp, info):
                 return t_info, p_info
 
             if exp.p.noise_during_stim:
-                stims = ["fix", "targets", "pattern", "noise"]
+                stims = ["fix", "cue", "targets", "pattern", "noise"]
             else:
-                stims = ["fix", "targets", "pattern"]
+                stims = ["fix", "cue", "targets", "pattern"]
             flip_time = exp.draw(stims)
 
             if not frame:
@@ -294,7 +301,7 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            flip_time = exp.draw(["fix", "targets", "noise"])
+            flip_time = exp.draw(["fix", "cue", "targets", "noise"])
             if not frame:
                 p_info.loc[p, "pulse_offset"] = flip_time
 
