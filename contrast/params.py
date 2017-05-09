@@ -42,7 +42,7 @@ base = dict(
     wait_resp=5,
     wait_feedback=.5,
 
-    pulse_count=("geom", .5, 1),
+    pulse_count=("geom", .25, 1),
     pulse_count_max=5,
     pulse_single_prob=.1,
     pulse_dur=.2,
