@@ -33,7 +33,7 @@ base = dict(
     noise_mask="circle",
     noise_contrast=0,
     noise_resolution=20,
-    noise_hz=.2,
+    noise_hz=5,
     noise_during_stim=True,
 
     wait_iti=2,
