@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from visigoth import AcquireFixation, AcquireTarget, flexible_values
-from visigoth.stimuli import Point, Points, LineCue, Pattern, GaussianNoise
+from visigoth.stimuli import Point, Points, PointCue, Pattern, GaussianNoise
 
 
 def create_stimuli(exp):
@@ -18,10 +18,10 @@ def create_stimuli(exp):
                 exp.p.fix_trial_color)
 
     # Spatial cue
-    cue = LineCue(exp.win,
-                  exp.p.cue_extent,
-                  exp.p.cue_width,
-                  exp.p.cue_color)
+    cue = PointCue(exp.win,
+                   exp.p.cue_norm,
+                   exp.p.cue_radius,
+                   exp.p.cue_color)
 
     # Saccade targets
     targets = Points(exp.win,

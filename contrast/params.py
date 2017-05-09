@@ -6,8 +6,8 @@ base = dict(
 
     target_pos=[(-10, 5), (10, 5)],
 
-    cue_extent=(.2, .5),
-    cue_width=5,
+    cue_norm=.175,
+    cue_radius=.075,
     cue_color=(.8, .6, -.8),
 
     monitor_eye=True,
