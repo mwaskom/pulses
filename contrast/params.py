@@ -46,8 +46,6 @@ base = dict(
     pulse_count_max=5,
     pulse_single_prob=.1,
     pulse_dur=.2,
-    #pulse_gap=("truncexpon", (8 - 2) / 3, 2, 3),
-    pulse_gap=("truncexpon", (2 - .5) / .75, .5, .75),
     pulse_train_max=16,
 
     perform_acc_target=.8,
@@ -55,5 +53,23 @@ base = dict(
     run_duration=540,
 
     output_template="data/{subject}/{session}/contrast_{time}",
+
+)
+
+
+fast = base.copy()
+fast.update(
+
+    pulse_gap=("truncexpon", (2.5 - .5) / .5, .5, .5),
+    output_template="data/{subject}/{session}/contrast_fast_{time}",
+
+)
+
+
+slow = base.copy()
+slow.update(
+
+    pulse_gap=("truncexpon", (10 - 2) / 2, 2, 2),
+    output_template="data/{subject}/{session}/contrast_slow_{time}",
 
 )
