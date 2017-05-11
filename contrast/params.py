@@ -36,6 +36,8 @@ base = dict(
     wait_pre_stim=1,
     wait_resp=5,
     wait_feedback=.5,
+    wait_finish_min=6,
+    wait_finish_max=14,
 
     pulse_count=("geom", .25, 1),
     pulse_count_max=5,
