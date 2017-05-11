@@ -77,6 +77,7 @@ def generate_trials(exp):
             target=target,
 
             # Pulse info (filled in below)
+            log_contrast_mean=np.nan,
             pulse_count=np.nan,
             pulse_train_dur=np.nan,
 
@@ -104,6 +105,7 @@ def generate_trials(exp):
         t_info = pd.Series(trial_info, dtype=np.object)
         p_info = generate_pulse_train(exp, t_info)
 
+        t_info["log_contrast_mean"] = p_info["log_contrast"].mean()
         t_info["pulse_count"] = len(p_info)
         t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
                                      + p_info["pulse_dur"].sum())
