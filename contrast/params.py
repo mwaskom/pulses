@@ -17,6 +17,7 @@ base = dict(
 
     eye_fixbreak_timeout=.25,
     eye_blink_timeout=.5,
+    eye_target_wait=.5,
 
     dist_means=[-1.1, -0.9],
     dist_sds=[.15, .15],
