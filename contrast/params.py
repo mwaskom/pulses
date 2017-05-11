@@ -24,7 +24,6 @@ base = dict(
     dist_targets=[0, 1],
 
     stim_pos=[(-5.6, -2.0), (5.6, -2.0)],
-    stim_radius=3,
     stim_sf=2,
     stim_tex="sin",
     stim_mask="raisedCos",
