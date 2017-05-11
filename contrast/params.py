@@ -47,7 +47,7 @@ base = dict(
     pulse_single_prob=.1,
     pulse_dur=.2,
     pulse_gap=("truncexpon", (2.5 - .5) / .5, .5, .5),
-    pulse_train_max=16,
+    pulse_train_max=28,
 
     perform_acc_target=.8,
 
@@ -61,6 +61,7 @@ base = dict(
 fast = base.copy()
 fast.update(
 
+    wait_pre_stim=("truncexpon", (4 - 1) / 1, 1, 1),
     pulse_gap=("truncexpon", (4 - 1) / 1, 1, 1),
     output_template="data/{subject}/{session}/contrast_fast_{time}",
 
@@ -70,6 +71,7 @@ fast.update(
 slow = base.copy()
 slow.update(
 
+    wait_pre_stim=("truncexpon", (4 - 1) / 1, 1, 1),
     pulse_gap=("truncexpon", (8 - 2) / 2, 2, 2),
     output_template="data/{subject}/{session}/contrast_slow_{time}",
 
