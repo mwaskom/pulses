@@ -29,12 +29,6 @@ def create_stimuli(exp):
                      exp.p.target_radius,
                      exp.p.target_color)
 
-    # Gaussian noise field
-    noise = GaussianNoise(exp.win,
-                          mask=exp.p.noise_mask,
-                          size=exp.p.stim_size,
-                          pix_per_deg=exp.p.noise_resolution)
-
     # Average of multiple sinusoidal grating stimulus
     pattern = Pattern(exp.win,
                       n=exp.p.stim_gratings,
@@ -82,9 +76,6 @@ def generate_trials(exp):
             gen_sd=gen_sd,
             target=target,
 
-            # Noise parameters
-            noise_contrast=flexible_values(exp.p.noise_contrast),
-
             # Pulse info (filled in below)
             pulse_count=np.nan,
             pulse_train_dur=np.nan,
@@ -97,7 +88,6 @@ def generate_trials(exp):
 
             # Achieved timing data
             onset_fix=np.nan,
-            onset_noise=np.nan,
             onset_response=np.nan,
             onset_feedback=np.nan,
 
@@ -149,13 +139,8 @@ def generate_pulse_train(exp, t_info):
     # Randomly sample gap durations with a constraint on trial duration
     train_dur = np.inf
     while train_dur > exp.p.pulse_train_max:
+
         gap_dur = flexible_values(exp.p.pulse_gap, count, rng)
-
-        # TODO is this the best way to sync the pulse onsets with the
-        # updates to the noise frames?
-        noise_frame = 1 / exp.p.noise_hz
-        gap_dur = (gap_dur / noise_frame).round() * noise_frame
-
         train_dur = np.sum(gap_dur) + total_pulse_dur
 
     # Generate the stimulus strength for each pulse
@@ -199,8 +184,6 @@ def run_trial(exp, info):
     stim_pos = exp.p.stim_pos[t_info.stim_pos]
     exp.s.cue.pos = stim_pos
     exp.s.pattern.pos = stim_pos
-    exp.s.noise.pos = stim_pos
-    exp.s.noise.contrast = t_info.noise_contrast
 
     # ~~~ Inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color  # TODO no fix during ITI
@@ -222,16 +205,10 @@ def run_trial(exp, info):
 
     # ~~~ Pre-stimulus period
     exp.s.fix.color = exp.p.fix_trial_color
-    noise_modulus = exp.win.framerate / exp.p.noise_hz
     prestim_frames = exp.frame_range(seconds=t_info.wait_pre_stim,
                                      yield_skipped=True)
 
     for frame, skipped in prestim_frames:
-
-        update_noise = (not frame % noise_modulus
-                        or not np.mod(skipped, noise_modulus).all())
-        if update_noise:
-            exp.s.noise.update()
 
         if not exp.check_fixation(allow_blinks=True):
             exp.sounds.fixbreak.play()
@@ -239,10 +216,7 @@ def run_trial(exp, info):
             t_info["result"] = "fixbreak"
             return t_info, p_info
 
-        flip_time = exp.draw(["fix", "cue", "targets", "noise"])
-
-        if not frame:
-            t_info["onset_noise"] = flip_time
+        flip_time = exp.draw(["fix", "cue", "targets"])
 
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
@@ -250,9 +224,6 @@ def run_trial(exp, info):
         # Update the pattern
         exp.s.pattern.contrast = info.contrast
         exp.s.pattern.randomize_phases()
-
-        # Update the noise
-        exp.s.noise.update()
 
         # Show each frame of the stimulus
         for frame in exp.frame_range(seconds=info.pulse_dur):
@@ -263,10 +234,7 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            if exp.p.noise_during_stim:
-                stims = ["fix", "cue", "targets", "pattern", "noise"]
-            else:
-                stims = ["fix", "cue", "targets", "pattern"]
+            stims = ["fix", "cue", "targets", "pattern"]
             flip_time = exp.draw(stims)
 
             if not frame:
@@ -285,17 +253,9 @@ def run_trial(exp, info):
         # so it should could to frames dropped during the stim
         p_info.loc[p, "dropped_frames"] = exp.win.nDroppedFrames
 
-        # Show the noise field during the pulse gap
-        gap_frames = exp.frame_range(seconds=info.gap_dur,
-                                     yield_skipped=True)
+        gap_frames = exp.frame_range(seconds=info.gap_dur)
 
-        # TODO just copied this from above; abstract it out?
-        for frame, skipped in gap_frames:
-
-            update_noise = (not frame % noise_modulus
-                            or not np.mod(skipped, noise_modulus).all())
-            if update_noise:
-                exp.s.noise.update()
+        for frame in gap_frames:
 
             if not exp.check_fixation(allow_blinks=True):
                 exp.sounds.fixbreak.play()
@@ -303,7 +263,9 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            flip_time = exp.draw(["fix", "cue", "targets", "noise"])
+            flip_time = exp.draw(["fix", "cue", "targets"])
+
+            # Record the time of first flip as the offset of the last pulse
             if not frame:
                 p_info.loc[p, "pulse_offset"] = flip_time
 

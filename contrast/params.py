@@ -30,12 +30,6 @@ base = dict(
     stim_size=6,
     stim_gratings=8,
 
-    noise_mask="circle",
-    noise_contrast=0,
-    noise_resolution=20,
-    noise_hz=5,
-    noise_during_stim=True,
-
     wait_iti=2,
     wait_fix=5,
     wait_start=.5,
