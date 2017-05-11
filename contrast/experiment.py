@@ -218,6 +218,8 @@ def run_trial(exp, info):
         exp.sounds.nofix.play()
         return t_info, p_info
 
+    exp.wait_until(timeout=exp.p.wait_start, draw="fix")
+
     # ~~~ Pre-stimulus period
     exp.s.fix.color = exp.p.fix_trial_color
     noise_modulus = exp.win.framerate / exp.p.noise_hz

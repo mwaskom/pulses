@@ -38,6 +38,7 @@ base = dict(
 
     wait_iti=2,
     wait_fix=5,
+    wait_start=.5,
     wait_pre_stim=1,
     wait_resp=5,
     wait_feedback=.5,
