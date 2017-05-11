@@ -220,6 +220,9 @@ def run_trial(exp, info):
 
         flip_time = exp.draw(["fix", "cue", "targets"])
 
+        if not frame:
+            t_info["onset_targets"] = flip_time
+
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
 
@@ -245,9 +248,6 @@ def run_trial(exp, info):
                 p_info.loc[p, "occurred"] = True
                 p_info.loc[p, "pulse_onset"] = flip_time
 
-                if info["pulse"] == 1:
-                    t_info["stim_onset"] = flip_time
-
             blink = not exp.tracker.check_eye_open(new_sample=False)
             p_info.loc[p, "blink"] |= blink
 
@@ -271,13 +271,10 @@ def run_trial(exp, info):
             if not frame:
                 p_info.loc[p, "pulse_offset"] = flip_time
 
-    # Determine if there were any stimulus blinks
-    t_info["stim_blink"] = p_info["blink"].any()
-
     # ~~~ Response period
 
     # Collect the response
-    t_info["onset_response"] = exp.clock.getTime()
+    t_info["offset_fix"] = exp.clock.getTime()
     res = exp.wait_until(AcquireTarget(exp, t_info.target),
                          timeout=exp.p.wait_resp,
                          draw="targets")
