@@ -39,10 +39,9 @@ base = dict(
 
     pulse_count=("geom", .25, 1),
     pulse_count_max=5,
-    pulse_single_prob=.1,
+    pulse_single_prob=0,
     pulse_dur=.2,
     pulse_gap=("truncexpon", (2.5 - .5) / .5, .5, .5),
-    pulse_train_max=28,
 
     perform_acc_target=.8,
 
@@ -58,6 +57,7 @@ fast.update(
 
     wait_pre_stim=("truncexpon", (4 - 1) / 1, 1, 1),
     pulse_gap=("truncexpon", (4 - 1) / 1, 1, 1),
+    pulse_train_max=14,
     output_template="data/{subject}/{session}/contrast_fast_{time}",
 
 )
@@ -68,6 +68,7 @@ slow.update(
 
     wait_pre_stim=("truncexpon", (4 - 1) / 1, 1, 1),
     pulse_gap=("truncexpon", (8 - 2) / 2, 2, 2),
+    pulse_train_max=28,
     output_template="data/{subject}/{session}/contrast_slow_{time}",
 
 )
