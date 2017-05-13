@@ -45,7 +45,7 @@ base = dict(
 
     perform_acc_target=.8,
 
-    run_duration=40,
+    run_duration=540,
 
     output_template="data/{subject}/{session}/contrast_{time}",
 
