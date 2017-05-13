@@ -45,85 +45,101 @@ def create_stimuli(exp):
 def generate_trials(exp):
     """Yield trial and pulse train info."""
 
+    # We need special logic to scheudule the final trial
+    # given the variability of trial durations.
+    finished = False
+
     # Create an infinite iterator for trial data
-    for t in itertools.count(1):
+    for t in exp.trial_count():
 
         # Get the current time
         now = exp.clock.getTime()
 
-        # Schedule the next trial
-        wait_iti = flexible_values(exp.p.wait_iti)
-
-        # Determine the stimulus parameters for this trial
-        stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))
-        gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
-        gen_mean = exp.p.dist_means[gen_dist]
-        gen_sd = exp.p.dist_sds[gen_dist]
-        target = exp.p.dist_targets[gen_dist]
-
-        trial_info = dict(
-
-            # Basic trial info
-            subject=exp.p.subject,
-            session=exp.p.session,
-            run=exp.p.run,
-            trial=t,
-
-            # Stimulus parameters
-            stim_pos=stim_pos,
-            gen_dist=gen_dist,
-            gen_mean=gen_mean,
-            gen_sd=gen_sd,
-            target=target,
-
-            # Pulse info (filled in below)
-            log_contrast_mean=np.nan,
-            pulse_count=np.nan,
-            pulse_train_dur=np.nan,
-
-            # Timing parameters
-            wait_iti=wait_iti,
-            wait_pre_stim=flexible_values(exp.p.wait_pre_stim),
-            wait_resp=flexible_values(exp.p.wait_resp),
-            wait_feedback=flexible_values(exp.p.wait_feedback),
-
-            # Achieved timing data
-            onset_fix=np.nan,
-            onset_response=np.nan,
-            onset_feedback=np.nan,
-
-            # Subject response fields
-            result=np.nan,
-            responded=False,
-            response=np.nan,
-            correct=np.nan,
-            rt=np.nan,
-            stim_blink=np.nan,
-
-        )
-
-        t_info = pd.Series(trial_info, dtype=np.object)
-        p_info = generate_pulse_train(exp, t_info)
-
-        t_info["log_contrast_mean"] = p_info["log_contrast"].mean()
-        t_info["pulse_count"] = len(p_info)
-        t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
-                                     + p_info["pulse_dur"].sum())
-
-        expected_trial_dur = (t_info["wait_pre_stim"]
-                              + t_info["pulse_train_dur"]
-                              + exp.p.wait_feedback
-                              + 2)  # Account for fix/response delay
-
-        # TODO we need some way to enforce minimum delay
-        # at end of fMRI runs
-        if (now + expected_trial_dur) > exp.p.run_duration:
+        # Check whether we have performed the final trial of the run
+        if finished or now > (exp.p.run_duration - exp.p.finish_min):
             raise StopIteration
+
+        # Sample parameters for the next trial and check constraints
+        while True:
+
+            # Sample parameters for a trial
+            t_info, p_info = generate_trial_info(exp)
+
+            # Calculate how long the trial will take
+            trial_dur = (t_info["wait_iti"]
+                         + t_info["wait_pre_stim"]
+                         + t_info["pulse_train_dur"]
+                         + 1)
+
+            finish_time = exp.p.run_duration - (now + trial_dur)
+
+            # Reject if the next trial is too long
+            if finish_time < exp.p.finish_min:
+                continue
+
+            # Check if next trial will end in the finish window
+            if finish_time < exp.p.finish_max:
+                finished = True
+
+            # Use these parameters for the next trial
+            break
 
         yield t_info, p_info
 
 
-def generate_pulse_train(exp, t_info):
+def generate_trial_info(exp):
+
+    # Schedule the next trial
+    wait_iti = flexible_values(exp.p.wait_iti)
+
+    # Determine the stimulus parameters for this trial
+    stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))
+    gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
+    gen_mean = exp.p.dist_means[gen_dist]
+    gen_sd = exp.p.dist_sds[gen_dist]
+    target = exp.p.dist_targets[gen_dist]
+
+    trial_info = exp.trial_info(
+
+        # Stimulus parameters
+        stim_pos=stim_pos,
+        gen_dist=gen_dist,
+        gen_mean=gen_mean,
+        gen_sd=gen_sd,
+        target=target,
+
+        # Pulse info (filled in below)
+        log_contrast_mean=np.nan,
+        pulse_count=np.nan,
+        pulse_train_dur=np.nan,
+
+        # Timing parameters
+        wait_iti=wait_iti,
+        wait_pre_stim=flexible_values(exp.p.wait_pre_stim),
+        wait_resp=flexible_values(exp.p.wait_resp),
+        wait_feedback=flexible_values(exp.p.wait_feedback),
+
+        # Achieved timing data
+        onset_fix=np.nan,
+        offset_fix=np.nan,
+        onset_targets=np.nan,
+        onset_feedback=np.nan,
+
+    )
+
+    t_info = pd.Series(trial_info, dtype=np.object)
+    p_info = generate_pulse_info(exp, t_info)
+
+    # Insert trial-level information determined by pulse schedule
+    t_info["log_contrast_mean"] = p_info["log_contrast"].mean()
+    t_info["pulse_count"] = len(p_info)
+    t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
+                                 + p_info["pulse_dur"].sum())
+
+    return t_info, p_info
+
+
+def generate_pulse_info(exp, t_info):
     """Generate the pulse train for a given trial."""
     rng = np.random.RandomState()
 
@@ -297,10 +313,12 @@ def run_trial(exp, info):
 
     return t_info, p_info
 
+
 def serialize_trial_info(exp, info):
 
     t_info, _ = info
     return t_info.to_json()
+
 
 def compute_performance(self):
 
@@ -310,6 +328,7 @@ def compute_performance(self):
         return mean_acc, None
     else:
         return None, None
+
 
 def save_data(exp):
 
