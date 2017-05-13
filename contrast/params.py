@@ -15,8 +15,6 @@ base = dict(
     eye_fixation=True,
     eye_response=True,
 
-    eye_fixbreak_timeout=.25,
-    eye_blink_timeout=.5,
     eye_target_wait=.5,
 
     dist_means=[-1.1, -0.9],
@@ -33,7 +31,6 @@ base = dict(
     wait_iti=2,
     wait_fix=5,
     wait_start=.5,
-    wait_pre_stim=1,
     wait_resp=5,
     wait_feedback=.5,
 
@@ -41,13 +38,10 @@ base = dict(
     pulse_count_max=5,
     pulse_single_prob=0,
     pulse_dur=.2,
-    pulse_gap=("truncexpon", (2.5 - .5) / .5, .5, .5),
 
     perform_acc_target=.8,
 
     run_duration=540,
-
-    output_template="data/{subject}/{session}/contrast_{time}",
 
 )
 
