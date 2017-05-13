@@ -76,6 +76,11 @@ slow.update(
 scan = slow.copy()
 scan.update(
 
+    display_name="cbi-projector",
+
+    wait_pre_run=8,
+    trigger=["backtick", "grave"],
+
     finish_min=10,
     finish_max=16,
 
