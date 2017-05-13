@@ -63,7 +63,7 @@ def generate_trials(exp):
         while True:
 
             # Sample parameters for a trial
-            t_info, p_info = generate_trial_info(exp)
+            t_info, p_info = generate_trial_info(exp, t)
 
             # Calculate how long the trial will take
             trial_dur = (t_info["wait_iti"]
@@ -87,10 +87,13 @@ def generate_trials(exp):
         yield t_info, p_info
 
 
-def generate_trial_info(exp):
+def generate_trial_info(exp, t):
 
     # Schedule the next trial
-    wait_iti = flexible_values(exp.p.wait_iti)
+    if t == 1 and exp.p.skip_first_iti:
+        wait_iti = 0
+    else:
+        wait_iti = flexible_values(exp.p.wait_iti)
 
     # Determine the stimulus parameters for this trial
     stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))

@@ -34,6 +34,8 @@ base = dict(
     wait_resp=5,
     wait_feedback=.5,
 
+    skip_first_iti=False,
+
     pulse_count=("geom", .25, 1),
     pulse_count_max=5,
     pulse_single_prob=0,
@@ -84,6 +86,7 @@ scan.update(
     finish_min=10,
     finish_max=16,
 
+    skip_first_iti=True,
     wait_iti=("truncexpon", (8 - 2) / 2, 2, 2),
     output_template="data/{subject}/{session}/contrast_slow_{time}",
 
