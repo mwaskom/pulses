@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from visigoth import AcquireFixation, AcquireTarget, flexible_values
-from visigoth.stimuli import Point, Points, Pattern, GaussianNoise
+from visigoth.stimuli import Point, Points, PointCue, Pattern, GaussianNoise
 
 
 def create_stimuli(exp):
@@ -17,17 +17,17 @@ def create_stimuli(exp):
                 exp.p.fix_radius,
                 exp.p.fix_trial_color)
 
+    # Spatial cue
+    cue = PointCue(exp.win,
+                   exp.p.cue_norm,
+                   exp.p.cue_radius,
+                   exp.p.cue_color)
+
     # Saccade targets
     targets = Points(exp.win,
                      exp.p.target_pos,
                      exp.p.target_radius,
                      exp.p.target_color)
-
-    # Gaussian noise field
-    noise = GaussianNoise(exp.win,
-                          mask=exp.p.noise_mask,
-                          size=exp.p.stim_size,
-                          pix_per_deg=exp.p.noise_resolution)
 
     # Average of multiple sinusoidal grating stimulus
     pattern = Pattern(exp.win,
@@ -45,87 +45,118 @@ def create_stimuli(exp):
 def generate_trials(exp):
     """Yield trial and pulse train info."""
 
+    # We need special logic to scheudule the final trial
+    # given the variability of trial durations.
+    finished = False
+
     # Create an infinite iterator for trial data
-    for t in itertools.count(1):
+    for t in exp.trial_count():
 
         # Get the current time
         now = exp.clock.getTime()
 
-        # Schedule the next trial
-        wait_iti = flexible_values(exp.p.wait_iti)
-
-        # Determine the stimulus parameters for this trial
-        stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))
-        gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
-        gen_mean = exp.p.dist_means[gen_dist]
-        gen_sd = exp.p.dist_sds[gen_dist]
-        target = exp.p.dist_targets[gen_dist]
-
-        trial_info = dict(
-
-            # Basic trial info
-            subject=exp.p.subject,
-            session=exp.p.session,
-            run=exp.p.run,
-            trial=t,
-
-            # Stimulus parameters
-            stim_pos=stim_pos,
-            gen_dist=gen_dist,
-            gen_mean=gen_mean,
-            gen_sd=gen_sd,
-            target=target,
-
-            # Noise parameters
-            noise_contrast=flexible_values(exp.p.noise_contrast),
-
-            # Pulse info (filled in below)
-            pulse_count=np.nan,
-            pulse_train_dur=np.nan,
-
-            # Timing parameters
-            wait_iti=wait_iti,
-            wait_pre_stim=flexible_values(exp.p.wait_pre_stim),
-            wait_resp=flexible_values(exp.p.wait_resp),
-            wait_feedback=flexible_values(exp.p.wait_feedback),
-
-            # Achieved timing data
-            onset_fix=np.nan,
-            onset_noise=np.nan,
-            onset_response=np.nan,
-            onset_feedback=np.nan,
-
-            # Subject response fields
-            result=np.nan,
-            responded=False,
-            response=np.nan,
-            correct=np.nan,
-            rt=np.nan,
-            stim_blink=np.nan,
-
-        )
-
-        t_info = pd.Series(trial_info, dtype=np.object)
-        p_info = generate_pulse_train(exp, t_info)
-
-        t_info["pulse_count"] = len(p_info)
-        t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
-                                     + p_info["pulse_dur"].sum())
-
-        expected_trial_dur = (t_info["wait_pre_stim"]
-                              + t_info["pulse_train_dur"]
-                              + exp.p.wait_feedback
-                              + 2)  # Account for fix/response delay
-
-        # TODO we need some way to enforce minimum delay
-        # at end of fMRI runs
-        if (now + expected_trial_dur) > exp.p.run_duration:
+        # Check whether we have performed the final trial of the run
+        if finished or now > (exp.p.run_duration - exp.p.finish_min):
             raise StopIteration
+
+        # Sample parameters for the next trial and check constraints
+        attempts = 0
+        while True:
+
+            # Increment the counter of attempts to find a good trial
+            attempts += 1
+
+            # Sample parameters for a trial
+            t_info, p_info = generate_trial_info(exp, t)
+
+            # Calculate how long the trial will take
+            trial_dur = (t_info["wait_iti"]
+                         + t_info["wait_pre_stim"]
+                         + t_info["pulse_train_dur"]
+                         + 1)
+
+            finish_time = exp.p.run_duration - (now + trial_dur)
+
+            # Reject if the next trial is too long
+            if finish_time < exp.p.finish_min:
+
+                # Make a number of attempts to find a trial that finishes with
+                # enough null time at the end of the run
+                if attempts < 50:
+                    continue
+
+                # If we are having a hard time scheduling a trial that gives
+                # enough null time, relax our criterion to get a trial that
+                # just finishes before the scanner does
+                if finish_time < 0:
+                    continue
+
+            # Check if next trial will end in the finish window
+            if finish_time < exp.p.finish_max:
+                finished = True
+
+            # Use these parameters for the next trial
+            break
 
         yield t_info, p_info
 
 
-def generate_pulse_train(exp, t_info):
+def generate_trial_info(exp, t):
+
+    # Schedule the next trial
+    if t == 1 and exp.p.skip_first_iti:
+        wait_iti = 0
+    else:
+        wait_iti = flexible_values(exp.p.wait_iti)
+
+    # Determine the stimulus parameters for this trial
+    stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))
+    gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
+    gen_mean = exp.p.dist_means[gen_dist]
+    gen_sd = exp.p.dist_sds[gen_dist]
+    target = exp.p.dist_targets[gen_dist]
+
+    trial_info = exp.trial_info(
+
+        # Stimulus parameters
+        stim_pos=stim_pos,
+        gen_dist=gen_dist,
+        gen_mean=gen_mean,
+        gen_sd=gen_sd,
+        target=target,
+
+        # Pulse info (filled in below)
+        log_contrast_mean=np.nan,
+        pulse_count=np.nan,
+        pulse_train_dur=np.nan,
+
+        # Timing parameters
+        wait_iti=wait_iti,
+        wait_pre_stim=flexible_values(exp.p.wait_pre_stim),
+        wait_resp=flexible_values(exp.p.wait_resp),
+        wait_feedback=flexible_values(exp.p.wait_feedback),
+
+        # Achieved timing data
+        onset_fix=np.nan,
+        offset_fix=np.nan,
+        onset_targets=np.nan,
+        onset_feedback=np.nan,
+
+    )
+
+    t_info = pd.Series(trial_info, dtype=np.object)
+    p_info = generate_pulse_info(exp, t_info)
+
+    # Insert trial-level information determined by pulse schedule
+    t_info["log_contrast_mean"] = p_info["log_contrast"].mean()
+    t_info["pulse_count"] = len(p_info)
+    t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
+                                 + p_info["pulse_dur"].sum())
+
+    return t_info, p_info
+
+
+def generate_pulse_info(exp, t_info):
     """Generate the pulse train for a given trial."""
     rng = np.random.RandomState()
 
@@ -143,13 +174,8 @@ def generate_pulse_train(exp, t_info):
     # Randomly sample gap durations with a constraint on trial duration
     train_dur = np.inf
     while train_dur > exp.p.pulse_train_max:
+
         gap_dur = flexible_values(exp.p.pulse_gap, count, rng)
-
-        # TODO is this the best way to sync the pulse onsets with the
-        # updates to the noise frames?
-        noise_frame = 1 / exp.p.noise_hz
-        gap_dur = (gap_dur / noise_frame).round() * noise_frame
-
         train_dur = np.sum(gap_dur) + total_pulse_dur
 
     # Generate the stimulus strength for each pulse
@@ -191,13 +217,11 @@ def run_trial(exp, info):
 
     # ~~~ Set trial-constant attributes of the stimuli
     stim_pos = exp.p.stim_pos[t_info.stim_pos]
+    exp.s.cue.pos = stim_pos
     exp.s.pattern.pos = stim_pos
-    exp.s.noise.pos = stim_pos
-    exp.s.noise.contrast = t_info.noise_contrast
 
     # ~~~ Inter-trial interval
-    exp.s.fix.color = exp.p.fix_iti_color
-    exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
+    exp.wait_until(exp.iti_end, iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
     t_info["onset_fix"] = exp.clock.getTime()
@@ -211,18 +235,14 @@ def run_trial(exp, info):
         exp.sounds.nofix.play()
         return t_info, p_info
 
+    exp.wait_until(timeout=exp.p.wait_start, draw="fix")
+
     # ~~~ Pre-stimulus period
     exp.s.fix.color = exp.p.fix_trial_color
-    noise_modulus = exp.win.framerate / exp.p.noise_hz
     prestim_frames = exp.frame_range(seconds=t_info.wait_pre_stim,
                                      yield_skipped=True)
 
     for frame, skipped in prestim_frames:
-
-        update_noise = (not frame % noise_modulus
-                        or not np.mod(skipped, noise_modulus).all())
-        if update_noise:
-            exp.s.noise.update()
 
         if not exp.check_fixation(allow_blinks=True):
             exp.sounds.fixbreak.play()
@@ -230,10 +250,10 @@ def run_trial(exp, info):
             t_info["result"] = "fixbreak"
             return t_info, p_info
 
-        flip_time = exp.draw(["fix", "targets", "noise"])
+        flip_time = exp.draw(["fix", "cue", "targets"])
 
         if not frame:
-            t_info["onset_noise"] = flip_time
+            t_info["onset_targets"] = flip_time
 
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
@@ -241,9 +261,6 @@ def run_trial(exp, info):
         # Update the pattern
         exp.s.pattern.contrast = info.contrast
         exp.s.pattern.randomize_phases()
-
-        # Update the noise
-        exp.s.noise.update()
 
         # Show each frame of the stimulus
         for frame in exp.frame_range(seconds=info.pulse_dur):
@@ -254,20 +271,14 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            if exp.p.noise_during_stim:
-                stims = ["fix", "targets", "pattern", "noise"]
-            else:
-                stims = ["fix", "targets", "pattern"]
+            stims = ["fix", "cue", "targets", "pattern"]
             flip_time = exp.draw(stims)
 
             if not frame:
 
                 exp.tracker.send_message("pulse_onset")
-                p_info.loc[p, "occured"] = True
+                p_info.loc[p, "occurred"] = True
                 p_info.loc[p, "pulse_onset"] = flip_time
-
-                if info["pulse"] == 1:
-                    t_info["stim_onset"] = flip_time
 
             blink = not exp.tracker.check_eye_open(new_sample=False)
             p_info.loc[p, "blink"] |= blink
@@ -276,17 +287,9 @@ def run_trial(exp, info):
         # so it should could to frames dropped during the stim
         p_info.loc[p, "dropped_frames"] = exp.win.nDroppedFrames
 
-        # Show the noise field during the pulse gap
-        gap_frames = exp.frame_range(seconds=info.gap_dur,
-                                     yield_skipped=True)
+        gap_frames = exp.frame_range(seconds=info.gap_dur)
 
-        # TODO just copied this from above; abstract it out?
-        for frame, skipped in gap_frames:
-
-            update_noise = (not frame % noise_modulus
-                            or not np.mod(skipped, noise_modulus).all())
-            if update_noise:
-                exp.s.noise.update()
+        for frame in gap_frames:
 
             if not exp.check_fixation(allow_blinks=True):
                 exp.sounds.fixbreak.play()
@@ -294,17 +297,16 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            flip_time = exp.draw(["fix", "targets", "noise"])
+            flip_time = exp.draw(["fix", "cue", "targets"])
+
+            # Record the time of first flip as the offset of the last pulse
             if not frame:
                 p_info.loc[p, "pulse_offset"] = flip_time
-
-    # Determine if there were any stimulus blinks
-    t_info["stim_blink"] = p_info["blink"].any()
 
     # ~~~ Response period
 
     # Collect the response
-    t_info["onset_response"] = exp.clock.getTime()
+    t_info["offset_fix"] = exp.clock.getTime()
     res = exp.wait_until(AcquireTarget(exp, t_info.target),
                          timeout=exp.p.wait_resp,
                          draw="targets")
@@ -327,10 +329,12 @@ def run_trial(exp, info):
 
     return t_info, p_info
 
+
 def serialize_trial_info(exp, info):
 
     t_info, _ = info
     return t_info.to_json()
+
 
 def compute_performance(self):
 
@@ -340,6 +344,7 @@ def compute_performance(self):
         return mean_acc, None
     else:
         return None, None
+
 
 def save_data(exp):
 
