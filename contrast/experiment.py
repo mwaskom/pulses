@@ -60,7 +60,11 @@ def generate_trials(exp):
             raise StopIteration
 
         # Sample parameters for the next trial and check constraints
+        attempts = 0
         while True:
+
+            # Increment the counter of attempts to find a good trial
+            attempts += 1
 
             # Sample parameters for a trial
             t_info, p_info = generate_trial_info(exp, t)
@@ -75,7 +79,17 @@ def generate_trials(exp):
 
             # Reject if the next trial is too long
             if finish_time < exp.p.finish_min:
-                continue
+
+                # Make a number of attempts to find a trial that finishes with
+                # enough null time at the end of the run
+                if attempts < 50:
+                    continue
+
+                # If we are having a hard time scheduling a trial that gives
+                # enough null time, relax our criterion to get a trial that
+                # just finishes before the scanner does
+                if finish_time < 0:
+                    continue
 
             # Check if next trial will end in the finish window
             if finish_time < exp.p.finish_max:

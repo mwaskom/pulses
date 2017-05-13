@@ -83,7 +83,7 @@ scan.update(
     wait_pre_run=8,
     trigger=["backtick", "grave"],
 
-    finish_min=10,
+    finish_min=6,
     finish_max=16,
 
     skip_first_iti=True,
