@@ -45,13 +45,44 @@ def create_stimuli(exp):
 def generate_trials(exp):
     """Yield trial and pulse train info."""
 
+    # We need special logic to scheudule the final trial
+    # given the variability of trial durations.
+    finished = False
+
     # Create an infinite iterator for trial data
     for t in exp.trial_count():
 
         # Get the current time
         now = exp.clock.getTime()
 
-        t_info, p_info = generate_trial_info(exp)
+        # Check whether we have performed the final trial of the run
+        if finished or now > (exp.p.run_duration - exp.p.finish_min):
+            raise StopIteration
+
+        # Sample parameters for the next trial and check constraints
+        while True:
+
+            # Sample parameters for a trial
+            t_info, p_info = generate_trial_info(exp)
+
+            # Calculate how long the trial will take
+            trial_dur = (t_info["wait_iti"]
+                         + t_info["wait_pre_stim"]
+                         + t_info["pulse_train_dur"]
+                         + 1)
+
+            finish_time = exp.p.run_duration - (now + trial_dur)
+
+            # Reject if the next trial is too long
+            if finish_time < exp.p.finish_min:
+                continue
+
+            # Check if next trial will end in the finish window
+            if finish_time < exp.p.finish_max:
+                finished = True
+
+            # Use these parameters for the next trial
+            break
 
         yield t_info, p_info
 
@@ -68,7 +99,7 @@ def generate_trial_info(exp):
     gen_sd = exp.p.dist_sds[gen_dist]
     target = exp.p.dist_targets[gen_dist]
 
-    trial_info = dict(
+    trial_info = exp.trial_info(
 
         # Stimulus parameters
         stim_pos=stim_pos,
@@ -285,10 +316,12 @@ def run_trial(exp, info):
 
     return t_info, p_info
 
+
 def serialize_trial_info(exp, info):
 
     t_info, _ = info
     return t_info.to_json()
+
 
 def compute_performance(self):
 
@@ -298,6 +331,7 @@ def compute_performance(self):
         return mean_acc, None
     else:
         return None, None
+
 
 def save_data(exp):
 
