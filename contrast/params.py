@@ -91,6 +91,6 @@ scan.update(
 
     skip_first_iti=True,
     wait_iti=("truncexpon", (8 - 2) / 2, 2, 2),
-    output_template="data/{subject}/{session}/contrast_slow_{time}",
+    output_template="data/{subject}/{session}/contrast_scan_{time}",
 
 )
