@@ -221,7 +221,8 @@ def run_trial(exp, info):
     exp.s.pattern.pos = stim_pos
 
     # ~~~ Inter-trial interval
-    exp.wait_until(exp.iti_end, iti_duration=t_info.wait_iti)
+    exp.s.fix.color = exp.p.fix_iti_color
+    exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
     t_info["onset_fix"] = exp.clock.getTime()
