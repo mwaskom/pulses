@@ -1,12 +1,11 @@
 from __future__ import division
-import itertools
 import json
 
 import numpy as np
 import pandas as pd
 
 from visigoth import AcquireFixation, AcquireTarget, flexible_values
-from visigoth.stimuli import Point, Points, PointCue, Pattern, GaussianNoise
+from visigoth.stimuli import Point, Points, PointCue, Pattern
 
 
 def create_stimuli(exp):
