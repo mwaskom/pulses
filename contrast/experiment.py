@@ -176,8 +176,8 @@ def generate_pulse_info(exp, t_info):
     if rng.rand() < exp.p.pulse_single_prob:
         count = 1
     else:
-        count = flexible_values(exp.p.pulse_count, random_state=rng,
-                                max=exp.p.pulse_count_max)
+        count = int(flexible_values(exp.p.pulse_count, random_state=rng,
+                                    max=exp.p.pulse_count_max))
 
     # Account for the duration of each pulse
     pulse_dur = flexible_values(exp.p.pulse_dur, count, rng)
