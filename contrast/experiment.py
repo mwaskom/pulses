@@ -104,10 +104,18 @@ def generate_trials(exp):
 def generate_trial_info(exp, t):
 
     # Schedule the next trial
-    if t == 1 and exp.p.skip_first_iti:
-        wait_iti = 0
+    wait_iti = flexible_values(exp.p.wait_iti)
+
+    if t == 1:
+        # Handle special case of first trial
+        if exp.p.skip_first_iti:
+            wait_iti = 0
     else:
-        wait_iti = flexible_values(exp.p.wait_iti)
+        # Handle special case of early fixbreak on last trial
+        last_t_info = exp.trial_data[-1][0]
+        if last_t_info.fixbreak_early:
+            if exp.p.wait_iti_early_fixbreak is not None:
+                wait_iti = exp.p.wait_iti_early_fixbreak
 
     # Determine the stimulus parameters for this trial
     stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))
@@ -135,6 +143,9 @@ def generate_trial_info(exp, t):
         wait_pre_stim=flexible_values(exp.p.wait_pre_stim),
         wait_resp=flexible_values(exp.p.wait_resp),
         wait_feedback=flexible_values(exp.p.wait_feedback),
+
+        # Track fixbreaks before pulses
+        fixbreak_early=np.nan,
 
         # Achieved timing data
         onset_fix=np.nan,
@@ -249,12 +260,17 @@ def run_trial(exp, info):
             exp.sounds.fixbreak.play()
             exp.flicker("fix")
             t_info["result"] = "fixbreak"
+            t_info["fixbreak_early"] = True
+            t_info["offset_cue"] = exp.clock.getTime()
             return t_info, p_info
 
         flip_time = exp.draw(["fix", "cue", "targets"])
 
         if not frame:
             t_info["onset_targets"] = flip_time
+            t_info["onset_cue"] = flip_time
+
+    t_info["fixbreak_early"] = False
 
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
