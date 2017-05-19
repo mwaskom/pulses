@@ -150,6 +150,8 @@ def generate_trial_info(exp, t):
         # Achieved timing data
         onset_fix=np.nan,
         offset_fix=np.nan,
+        onset_cue=np.nan,
+        offset_cue=np.nan,
         onset_targets=np.nan,
         onset_feedback=np.nan,
 
@@ -286,6 +288,7 @@ def run_trial(exp, info):
                 exp.sounds.fixbreak.play()
                 exp.flicker("fix")
                 t_info["result"] = "fixbreak"
+                t_info["offset_cue"] = exp.clock.getTime()
                 return t_info, p_info
 
             stims = ["fix", "cue", "targets", "pattern"]
@@ -312,6 +315,7 @@ def run_trial(exp, info):
                 exp.sounds.fixbreak.play()
                 exp.flicker("fix")
                 t_info["result"] = "fixbreak"
+                t_info["offset_cue"] = exp.clock.getTime()
                 return t_info, p_info
 
             flip_time = exp.draw(["fix", "cue", "targets"])
@@ -323,7 +327,9 @@ def run_trial(exp, info):
     # ~~~ Response period
 
     # Collect the response
-    t_info["offset_fix"] = exp.clock.getTime()
+    now = exp.clock.getTime()
+    t_info["offset_fix"] = now
+    t_info["offset_cue"] = now
     res = exp.wait_until(AcquireTarget(exp, t_info.target),
                          timeout=exp.p.wait_resp,
                          draw="targets")
