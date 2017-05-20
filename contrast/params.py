@@ -6,6 +6,8 @@ base = dict(
 
     target_pos=[(-10, 5), (10, 5)],
 
+    fix_iti_color=(-.9, -.9, -.9),
+
     cue_norm=.175,
     cue_radius=.075,
     cue_color=(.8, .6, -.8),
@@ -22,6 +24,7 @@ base = dict(
     dist_targets=[0, 1],
 
     stim_pos=[(-5.6, -2.0), (5.6, -2.0)],
+    stim_pos_max_repeat=3,
     stim_sf=2,
     stim_tex="sin",
     stim_mask="raisedCos",
@@ -29,6 +32,7 @@ base = dict(
     stim_gratings=8,
 
     wait_iti=2,
+    wait_iti_early_fixbreak=1,
     wait_fix=5,
     wait_start=.5,
     wait_resp=5,
@@ -83,11 +87,13 @@ scan.update(
     wait_pre_run=8,
     trigger=["backtick", "grave"],
 
+    fix_window=3,
+
     finish_min=6,
     finish_max=16,
 
     skip_first_iti=True,
-    wait_iti=("truncexpon", (8 - 2) / 2, 2, 2),
-    output_template="data/{subject}/{session}/contrast_slow_{time}",
+    wait_iti=("truncexpon", (12 - 3) / 3, 3, 3),
+    output_template="data/{subject}/{session}/contrast_scan_{time}",
 
 )
