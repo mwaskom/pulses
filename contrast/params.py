@@ -84,7 +84,7 @@ scan.update(
 
     display_name="cbi-projector",
 
-    wait_pre_run=8,
+    wait_pre_run=6 * 1.5,
     trigger=["backtick", "grave"],
 
     fix_window=3,
