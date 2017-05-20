@@ -93,7 +93,7 @@ scan.update(
     finish_max=16,
 
     skip_first_iti=True,
-    wait_iti=("truncexpon", (8 - 2) / 2, 2, 2),
+    wait_iti=("truncexpon", (12 - 3) / 3, 3, 3),
     output_template="data/{subject}/{session}/contrast_scan_{time}",
 
 )
