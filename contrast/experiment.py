@@ -4,8 +4,9 @@ import json
 import numpy as np
 import pandas as pd
 
-from visigoth import AcquireFixation, AcquireTarget, flexible_values
 from visigoth.stimuli import Point, Points, PointCue, Pattern
+from visigoth import (AcquireFixation, AcquireTarget,
+                      flexible_values, limited_repeat_sequence)
 
 
 def create_stimuli(exp):
@@ -48,6 +49,11 @@ def generate_trials(exp):
     # given the variability of trial durations.
     finished = False
 
+    # Create a generator to control cue position repeats
+    cue_positions = list(range(len(exp.p.stim_pos)))
+    cue_pos_gen = limited_repeat_sequence(cue_positions,
+                                          exp.p.stim_pos_max_repeat)
+
     # Create an infinite iterator for trial data
     for t in exp.trial_count():
 
@@ -66,7 +72,7 @@ def generate_trials(exp):
             attempts += 1
 
             # Sample parameters for a trial
-            t_info, p_info = generate_trial_info(exp, t)
+            t_info, p_info = generate_trial_info(exp, t, cue_pos_gen)
 
             # Calculate how long the trial will take
             trial_dur = (t_info["wait_iti"]
@@ -100,7 +106,7 @@ def generate_trials(exp):
         yield t_info, p_info
 
 
-def generate_trial_info(exp, t):
+def generate_trial_info(exp, t, cue_pos_gen):
 
     # Schedule the next trial
     wait_iti = flexible_values(exp.p.wait_iti)
@@ -117,7 +123,7 @@ def generate_trial_info(exp, t):
                 wait_iti = exp.p.wait_iti_early_fixbreak
 
     # Determine the stimulus parameters for this trial
-    stim_pos = flexible_values(list(range(len(exp.p.stim_pos))))
+    stim_pos = next(cue_pos_gen)
     gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
     gen_mean = exp.p.dist_means[gen_dist]
     gen_sd = exp.p.dist_sds[gen_dist]
