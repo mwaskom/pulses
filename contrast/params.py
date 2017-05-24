@@ -11,6 +11,7 @@ base = dict(
     cue_norm=.175,
     cue_radius=.075,
     cue_color=(.8, .6, -.8),
+    cue_validity=1,
 
     monitor_eye=True,
 
