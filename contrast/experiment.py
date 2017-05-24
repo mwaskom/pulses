@@ -287,7 +287,6 @@ def run_trial(exp, info):
     t_info["fixbreak_early"] = False
 
     # ~~~ Stimulus period
-    print p_info
     for p, info in p_info.iterrows():
 
         # Update the pattern
