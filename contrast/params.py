@@ -11,6 +11,7 @@ base = dict(
     cue_norm=.175,
     cue_radius=.075,
     cue_color=(.8, .6, -.8),
+    cue_validity=1,
 
     monitor_eye=True,
 
@@ -82,17 +83,18 @@ slow.update(
 scan = slow.copy()
 scan.update(
 
-    display_name="cbi-projector",
-
-    wait_pre_run=6 * 1.5,
-    trigger=["backtick", "grave"],
+    display_name="nyu-cbi-propixx",
+    trigger=["5", "backtick", "grave"],
+    eye_host_address="192.168.1.5",
 
     fix_window=3,
+    eye_blink_timeout=1,
 
     finish_min=6,
     finish_max=16,
 
     skip_first_iti=True,
+    wait_pre_run=0,
     wait_iti=("truncexpon", (12 - 3) / 3, 3, 3),
     output_template="data/{subject}/{session}/contrast_scan_{time}",
 

@@ -123,7 +123,7 @@ def generate_trial_info(exp, t, cue_pos_gen):
                 wait_iti = exp.p.wait_iti_early_fixbreak
 
     # Determine the stimulus parameters for this trial
-    stim_pos = next(cue_pos_gen)
+    cue_pos = next(cue_pos_gen)
     gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
     gen_mean = exp.p.dist_means[gen_dist]
     gen_sd = exp.p.dist_sds[gen_dist]
@@ -132,7 +132,7 @@ def generate_trial_info(exp, t, cue_pos_gen):
     trial_info = exp.trial_info(
 
         # Stimulus parameters
-        stim_pos=stim_pos,
+        cue_pos=cue_pos,
         gen_dist=gen_dist,
         gen_mean=gen_mean,
         gen_sd=gen_sd,
@@ -202,6 +202,14 @@ def generate_pulse_info(exp, t_info):
     log_contrast = flexible_values(contrast_dist, count, rng,
                                    max=np.log10(max_contrast))
 
+    # Determine the stimulus position
+    # TODO this currently hardcodes 2 possible stimulus positions for testing
+    if t_info["cue_pos"] == 0:
+        ps = [exp.p.cue_validity, 1 - exp.p.cue_validity]
+    elif t_info["cue_pos"] == 1:
+        ps = [1 - exp.p.cue_validity, exp.p.cue_validity]
+    stim_pos = np.random.choice([0, 1], count, p=ps)
+
     p_info = pd.DataFrame(dict(
 
         # Basic trial information
@@ -212,6 +220,7 @@ def generate_pulse_info(exp, t_info):
 
         # Pulse information
         pulse=np.arange(1, count + 1),
+        stim_pos=stim_pos,
         log_contrast=log_contrast,
         contrast=10 ** log_contrast,
         pulse_dur=pulse_dur,
@@ -234,9 +243,7 @@ def run_trial(exp, info):
     t_info, p_info = info
 
     # ~~~ Set trial-constant attributes of the stimuli
-    stim_pos = exp.p.stim_pos[t_info.stim_pos]
-    exp.s.cue.pos = stim_pos
-    exp.s.pattern.pos = stim_pos
+    exp.s.cue.pos = exp.p.stim_pos[t_info.cue_pos]
 
     # ~~~ Inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color
@@ -283,6 +290,7 @@ def run_trial(exp, info):
     for p, info in p_info.iterrows():
 
         # Update the pattern
+        exp.s.pattern.pos = exp.p.stim_pos[info.stim_pos]
         exp.s.pattern.contrast = info.contrast
         exp.s.pattern.randomize_phases()
 
