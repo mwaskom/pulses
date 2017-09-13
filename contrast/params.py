@@ -84,8 +84,10 @@ scan = slow.copy()
 scan.update(
 
     display_name="nyu-cbi-propixx",
-    trigger=["5", "backtick", "grave"],
     eye_host_address="192.168.1.5",
+
+    trigger=["5", "backtick", "grave"],
+    pre_trigger_stim="fix",
 
     fix_window=3,
     eye_blink_timeout=1,
