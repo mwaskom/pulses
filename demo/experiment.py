@@ -85,10 +85,14 @@ def run_trial(exp, info):
     waitKeys(["space"])
     exp.check_abort()
 
+    exp.draw([])
+    waitKeys(["space"])
+    exp.check_abort()
+
     exp.s.pattern.contrast = 10 ** np.mean(exp.p.dist_means)
 
     for frame in exp.frame_range(seconds=1.5):
-        exp.draw([])
+        exp.draw(["fix", "cue", "targets"])
     
     for frame in exp.frame_range(seconds=exp.p.pulse_dur):
         exp.draw(["fix", "cue", "targets", "pattern"])
