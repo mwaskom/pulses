@@ -261,7 +261,10 @@ def run_trial(exp, info):
         exp.sounds.nofix.play()
         return t_info, p_info
 
-    exp.wait_until(timeout=exp.p.wait_start, draw="fix")
+    for frame in exp.frame_range(seconds=exp.p.wait_start):
+
+        exp.check_fixation(allow_blinks=True)
+        exp.draw("fix")
 
     # ~~~ Pre-stimulus period
     exp.s.fix.color = exp.p.fix_trial_color
