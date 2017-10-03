@@ -6,7 +6,7 @@ base = dict(
 
     target_pos=[(-10, 5), (10, 5)],
 
-    fix_iti_color=(-.9, -.9, -.9),
+    fix_iti_color=(.6, .6, .6),
 
     cue_norm=.175,
     cue_radius=.075,

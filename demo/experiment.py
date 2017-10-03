@@ -50,9 +50,12 @@ def generate_trials(exp):
 
 def run_trial(exp, info):
 
+    exp.s.fix.color = exp.p.fix_iti_color
+    exp.draw(["fix"])
     waitKeys(["space"])
     exp.check_abort()
 
+    exp.s.fix.color = exp.p.fix_trial_color
     exp.draw(["fix"])
     waitKeys(["space"])
     exp.check_abort()
@@ -96,6 +99,9 @@ def run_trial(exp, info):
     
     for frame in exp.frame_range(seconds=exp.p.pulse_dur):
         exp.draw(["fix", "cue", "targets", "pattern"])
+
+    for frame in exp.frame_range(seconds=1.5):
+        exp.draw(["fix", "cue", "targets"])
 
     exp.draw([])
     exp.check_abort()
