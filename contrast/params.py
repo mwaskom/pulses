@@ -19,6 +19,7 @@ base = dict(
     eye_response=True,
 
     eye_target_wait=.5,
+    eye_target_hold=.2,
 
     dist_means=[-1.1, -0.9],
     dist_sds=[.15, .15],
