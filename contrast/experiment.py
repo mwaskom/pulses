@@ -68,6 +68,9 @@ def generate_trials(exp):
         attempts = 0
         while True:
 
+            # Allow experimenter to break if we get stuck here
+            exp.check_abort()
+
             # Increment the counter of attempts to find a good trial
             attempts += 1
 

@@ -57,7 +57,7 @@ fast = base.copy()
 fast.update(
 
     finish_min=0,
-    finish_max=6,
+    finish_max=8,
 
     wait_pre_stim=("truncexpon", (4 - 1) / 1, 1, 1),
     pulse_gap=("truncexpon", (4 - 1) / 1, 1, 1),
