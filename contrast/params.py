@@ -33,7 +33,7 @@ base = dict(
     stim_size=6,
     stim_gratings=8,
 
-    wait_iti=2,
+    wait_iti=3,
     wait_iti_early_fixbreak=1,
     wait_fix=5,
     wait_start=.5,
@@ -56,7 +56,7 @@ base = dict(
 
     perform_acc_target=.8,
 
-    run_duration=540,
+    run_duration=420,
 
 )
 
