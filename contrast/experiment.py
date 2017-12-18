@@ -76,6 +76,10 @@ def generate_trials(exp):
             # Allow experimenter to break if we get stuck here
             exp.check_abort()
 
+            # Check if we've blown through the final trial window
+            if exp.clock.getTime() > exp.p.run_duration:
+                raise StopIteration
+
             # Increment the counter of attempts to find a good trial
             attempts += 1
 
