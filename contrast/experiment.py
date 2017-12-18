@@ -105,7 +105,7 @@ def generate_trials(exp):
                     continue
 
             # Check if next trial will end in the finish window
-            if finish_time < (exp.p.finish_max * timing):
+            if finish_time < (exp.p.finish_max * exp.p.timing):
                 finished = True
 
             # Use these parameters for the next trial

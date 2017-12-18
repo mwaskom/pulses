@@ -42,14 +42,14 @@ base = dict(
 
     wait_pre_stim=("truncexpon", 3, 2, 2),
     pulse_gap=("truncexpon", 3, 2, 2),
-    pulse_train_max=14,
+    pulse_train_max=28,
 
     finish_min=0,
     finish_max=6,
 
     skip_first_iti=False,
 
-    pulse_count=("geom", .25, 1),
+    pulse_count=("geom", .25, 0),
     pulse_count_max=5,
     pulse_single_prob=0,
     pulse_dur=.2,
@@ -107,6 +107,8 @@ scan.update(
 
     fix_window=3,
     eye_blink_timeout=1,
+
+    pulse_count=("geom", .25, 1),
 
     finish_min=6,
     finish_max=16,
