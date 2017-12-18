@@ -40,6 +40,13 @@ base = dict(
     wait_resp=5,
     wait_feedback=.5,
 
+    wait_pre_stim=("truncexpon", 3, 2, 2),
+    pulse_gap=("truncexpon", 3, 2, 2),
+    pulse_train_max=14,
+
+    finish_min=0,
+    finish_max=6,
+
     skip_first_iti=False,
 
     pulse_count=("geom", .25, 1),
@@ -50,6 +57,14 @@ base = dict(
     perform_acc_target=.8,
 
     run_duration=540,
+
+)
+
+
+psych = base.copy()
+psych.update(
+
+    output_template="data/{subject}/{session}/contrast_psych_{time}",
 
 )
 

@@ -9,6 +9,11 @@ from visigoth import (AcquireFixation, AcquireTarget,
                       flexible_values, limited_repeat_sequence)
 
 
+def define_cmdline_params(self, parser):
+
+    parser.add_argument("--timing", default=1, type=float)
+
+
 def create_stimuli(exp):
 
     # Fixation point
@@ -100,7 +105,7 @@ def generate_trials(exp):
                     continue
 
             # Check if next trial will end in the finish window
-            if finish_time < exp.p.finish_max:
+            if finish_time < (exp.p.finish_max * timing):
                 finished = True
 
             # Use these parameters for the next trial
@@ -148,7 +153,7 @@ def generate_trial_info(exp, t, cue_pos_gen):
 
         # Timing parameters
         wait_iti=wait_iti,
-        wait_pre_stim=flexible_values(exp.p.wait_pre_stim),
+        wait_pre_stim=flexible_values(exp.p.wait_pre_stim) * exp.p.timing,
         wait_resp=flexible_values(exp.p.wait_resp),
         wait_feedback=flexible_values(exp.p.wait_feedback),
 
@@ -194,9 +199,9 @@ def generate_pulse_info(exp, t_info):
 
     # Randomly sample gap durations with a constraint on trial duration
     train_dur = np.inf
-    while train_dur > exp.p.pulse_train_max:
+    while train_dur > (exp.p.pulse_train_max * exp.p.timing):
 
-        gap_dur = flexible_values(exp.p.pulse_gap, count, rng)
+        gap_dur = flexible_values(exp.p.pulse_gap, count, rng) * exp.p.timing
         train_dur = np.sum(gap_dur) + total_pulse_dur
 
     # Generate the stimulus strength for each pulse
