@@ -3,6 +3,7 @@ import json
 
 import numpy as np
 import pandas as pd
+from scipy import stats
 
 from visigoth.stimuli import Point, Points, PointCue, Pattern
 from visigoth import (AcquireFixation, AcquireTarget,
@@ -179,6 +180,7 @@ def generate_trial_info(exp, t, cue_pos_gen):
 
     # Insert trial-level information determined by pulse schedule
     t_info["log_contrast_mean"] = p_info["log_contrast"].mean()
+    t_info["trial_llr"] = p_info["pulse_llr"].sum()
     t_info["pulse_count"] = len(p_info)
     t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
                                  + p_info["pulse_dur"].sum())
@@ -214,6 +216,9 @@ def generate_pulse_info(exp, t_info):
     log_contrast = flexible_values(contrast_dist, count, rng,
                                    max=np.log10(max_contrast))
 
+    # Define the LLR of each pulse
+    pulse_llr = compute_llr(log_contrast, exp.p.dist_means, exp.p.dist_sds)
+
     # Determine the stimulus position
     # TODO this currently hardcodes 2 possible stimulus positions for testing
     if t_info["cue_pos"] == 0:
@@ -235,6 +240,7 @@ def generate_pulse_info(exp, t_info):
         stim_pos=stim_pos,
         log_contrast=log_contrast,
         contrast=10 ** log_contrast,
+        pulse_llr=pulse_llr,
         pulse_dur=pulse_dur,
         gap_dur=gap_dur,
 
@@ -248,6 +254,19 @@ def generate_pulse_info(exp, t_info):
     ))
 
     return p_info
+
+
+def compute_llr(c, means, sds):
+    """Compute the pulse log-likelihood supporting Target 1."""
+    # Define the generating distributions
+    m0, m1 = means
+    s0, s1 = sds
+    d0, d1 = stats.norm(m0, s0), stats.norm(m1, s1)
+
+    # Compute LLR of each pulse
+    l0, l1 = np.log10(d0.pdf(c)), np.log10(d1.pdf(c))
+    llr = l1 - l0
+    return llr
 
 
 def run_trial(exp, info):
