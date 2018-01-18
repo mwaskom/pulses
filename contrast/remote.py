@@ -28,7 +28,8 @@ def initialize_trial_figure(app):
                 yticklabels=["No", "Yes"],
                 ylabel="Correct")
 
-    axes[2].axhline(0, c=".7", ls="--")
+    axes[2].axhline(+.1, lw=3, color=mpl.cm.bwr(.7), alpha=.5, zorder=0)
+    axes[2].axhline(-.1, lw=3, color=mpl.cm.bwr(.3), alpha=.5, zorder=0)
     axes[2].set(ylim=(-5, 5),
                 ylabel="LLR")
 
@@ -64,7 +65,7 @@ def update_trial_figure(app, trial_data):
                            s=acc_df.pulse_count * 20,
                            c=acc_df.response,
                            marker=marker,
-                           cmap="RdYlBu", linewidth=2)
+                           cmap="bwr", linewidth=2)
         llr_scatters.append(c)
     llr_ax.set(xlim=(.5, trial_df.trial.max() + .5))
 
