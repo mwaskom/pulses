@@ -63,7 +63,7 @@ def update_trial_figure(app, trial_data):
         c = llr_ax.scatter(acc_df.trial,
                            acc_df.trial_llr,
                            s=acc_df.pulse_count * 20,
-                           c=acc_df.response,
+                           c=acc_df.target,
                            marker=marker,
                            cmap="bwr", linewidth=2)
         llr_scatters.append(c)
