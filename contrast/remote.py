@@ -33,6 +33,8 @@ def initialize_trial_figure(app):
     axes[2].set(ylim=(-5, 5),
                 ylabel="LLR")
 
+    fig.text(.5, .07, "", size=12, ha="center", va="center")
+
     fig.subplots_adjust(.15, .125, .95, .95)
 
     return fig, axes
@@ -56,18 +58,27 @@ def update_trial_figure(app, trial_data):
     cor_ax.set(xlim=(.5, trial_df.trial.max() + .5))
 
     # Draw trial information
-    # TODO add nofix/fixbreak/nochoice
+    marker_dict = dict(correct="o", wrong="x",
+                       fixbreak="*", nochoice="*", nofix="+")
     llr_scatters = []
-    for acc, acc_df in trial_df.groupby("correct"):
-        marker = "o" if acc else "x"
-        c = llr_ax.scatter(acc_df.trial,
-                           acc_df.trial_llr,
-                           s=acc_df.pulse_count * 20,
-                           c=acc_df.target,
-                           marker=marker,
-                           cmap="bwr", linewidth=2)
+    for res, res_df in trial_df.groupby("correct"):
+        c = llr_ax.scatter(res_df.trial,
+                           res_df.trial_llr,
+                           s=res_df.pulse_count * 20,
+                           c=res_df.target,
+                           marker=marker_dict[res],
+                           linewidth=2,
+                           cmap="bwr", vmin=-.2, vmax=1.2)
         llr_scatters.append(c)
     llr_ax.set(xlim=(.5, trial_df.trial.max() + .5))
+
+    # Update the accuracy text
+    resp = trial_df.responded
+    sub_correct = trial_df.correct[resp].mean()
+    opt_correct = (trial_df.trial_llr > 0 == trial_df.target)[resp].mean()
+    t, = app.fig.texts
+    text = "{:.1%} correct (optimal: {:.1%})".format(sub_correct, opt_correct)
+    t.set_text(text)
 
     # Draw the canvas to show the new data
     app.fig_canvas.draw()
