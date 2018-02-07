@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
     _, sess_dir = sys.argv
 
-    parts = sess_dir.split("/")
+    parts = sess_dir.strip("/").split("/")
     subject = parts[-3]
     session = parts[-2]
 
