@@ -8,23 +8,32 @@ from scipy import stats
 import pyglet
 from psychopy.visual import GratingStim
 from visigoth.stimuli import Point, Pattern
-from visigoth import (AcquireFixation, AcquireTarget,
-                      flexible_values, limited_repeat_sequence)
+from visigoth import AcquireFixation, flexible_values
 
 
 class BetDial(object):
 
     def __init__(self, win):
 
+        tex = np.array([[0, 1], [0, 1]])
         self.stim = GratingStim(win,
                                 mask="circle",
-                                tex="sqr",
-                                size=2,
-                                sf=2,
+                                tex=tex,
+                                size=(1, .2),
+                                sf=.5,
+                                phase=0,
+                                color=win.color,
                                 autoLog=False)
+        self.bg = GratingStim(win,
+                              tex=None,
+                              mask="gauss",
+                              size=2,
+                              color=win.color)
 
     def draw(self):
-
+        angle, _ = read_joystick()
+        self.value = angle
+        self.bg.draw()
         self.stim.draw()
 
     @property
@@ -33,7 +42,7 @@ class BetDial(object):
 
     @value.setter
     def value(self, val):
-        self.stim.ori = val * 90
+        self.stim.ori = val * 90 + 90
         self._val = val
 
 
@@ -45,22 +54,6 @@ def read_joystick():
     trigger = device.buttons[0]
     device.close()
     return angle, trigger
-
-
-class Joystick(object):
-
-    def __init__(self):
-
-        device, = pyglet.input.get_joysticks()
-        self.device = device
-
-    def read(self):
-
-        self.device.open()
-        angle = self.device.rz
-        trigger = self.device.buttons[0]
-        self.device.close()
-        return angle, trigger
 
 
 def define_cmdline_params(self, parser):
@@ -76,16 +69,17 @@ def create_stimuli(exp):
                 exp.p.fix_radius,
                 exp.p.fix_trial_color)
 
+    # Current gamble state
     bet = BetDial(exp.win)
 
-    # Average of multiple sinusoidal grating stimulus
+    # Contrast pattern stimulus
     pattern = Pattern(exp.win,
                       n=exp.p.stim_gratings,
                       elementTex=exp.p.stim_tex,
                       elementMask=exp.p.stim_mask,
                       sizes=exp.p.stim_size,
                       sfs=exp.p.stim_sf,
-                      pos=(0, 0)
+                      pos=exp.p.stim_pos,
                       )
 
     return locals()
@@ -97,11 +91,6 @@ def generate_trials(exp):
     # We need special logic to scheudule the final trial
     # given the variability of trial durations.
     finished = False
-
-    # Create a generator to control cue position repeats
-    cue_positions = list(range(len(exp.p.stim_pos)))
-    cue_pos_gen = limited_repeat_sequence(cue_positions,
-                                          exp.p.stim_pos_max_repeat)
 
     # Create an infinite iterator for trial data
     for t in exp.trial_count():
@@ -128,7 +117,7 @@ def generate_trials(exp):
             attempts += 1
 
             # Sample parameters for a trial
-            t_info, p_info = generate_trial_info(exp, t, cue_pos_gen)
+            t_info, p_info = generate_trial_info(exp, t)
 
             # Calculate how long the trial will take
             trial_dur = (t_info["wait_iti"]
@@ -162,7 +151,7 @@ def generate_trials(exp):
         yield t_info, p_info
 
 
-def generate_trial_info(exp, t, cue_pos_gen):
+def generate_trial_info(exp, t):
 
     # Schedule the next trial
     wait_iti = flexible_values(exp.p.wait_iti)
@@ -179,7 +168,6 @@ def generate_trial_info(exp, t, cue_pos_gen):
                 wait_iti = exp.p.wait_iti_early_fixbreak
 
     # Determine the stimulus parameters for this trial
-    cue_pos = next(cue_pos_gen)
     gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
     gen_mean = exp.p.dist_means[gen_dist]
     gen_sd = exp.p.dist_sds[gen_dist]
@@ -188,7 +176,6 @@ def generate_trial_info(exp, t, cue_pos_gen):
     trial_info = exp.trial_info(
 
         # Stimulus parameters
-        cue_pos=cue_pos,
         gen_dist=gen_dist,
         gen_mean=gen_mean,
         gen_sd=gen_sd,
@@ -211,10 +198,8 @@ def generate_trial_info(exp, t, cue_pos_gen):
         # Achieved timing data
         onset_fix=np.nan,
         offset_fix=np.nan,
-        onset_cue=np.nan,
-        offset_cue=np.nan,
-        onset_targets=np.nan,
-        onset_feedback=np.nan,
+        onset_bet=np.nan,
+        offset_bet=np.nan,
 
     )
 
@@ -262,14 +247,6 @@ def generate_pulse_info(exp, t_info):
     # Define the LLR of each pulse
     pulse_llr = compute_llr(log_contrast, exp.p.dist_means, exp.p.dist_sds)
 
-    # Determine the stimulus position
-    # TODO this currently hardcodes 2 possible stimulus positions for testing
-    if t_info["cue_pos"] == 0:
-        ps = [exp.p.cue_validity, 1 - exp.p.cue_validity]
-    elif t_info["cue_pos"] == 1:
-        ps = [1 - exp.p.cue_validity, exp.p.cue_validity]
-    stim_pos = np.random.choice([0, 1], count, p=ps)
-
     p_info = pd.DataFrame(dict(
 
         # Basic trial information
@@ -280,7 +257,6 @@ def generate_pulse_info(exp, t_info):
 
         # Pulse information
         pulse=np.arange(1, count + 1),
-        stim_pos=stim_pos,
         log_contrast=log_contrast,
         contrast=10 ** log_contrast,
         pulse_llr=pulse_llr,
@@ -349,17 +325,12 @@ def run_trial(exp, info):
             exp.flicker("fix")
             t_info["result"] = "fixbreak"
             t_info["fixbreak_early"] = True
-            t_info["offset_cue"] = exp.clock.getTime()
             return t_info, p_info
-
-        angle, _ = read_joystick()
-        exp.s.bet.value = angle
 
         flip_time = exp.draw(["bet", "fix"])
 
         if not frame:
-            t_info["onset_targets"] = flip_time
-            t_info["onset_cue"] = flip_time
+            t_info["onset_bet"] = flip_time
 
     t_info["fixbreak_early"] = False
 
@@ -367,7 +338,6 @@ def run_trial(exp, info):
     for p, info in p_info.iterrows():
 
         # Update the pattern
-        exp.s.pattern.pos = exp.p.stim_pos[info.stim_pos]
         exp.s.pattern.contrast = info.contrast
         exp.s.pattern.randomize_phases()
 
@@ -381,10 +351,7 @@ def run_trial(exp, info):
                 t_info["offset_cue"] = exp.clock.getTime()
                 return t_info, p_info
 
-            angle, _ = read_joystick()
-            exp.s.bet.value = angle
-
-            stims = ["bet", "pattern", "fix"]
+            stims = ["pattern", "bet", "fix"]
             flip_time = exp.draw(stims)
 
             if not frame:
@@ -408,11 +375,7 @@ def run_trial(exp, info):
                 exp.sounds.fixbreak.play()
                 exp.flicker("fix")
                 t_info["result"] = "fixbreak"
-                t_info["offset_cue"] = exp.clock.getTime()
                 return t_info, p_info
-
-            angle, _ = read_joystick()
-            exp.s.bet.value = angle
 
             flip_time = exp.draw(["bet", "fix"])
 
@@ -425,19 +388,39 @@ def run_trial(exp, info):
     # Collect the response
     now = exp.clock.getTime()
     t_info["offset_fix"] = now
-    t_info["offset_cue"] = now
-    res = exp.wait_until(AcquireTarget(exp, t_info.target),
-                         timeout=exp.p.wait_resp)
+    t_info["offset_bet"] = now
 
-    if res is None:
-        t_info["result"] = "fixbreak"
-    else:
-        t_info.update(pd.Series(res))
+    # TODO decide how to handle value == 0
+
+    bet, _ = read_joystick()
+    response = int(bet > 0)
+    correct = response == t_info["target"]
+    result = "correct" if correct else "wrong"
+    value = abs(bet) if correct else -abs(bet)
+
+    res = dict(
+        response=response,
+        correct=correct,
+        result=result,
+        bet=bet,
+        value=value,
+        rt=np.nan,
+    )
+
+    t_info.update(pd.Series(res))
 
     # Give feedback
-    t_info["onset_feedback"] = exp.clock.getTime()
-    exp.sounds[t_info.result].play()
-    exp.wait_until(timeout=exp.p.wait_feedback)
+    duration = abs(bet) * 2
+    if correct:
+        Sound("C", duration, octave=5).play()
+        Sound("E", duration, octave=5).play()
+        Sound("G", duration, octave=5).play()
+    else:
+        Sound("B", duration, octave=4).play()
+        Sound("D", duration, octave=4).play()
+        Sound("Efl", duration, octave=4).play()
+
+    exp.wait_until(timeout=duration)
 
     # Prepare for the inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color
