@@ -3,10 +3,11 @@ import json
 
 import numpy as np
 import pandas as pd
-from scipy import stats
+from scipy import stats, signal
 
 import pyglet
-from psychopy.visual import GratingStim
+import sounddevice
+from psychopy.visual import GratingStim, TextStim, Polygon
 from visigoth.stimuli import Point, Pattern
 from visigoth import AcquireFixation, flexible_values
 
@@ -24,11 +25,13 @@ class BetDial(object):
                                 phase=0,
                                 color=win.color,
                                 autoLog=False)
+
         self.bg = GratingStim(win,
                               tex=None,
                               mask="gauss",
                               size=2,
-                              color=win.color)
+                              color=win.color,
+                              autoLog=False)
 
     def draw(self):
         angle, _ = read_joystick()
@@ -54,6 +57,24 @@ def read_joystick():
     trigger = device.buttons[0]
     device.close()
     return angle, trigger
+
+
+def play_feedback(correct, bet):
+
+    sample_rate = 44100
+    tt = np.linspace(0, 1, sample_rate)
+    f0, f1 = (800, 1600) if correct else (800, 400)
+    chirp = signal.chirp(tt, f0=800, f1=f1, t1=1, method="quadratic")
+
+    idx = sample_rate // 2 + int(.5 * abs(bet) * sample_rate)
+    sound_array = chirp[:idx]
+
+    hw_size = int(min(sample_rate // 200, len(sound_array) // 15))
+    hanning_window = np.hanning(2 * hw_size + 1)
+    sound_array[:hw_size] *= hanning_window[:hw_size]
+    sound_array[-hw_size:] *= hanning_window[hw_size + 1:]
+
+    sounddevice.play(sound_array, sample_rate)
 
 
 def define_cmdline_params(self, parser):
@@ -82,72 +103,22 @@ def create_stimuli(exp):
                       pos=exp.p.stim_pos,
                       )
 
+    # Contrast pattern stimulus
+    feedback = Polygon(exp.win, lineColor=None, opacity=.5, autoLog=False)
+
     return locals()
 
 
 def generate_trials(exp):
     """Yield trial and pulse train info."""
-
-    # We need special logic to scheudule the final trial
-    # given the variability of trial durations.
-    finished = False
-
-    # Create an infinite iterator for trial data
     for t in exp.trial_count():
 
-        # Get the current time
-        now = exp.clock.getTime()
-
         # Check whether we have performed the final trial of the run
-        if finished or now > (exp.p.run_duration - exp.p.finish_min):
+        if exp.clock.getTime() >= exp.p.run_duration:
             raise StopIteration
 
-        # Sample parameters for the next trial and check constraints
-        attempts = 0
-        while True:
-
-            # Allow experimenter to break if we get stuck here
-            exp.check_abort()
-
-            # Check if we've blown through the final trial window
-            if exp.clock.getTime() > exp.p.run_duration:
-                raise StopIteration
-
-            # Increment the counter of attempts to find a good trial
-            attempts += 1
-
-            # Sample parameters for a trial
-            t_info, p_info = generate_trial_info(exp, t)
-
-            # Calculate how long the trial will take
-            trial_dur = (t_info["wait_iti"]
-                         + t_info["wait_pre_stim"]
-                         + t_info["pulse_train_dur"]
-                         + 1)
-
-            finish_time = exp.p.run_duration - (now + trial_dur)
-
-            # Reject if the next trial is too long
-            if finish_time < exp.p.finish_min:
-
-                # Make a number of attempts to find a trial that finishes with
-                # enough null time at the end of the run
-                if attempts < 50:
-                    continue
-
-                # If we are having a hard time scheduling a trial that gives
-                # enough null time, relax our criterion to get a trial that
-                # just finishes before the scanner does
-                if finish_time < 0:
-                    continue
-
-            # Check if next trial will end in the finish window
-            if finish_time < (exp.p.finish_max * exp.p.timing):
-                finished = True
-
-            # Use these parameters for the next trial
-            break
-
+        # Sample parameters for a trial
+        t_info, p_info = generate_trial_info(exp, t)
         yield t_info, p_info
 
 
@@ -155,17 +126,6 @@ def generate_trial_info(exp, t):
 
     # Schedule the next trial
     wait_iti = flexible_values(exp.p.wait_iti)
-
-    if t == 1:
-        # Handle special case of first trial
-        if exp.p.skip_first_iti:
-            wait_iti = 0
-    else:
-        # Handle special case of early fixbreak on last trial
-        last_t_info = exp.trial_data[-1][0]
-        if last_t_info.fixbreak_early:
-            if exp.p.wait_iti_early_fixbreak is not None:
-                wait_iti = exp.p.wait_iti_early_fixbreak
 
     # Determine the stimulus parameters for this trial
     gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
@@ -195,6 +155,10 @@ def generate_trial_info(exp, t):
         # Track fixbreaks before pulses
         fixbreak_early=np.nan,
 
+        # Extra behavioral fields
+        bet=np.nan,
+        reward=np.nan,
+
         # Achieved timing data
         onset_fix=np.nan,
         offset_fix=np.nan,
@@ -221,11 +185,8 @@ def generate_pulse_info(exp, t_info):
     rng = np.random.RandomState()
 
     # Randomly sample the pulse count for this trial
-    if rng.rand() < exp.p.pulse_single_prob:
-        count = 1
-    else:
-        count = int(flexible_values(exp.p.pulse_count, random_state=rng,
-                                    max=exp.p.pulse_count_max))
+    count = int(flexible_values(exp.p.pulse_count, random_state=rng,
+                                max=exp.p.pulse_count_max))
 
     # Account for the duration of each pulse
     pulse_dur = flexible_values(exp.p.pulse_dur, count, rng)
@@ -396,31 +357,26 @@ def run_trial(exp, info):
     response = int(bet > 0)
     correct = response == t_info["target"]
     result = "correct" if correct else "wrong"
-    value = abs(bet) if correct else -abs(bet)
+    reward = abs(bet) if correct else -abs(bet)
 
     res = dict(
         response=response,
         correct=correct,
         result=result,
+        reward=reward,
         bet=bet,
-        value=value,
         rt=np.nan,
     )
 
     t_info.update(pd.Series(res))
 
     # Give feedback
-    duration = abs(bet) * 2
-    if correct:
-        Sound("C", duration, octave=5).play()
-        Sound("E", duration, octave=5).play()
-        Sound("G", duration, octave=5).play()
-    else:
-        Sound("B", duration, octave=4).play()
-        Sound("D", duration, octave=4).play()
-        Sound("Efl", duration, octave=4).play()
-
-    exp.wait_until(timeout=duration)
+    exp.s.feedback.radius = abs(bet) * 1
+    exp.s.feedback.ori = 180 * int(~correct)
+    color_choices = dict(correct=(-.8, .5, -.8), wrong=(1, -.7, -.6))
+    exp.s.feedback.fillColor = color_choices.get(result, exp.win.color)
+    play_feedback(correct, bet)
+    exp.wait_until(timeout=exp.p.wait_feedback, draw="feedback")
 
     # Prepare for the inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color
@@ -439,10 +395,26 @@ def compute_performance(self):
 
     if self.trial_data:
         data = pd.DataFrame([t for t, _ in self.trial_data])
-        mean_acc = data["correct"].mean()
-        return mean_acc, None
+        total_reward = np.round(10 * data["reward"].sum())
+        return total_reward,
     else:
-        return None, None
+        return None,
+
+
+def show_performance(self, total_reward):
+
+    lines = ["End of the run!"]
+
+    if total_reward is not None:
+        lines.extend(["", "You earned {:.0f} points!".format(total_reward)])
+
+    n = len(lines)
+    height = .5
+    heights = (np.arange(n)[::-1] - (n / 2 - .5)) * height
+    for line, y in zip(lines, heights):
+        TextStim(self.win, line, pos=(0, y), height=height).draw()
+
+    self.win.flip()
 
 
 def save_data(exp):
