@@ -12,7 +12,7 @@ from visigoth.stimuli import Point, Pattern
 from visigoth import AcquireFixation, flexible_values
 
 
-class BetDial(object):
+class Gague(object):
 
     def __init__(self, win):
 
@@ -20,7 +20,7 @@ class BetDial(object):
         self.stim = GratingStim(win,
                                 mask="circle",
                                 tex=tex,
-                                size=(1, .2),
+                                size=(1.5, .25),
                                 sf=.5,
                                 phase=0,
                                 color=win.color,
@@ -91,7 +91,7 @@ def create_stimuli(exp):
                 exp.p.fix_trial_color)
 
     # Current gamble state
-    bet = BetDial(exp.win)
+    gauge = Gague(exp.win)
 
     # Contrast pattern stimulus
     pattern = Pattern(exp.win,
@@ -162,8 +162,8 @@ def generate_trial_info(exp, t):
         # Achieved timing data
         onset_fix=np.nan,
         offset_fix=np.nan,
-        onset_bet=np.nan,
-        offset_bet=np.nan,
+        onset_gauge=np.nan,
+        offset_gauge=np.nan,
 
     )
 
@@ -288,10 +288,10 @@ def run_trial(exp, info):
             t_info["fixbreak_early"] = True
             return t_info, p_info
 
-        flip_time = exp.draw(["bet", "fix"])
+        flip_time = exp.draw(["gauge", "fix"])
 
         if not frame:
-            t_info["onset_bet"] = flip_time
+            t_info["onset_gauge"] = flip_time
 
     t_info["fixbreak_early"] = False
 
@@ -312,7 +312,7 @@ def run_trial(exp, info):
                 t_info["offset_cue"] = exp.clock.getTime()
                 return t_info, p_info
 
-            stims = ["pattern", "bet", "fix"]
+            stims = ["pattern", "gauge", "fix"]
             flip_time = exp.draw(stims)
 
             if not frame:
@@ -338,7 +338,7 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            flip_time = exp.draw(["bet", "fix"])
+            flip_time = exp.draw(["gauge", "fix"])
 
             # Record the time of first flip as the offset of the last pulse
             if not frame:
@@ -349,7 +349,7 @@ def run_trial(exp, info):
     # Collect the response
     now = exp.clock.getTime()
     t_info["offset_fix"] = now
-    t_info["offset_bet"] = now
+    t_info["offset_gauge"] = now
 
     # TODO decide how to handle value == 0
 
