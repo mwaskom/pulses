@@ -1,5 +1,6 @@
 from __future__ import division
 import json
+import time
 
 import numpy as np
 import pandas as pd
@@ -14,7 +15,7 @@ from visigoth import AcquireFixation, flexible_values
 
 class Gague(object):
 
-    def __init__(self, win):
+    def __init__(self, win, joystick):
 
         tex = np.array([[0, 1], [0, 1]])
         self.stim = GratingStim(win,
@@ -33,8 +34,10 @@ class Gague(object):
                               color=win.color,
                               autoLog=False)
 
+        self.joystick = joystick
+
     def draw(self):
-        angle, _ = read_joystick()
+        angle, _ = self.joystick.read()
         self.value = angle
         self.bg.draw()
         self.stim.draw()
@@ -49,14 +52,59 @@ class Gague(object):
         self._val = val
 
 
-def read_joystick():
+class Joystick(object):
+    """Simple interface to a Joystick using pyglet.
 
-    device, = pyglet.input.get_joysticks()
-    device.open()
-    angle = device.rz
-    trigger = device.buttons[0]
-    device.close()
-    return angle, trigger
+    Integration with Pyglet's event loop is broken in Psychopy and hard to
+    figure out how to do without writing everything around the Pyglet App.
+    Here we are exploiting a simple hack to read from the Joystick in a
+    blocking fashion at requested times.
+
+    Also for this experiment we only care about the rotational angle around
+    the Z axis and the main trigger, so that's all we're going to read/log.
+
+    """
+    def __init__(self, exp):
+
+        devices = pyglet.input.get_joysticks()
+        assert len(devices) == 1
+        self.device = devices[0]
+
+        self.exp = exp
+        self.log_timestamps = []
+        self.log_angles = []
+        self.log_triggers = []
+        self.log_readtimes = []
+
+    def read(self, log=True):
+        """Return rotational angle and trigger status; log with time info."""
+        start = time.time()
+        self.device.open()
+        timestamp = self.exp.clock.getTime()
+        angle = self.device.rz
+        trigger = self.device.buttons[0]
+        self.device.close()
+        end = time.time()
+
+        if log:
+            self.log_timestamps.append(timestamp)
+            self.log_angles.append(angle)
+            self.log_triggers.append(trigger)
+            self.log_readtimes.append(end - start)
+
+        return angle, trigger
+
+    @property
+    def log(self):
+        if self.log_timestamps:
+            df = pd.DataFrame(
+                np.c_[self.log_timestamps,
+                      self.log_angles,
+                      self.log_triggers,
+                      self.log_readtimes],
+                columns=["time", "angle", "trigger", "readtime"]
+            )
+        return df
 
 
 def play_feedback(correct, bet):
@@ -84,6 +132,9 @@ def define_cmdline_params(self, parser):
 
 def create_stimuli(exp):
 
+    # Joystick (not a stimulus but needed here
+    joystick = Joystick(exp)
+
     # Fixation point
     fix = Point(exp.win,
                 exp.p.fix_pos,
@@ -91,7 +142,7 @@ def create_stimuli(exp):
                 exp.p.fix_trial_color)
 
     # Current gamble state
-    gauge = Gague(exp.win)
+    gauge = Gague(exp.win, joystick)
 
     # Contrast pattern stimulus
     pattern = Pattern(exp.win,
@@ -353,7 +404,7 @@ def run_trial(exp, info):
 
     # TODO decide how to handle value == 0
 
-    bet, _ = read_joystick()
+    bet, _ = exp.s.joystick.read()
     response = int(bet > 0)
     correct = response == t_info["target"]
     result = "correct" if correct else "wrong"
@@ -435,3 +486,6 @@ def save_data(exp):
         out_json_fname = exp.output_stem + "_params.json"
         with open(out_json_fname, "w") as fid:
             json.dump(exp.p, fid, sort_keys=True, indent=4)
+
+        out_joydat_fname = exp.output_stem + "_joydat.csv"
+        exp.s.joystick.log.to_csv(out_joydat_fname, index=False)
