@@ -407,6 +407,7 @@ def run_trial(exp, info):
     reward = abs(bet) if correct else -abs(bet)
 
     res = dict(
+        responded=True,
         response=response,
         correct=correct,
         result=result,
