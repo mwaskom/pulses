@@ -111,7 +111,7 @@ def play_feedback(correct, bet):
 
     sample_rate = 44100
     tt = np.linspace(0, 1, sample_rate)
-    f0, f1 = (800, 1600) if correct else (800, 400)
+    f0, f1 = (600, 1600) if correct else (1200, 400)
     chirp = signal.chirp(tt, f0=800, f1=f1, t1=1, method="quadratic")
 
     idx = sample_rate // 2 + int(.5 * abs(bet) * sample_rate)
@@ -402,7 +402,7 @@ def run_trial(exp, info):
     t_info["offset_fix"] = now
     t_info["offset_gauge"] = now
 
-    # TODO decide how to handle value == 0
+    # TODO decide how to handle values close to 0
 
     bet, _ = exp.s.joystick.read()
     response = int(bet > 0)
@@ -422,7 +422,7 @@ def run_trial(exp, info):
     t_info.update(pd.Series(res))
 
     # Give feedback
-    exp.s.feedback.radius = abs(bet) * 1
+    exp.s.feedback.radius = .5 + abs(bet)
     exp.s.feedback.ori = 180 * int(~correct)
     color_choices = dict(correct=(-.8, .5, -.8), wrong=(1, -.7, -.6))
     exp.s.feedback.fillColor = color_choices.get(result, exp.win.color)
