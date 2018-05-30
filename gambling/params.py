@@ -39,7 +39,7 @@ base = dict(
     pulse_count_max=5,
     pulse_dur=.2,
 
-    run_duration=600,
+    trials_per_run=40,
 
     output_template="data/{subject}/{session}/gambling_{time}",
 

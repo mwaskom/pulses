@@ -162,11 +162,7 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
     """Yield trial and pulse train info."""
-    for t in exp.trial_count():
-
-        # Check whether we have performed the final trial of the run
-        if exp.clock.getTime() >= exp.p.run_duration:
-            raise StopIteration
+    for t in exp.trial_count(exp.p.trials_per_run):
 
         # Sample parameters for a trial
         t_info, p_info = generate_trial_info(exp, t)
