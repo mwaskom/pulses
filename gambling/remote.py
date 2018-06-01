@@ -16,26 +16,42 @@ def create_stim_artists(app):
 def initialize_trial_figure(app):
 
     fig = mpl.figure.Figure((5, 5), dpi=100, facecolor="white")
-    axes = [fig.add_subplot(3, 1, i) for i in range(1, 4)]
+    locator = mpl.ticker.MaxNLocator(min_n_ticks=1, integer=True)
 
-    axes[0].set(ylim=(-.1, 1.1),
+    axes = [fig.add_subplot(4, 1, i) for i in range(1, 5)]
+
+    axes[0].set(xticklabels=[],
+                ylim=(-.1, 1.1),
                 yticks=[0, 1],
                 yticklabels=["No", "Yes"],
                 ylabel="Responded")
 
-    axes[1].set(ylim=(-.1, 1.1),
+    axes[1].set(xticklabels=[],
+                ylim=(-.1, 1.1),
                 yticks=[0, 1],
                 yticklabels=["No", "Yes"],
                 ylabel="Correct")
 
-    axes[2].axhline(+.1, lw=3, color=mpl.cm.coolwarm(.9), alpha=.5, zorder=0)
-    axes[2].axhline(-.1, lw=3, color=mpl.cm.coolwarm(.1), alpha=.5, zorder=0)
-    axes[2].set(ylim=(-5, 5),
+    axes[2].set(xticklabels=[],
+                ylim=(-1.1, 1.1),
+                yticks=[-1, -.5, 0, .5, 1],
+                yticklabels=[-1, "", 0, "", 1],
+                ylabel="Bet")
+    axes[2].axhline(+1, lw=1, color=".8", zorder=0)
+    axes[2].axhline(0, lw=1, color=".7", dashes=(3, 1), zorder=0)
+    axes[2].axhline(-1, lw=1, color=".8", zorder=0)
+
+    axes[3].axhline(+.1, lw=3, color=mpl.cm.coolwarm(.9), alpha=.5, zorder=0)
+    axes[3].axhline(-.1, lw=3, color=mpl.cm.coolwarm(.1), alpha=.5, zorder=0)
+    axes[3].set(ylim=(-5, 5),
                 ylabel="LLR")
+
+    for ax in axes:
+        ax.xaxis.set_major_locator(locator)
 
     fig.text(.55, .04, "", size=12, ha="center", va="center")
 
-    fig.subplots_adjust(.15, .125, .95, .95)
+    fig.subplots_adjust(.15, .125, .95, .95, )
 
     return fig, axes
 
@@ -47,15 +63,19 @@ def update_trial_figure(app, trial_data):
     app.trial_data.append(trial_data)
     trial_df = pd.DataFrame(app.trial_data)
 
-    resp_ax, cor_ax, llr_ax = app.axes
+    resp_ax, cor_ax, bet_ax, llr_ax = app.axes
 
     # Draw valid and invalid responses
     resp_line, = resp_ax.plot(trial_df.trial, trial_df.responded, "ko")
-    resp_ax.set(xlim=(.5, trial_df.trial.max() + .5))
+    resp_ax.set(xlim=(.5, trial_df.trial.max() + .5), xticklabels=[])
 
     # Draw correct and incorrect responses
     cor_line, = cor_ax.plot(trial_df.trial, trial_df.correct, "ko")
-    cor_ax.set(xlim=(.5, trial_df.trial.max() + .5))
+    cor_ax.set(xlim=(.5, trial_df.trial.max() + .5), xticklabels=[])
+
+    # Draw bet size
+    bet_line, = bet_ax.plot(trial_df.trial, trial_df.bet, "ko")
+    bet_ax.set(xlim=(.5, trial_df.trial.max() + .5), xticklabels=[])
 
     # Draw trial information
     marker_dict = dict(correct="o", wrong="x",
@@ -73,9 +93,12 @@ def update_trial_figure(app, trial_data):
     llr_ax.set(xlim=(.5, trial_df.trial.max() + .5))
 
     # Update the accuracy text
-    total_points = (trial_df.reward.sum() * 10).round()
+    resp = trial_df.responded
+    total_points = trial_df.reward.sum() * 10
+    p_correct = trial_df[resp].correct.mean()
     t, = app.fig.texts
-    text = "Total points: {:.0f}".format(total_points)
+    text_args = total_points, p_correct
+    text = "Total points: {:.0f}    Accuracy: {:.1%}".format(*text_args)
     t.set_text(text)
 
     # Draw the canvas to show the new data
@@ -86,4 +109,5 @@ def update_trial_figure(app, trial_data):
     # the *next* trial.
     resp_line.remove()
     cor_line.remove()
+    bet_line.remove()
     [c.remove() for c in llr_scatters]
