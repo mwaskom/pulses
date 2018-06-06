@@ -28,8 +28,8 @@ base = dict(
     wait_resp=5,
     wait_feedback=1,
 
-    wait_pre_stim=("truncexpon", 2, 2, 1),
-    pulse_gap=("truncexpon", 2, 2, 1),
+    wait_pre_stim=("truncexpon", (3 - 1.5) / .5, 1.5, .5),
+    pulse_gap=("truncexpon", (3 - 1.5) / .5, 1.5, .5),
     pulse_train_max=28,
 
     finish_min=0,

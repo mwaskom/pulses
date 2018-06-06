@@ -155,7 +155,7 @@ def create_stimuli(exp):
                       )
 
     # Contrast pattern stimulus
-    feedback = Polygon(exp.win, lineColor=None, opacity=.5, autoLog=False)
+    feedback = Polygon(exp.win, lineColor=None, opacity=.3, autoLog=False)
 
     return locals()
 
@@ -419,7 +419,7 @@ def run_trial(exp, info):
     t_info.update(pd.Series(res))
 
     # Give feedback
-    exp.s.feedback.radius = .5 + abs(bet)
+    exp.s.feedback.radius = .2 + 2 * abs(bet)
     exp.s.feedback.ori = 180 * int(~correct)
     color_choices = dict(correct=(-.8, .5, -.8), wrong=(1, -.7, -.6))
     exp.s.feedback.fillColor = color_choices.get(result, exp.win.color)
