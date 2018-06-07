@@ -23,8 +23,8 @@ base = dict(
     stim_gratings=8,
 
     wait_iti=3,
-    wait_fix=5,
-    wait_start=.5,
+    wait_fix=20,
+    wait_start=0,
     wait_resp=5,
     wait_feedback=1,
 
@@ -39,7 +39,7 @@ base = dict(
     pulse_count_max=5,
     pulse_dur=.2,
 
-    trials_per_run=40,
+    trials_per_run=50,
 
     output_template="data/{subject}/{session}/gambling_{time}",
 

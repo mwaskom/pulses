@@ -10,7 +10,7 @@ import pyglet
 import sounddevice
 from psychopy.visual import GratingStim, TextStim, Polygon
 from visigoth.stimuli import Point, Pattern
-from visigoth import AcquireFixation, flexible_values
+from visigoth import flexible_values
 
 
 class Gague(object):
@@ -111,7 +111,7 @@ def play_feedback(correct, bet):
 
     sample_rate = 44100
     tt = np.linspace(0, 1, sample_rate)
-    f0, f1 = (600, 1600) if correct else (1200, 400)
+    f0, f1 = (400, 1800) if correct else (1200, 200)
     chirp = signal.chirp(tt, f0=800, f1=f1, t1=1, method="quadratic")
 
     idx = sample_rate // 2 + int(.5 * abs(bet) * sample_rate)
@@ -307,11 +307,14 @@ def run_trial(exp, info):
     # ~~~ Trial onset
     t_info["onset_fix"] = exp.clock.getTime()
     exp.s.fix.color = exp.p.fix_ready_color
-    res = exp.wait_until(AcquireFixation(exp),
-                         timeout=exp.p.wait_fix,
-                         draw="fix")
-
-    if res is None:
+    while exp.clock.getTime() < (t_info["onset_fix"] + exp.p.wait_fix):
+        bet, trigger = exp.s.joystick.read()
+        fix = exp.check_fixation()
+        if fix and trigger and np.abs(bet) < .1:
+            break
+        exp.check_abort()
+        exp.draw(["fix"])
+    else:
         t_info["result"] = "nofix"
         exp.sounds.nofix.play()
         return t_info, p_info
