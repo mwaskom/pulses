@@ -128,6 +128,7 @@ def play_feedback(correct, bet):
 def define_cmdline_params(self, parser):
 
     parser.add_argument("--timing", default=1, type=float)
+    parser.add_argument("--training", action="store_true")
 
 
 def create_stimuli(exp):
@@ -318,7 +319,7 @@ def run_trial(exp, info):
     while exp.clock.getTime() < (t_info["onset_fix"] + exp.p.wait_fix):
         bet, trigger = exp.s.joystick.read()
         fix = exp.check_fixation()
-        if fix and trigger and np.abs(bet) < .1:
+        if fix and trigger and np.abs(bet) < exp.p.start_stick_thresh:
             break
         exp.check_abort()
         exp.draw(["fix"])
@@ -331,6 +332,11 @@ def run_trial(exp, info):
 
         exp.check_fixation(allow_blinks=True)
         exp.draw("fix")
+
+    if exp.p.training:
+        stims = ["fix"]
+    else:
+        stims = ["gauge", "fix"]
 
     # ~~~ Pre-stimulus period
     exp.s.fix.color = exp.p.fix_trial_color
@@ -346,7 +352,7 @@ def run_trial(exp, info):
             t_info["fixbreak_early"] = True
             return t_info, p_info
 
-        flip_time = exp.draw(["gauge", "fix"])
+        flip_time = exp.draw(stims)
 
         if not frame:
             t_info["onset_gauge"] = flip_time
@@ -370,8 +376,7 @@ def run_trial(exp, info):
                 t_info["offset_cue"] = exp.clock.getTime()
                 return t_info, p_info
 
-            stims = ["pattern", "gauge", "fix"]
-            flip_time = exp.draw(stims)
+            flip_time = exp.draw(["pattern"] + stims)
 
             if not frame:
 
@@ -396,7 +401,7 @@ def run_trial(exp, info):
                 t_info["result"] = "fixbreak"
                 return t_info, p_info
 
-            flip_time = exp.draw(["gauge", "fix"])
+            flip_time = exp.draw(stims)
 
             # Record the time of first flip as the offset of the last pulse
             if not frame:
@@ -409,17 +414,42 @@ def run_trial(exp, info):
     t_info["offset_fix"] = now
     t_info["offset_gauge"] = now
 
-    # TODO decide how to handle values close to 0
+    if exp.p.training:
 
-    bet, _ = exp.s.joystick.read()
-    bet *= t_info["stick_direction"]
-    response = int(bet > 0)
-    correct = response == t_info["target"]
-    result = "correct" if correct else "wrong"
-    reward = abs(bet) if correct else -abs(bet)
+        bet = np.nan
+        reward = np.nan
+        response = None
+
+        while exp.clock.getTime() < (t_info["offset_fix"] + exp.p.wait_resp):
+            pos, _ = exp.s.joystick.read()
+            if abs(pos) > exp.p.resp_stick_thresh:
+
+                pos *= t_info["stick_direction"]
+                response = int(pos > 0)
+                correct = response == t_info["target"]
+                result = "correct" if correct else "wrong"
+                responded = True
+                break
+
+            exp.draw([])
+
+        else:
+            correct = np.nan
+            result = "nochoice"
+            responded = False
+
+    else:
+
+        bet, _ = exp.s.joystick.read()
+        bet *= t_info["stick_direction"]
+        response = int(bet > 0)
+        correct = response == t_info["target"]
+        result = "correct" if correct else "wrong"
+        reward = abs(bet) if correct else -abs(bet)
+        responded = True
 
     res = dict(
-        responded=True,
+        responded=responded,
         response=response,
         correct=correct,
         result=result,
@@ -431,12 +461,17 @@ def run_trial(exp, info):
     t_info.update(pd.Series(res))
 
     # Give feedback
-    exp.s.feedback.radius = .2 + 2 * abs(bet)
-    exp.s.feedback.ori = 180 * int(~correct)
-    color_choices = dict(correct=(-.8, .5, -.8), wrong=(1, -.7, -.6))
-    exp.s.feedback.fillColor = color_choices.get(result, exp.win.color)
-    play_feedback(correct, bet)
-    exp.wait_until(timeout=exp.p.wait_feedback, draw="feedback")
+    if exp.p.training:
+        exp.sounds[t_info["result"]].play()
+        exp.wait_until(timeout=exp.p.wait_feedback)
+
+    else:
+        exp.s.feedback.radius = .2 + 2 * abs(bet)
+        exp.s.feedback.ori = 180 * int(~correct)
+        color_choices = dict(correct=(-.8, .5, -.8), wrong=(1, -.7, -.6))
+        exp.s.feedback.fillColor = color_choices.get(result, exp.win.color)
+        play_feedback(correct, bet)
+        exp.wait_until(timeout=exp.p.wait_feedback, draw="feedback")
 
     # Prepare for the inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color
@@ -456,25 +491,28 @@ def compute_performance(self):
     if self.trial_data:
         data = pd.DataFrame([t for t, _ in self.trial_data])
         total_reward = np.round(10 * data["reward"].sum())
-        return total_reward,
+        mean_correct = data[data.responded].correct.mean()
+        return total_reward, mean_correct
     else:
-        return None,
+        return None, None
 
 
-def show_performance(self, total_reward):
+def show_performance(exp, total_reward, mean_correct):
 
     lines = ["End of the run!"]
 
-    if total_reward is not None:
+    if exp.p.training and mean_correct is not None:
+        lines.extend(["", "You got {:.0%} correct!".format(mean_correct)])
+    elif total_reward is not None:
         lines.extend(["", "You earned {:.0f} points!".format(total_reward)])
 
     n = len(lines)
     height = .5
     heights = (np.arange(n)[::-1] - (n / 2 - .5)) * height
     for line, y in zip(lines, heights):
-        TextStim(self.win, line, pos=(0, y), height=height).draw()
+        TextStim(exp.win, line, pos=(0, y), height=height).draw()
 
-    self.win.flip()
+    exp.win.flip()
 
 
 def save_data(exp):

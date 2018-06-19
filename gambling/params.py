@@ -1,7 +1,7 @@
 
 base = dict(
 
-    display_name="macbook-air",
+    display_name="kianilab-ps1",
     display_luminance=35,
 
     fix_iti_color=(.6, .6, .6),
@@ -27,6 +27,9 @@ base = dict(
     wait_start=0,
     wait_resp=5,
     wait_feedback=1,
+
+    start_stick_thresh=.3,
+    resp_stick_thresh=.3,
 
     wait_pre_stim=("truncexpon", (3 - 1.5) / .5, 1.5, .5),
     pulse_gap=("truncexpon", (3 - 1.5) / .5, 1.5, .5),
