@@ -180,6 +180,13 @@ def generate_trial_info(exp, t):
     gen_sd = exp.p.dist_sds[gen_dist]
     target = exp.p.dist_targets[gen_dist]
 
+    # Determine the stick direction for this trial
+    try:
+        subject_number = int(exp.p.subject[-1])
+        stick_direction = 1 if subject_number % 2 else -1
+    except ValueError:
+        stick_direction = 1
+
     trial_info = exp.trial_info(
 
         # Stimulus parameters
@@ -203,6 +210,7 @@ def generate_trial_info(exp, t):
         fixbreak_early=np.nan,
 
         # Extra behavioral fields
+        stick_direction=stick_direction,
         bet=np.nan,
         reward=np.nan,
 
@@ -404,6 +412,7 @@ def run_trial(exp, info):
     # TODO decide how to handle values close to 0
 
     bet, _ = exp.s.joystick.read()
+    bet *= t_info["stick_direction"]
     response = int(bet > 0)
     correct = response == t_info["target"]
     result = "correct" if correct else "wrong"
