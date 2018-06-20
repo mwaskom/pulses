@@ -83,7 +83,7 @@ def update_trial_figure(app, trial_data):
     llr_scatters = []
     for res, res_df in trial_df.groupby("result"):
         if res_df.bet.isnull().all():
-            response_var = res_df.response - .5
+            response_var = (res_df.response * 1.5) - .75
         else:
             response_var = res_df.bet
         c = llr_ax.scatter(res_df.trial,
