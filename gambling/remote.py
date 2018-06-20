@@ -44,6 +44,8 @@ def initialize_trial_figure(app):
     axes[3].axhline(+.1, lw=3, color=mpl.cm.coolwarm(.9), alpha=.5, zorder=0)
     axes[3].axhline(-.1, lw=3, color=mpl.cm.coolwarm(.1), alpha=.5, zorder=0)
     axes[3].set(ylim=(-5, 5),
+                yticks=[-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+                yticklabels=[-5, "", "", "", "", 0, "", "", "", "", 5],
                 ylabel="LLR")
 
     for ax in axes:
