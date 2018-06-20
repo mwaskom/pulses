@@ -82,11 +82,15 @@ def update_trial_figure(app, trial_data):
                        fixbreak=(6, 2), nochoice=(8, 2), nofix=(3, 2))
     llr_scatters = []
     for res, res_df in trial_df.groupby("result"):
+        if res_df.bet.isnull().all():
+            response_var = res_df.response - .5
+        else:
+            response_var = res_df.bet
         c = llr_ax.scatter(res_df.trial,
                            res_df.trial_llr,
                            marker=marker_dict[res],
                            s=res_df.pulse_count * 20,
-                           c=res_df.bet,
+                           c=response_var,
                            linewidth=2,
                            cmap="coolwarm", vmin=-1, vmax=1)
         llr_scatters.append(c)
