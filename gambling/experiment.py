@@ -107,14 +107,14 @@ class Joystick(object):
         return df
 
 
-def play_feedback(correct, bet):
+def play_feedback(correct, reward):
 
     sample_rate = 44100
-    tt = np.linspace(0, 1, sample_rate)
+    tt = np.linspace(0, 1.5, sample_rate)
     f0, f1 = (400, 1800) if correct else (1200, 200)
     chirp = signal.chirp(tt, f0=800, f1=f1, t1=1, method="quadratic")
 
-    idx = sample_rate // 2 + int(.5 * abs(bet) * sample_rate)
+    idx = sample_rate // 2 + int(.5 * abs(reward / 2) * sample_rate)
     sound_array = chirp[:idx]
 
     hw_size = int(min(sample_rate // 200, len(sound_array) // 15))
@@ -445,7 +445,7 @@ def run_trial(exp, info):
         response = int(bet > 0)
         correct = response == t_info["target"]
         result = "correct" if correct else "wrong"
-        reward = abs(bet) if correct else -abs(bet)
+        reward = 1 - 4 * (int(correct) - bet) ** 2
         responded = True
 
     res = dict(
@@ -466,11 +466,11 @@ def run_trial(exp, info):
         exp.wait_until(timeout=exp.p.wait_feedback)
 
     else:
-        exp.s.feedback.radius = .2 + 2 * abs(bet)
+        exp.s.feedback.radius = .25 + abs(reward)
         exp.s.feedback.ori = 180 * int(~correct)
         color_choices = dict(correct=(-.8, .5, -.8), wrong=(1, -.7, -.6))
         exp.s.feedback.fillColor = color_choices.get(result, exp.win.color)
-        play_feedback(correct, bet)
+        play_feedback(correct, reward)
         exp.wait_until(timeout=exp.p.wait_feedback, draw="feedback")
 
     # Prepare for the inter-trial interval
