@@ -110,11 +110,11 @@ class Joystick(object):
 def play_feedback(correct, reward):
 
     sample_rate = 44100
-    tt = np.linspace(0, 1.5, sample_rate)
+    tt = np.linspace(0, 1, sample_rate)
     f0, f1 = (400, 1800) if correct else (1200, 200)
-    chirp = signal.chirp(tt, f0=800, f1=f1, t1=1, method="quadratic")
+    chirp = signal.chirp(tt, f0=f0, f1=f1, t1=1, method="quadratic")
 
-    idx = sample_rate // 2 + int(.5 * abs(reward / 2) * sample_rate)
+    idx = sample_rate // 4 + int(.75 * abs(reward / 3) * sample_rate)
     sound_array = chirp[:idx]
 
     hw_size = int(min(sample_rate // 200, len(sound_array) // 15))
@@ -214,6 +214,7 @@ def generate_trial_info(exp, t):
         stick_direction=stick_direction,
         bet=np.nan,
         reward=np.nan,
+        cert=np.nan,
 
         # Achieved timing data
         onset_fix=np.nan,
@@ -417,6 +418,7 @@ def run_trial(exp, info):
     if exp.p.training:
 
         bet = np.nan
+        cert = np.nan
         reward = np.nan
         response = None
 
@@ -443,9 +445,10 @@ def run_trial(exp, info):
         bet, _ = exp.s.joystick.read()
         bet *= t_info["stick_direction"]
         response = int(bet > 0)
+        cert = abs(bet) / 2 + .5
         correct = response == t_info["target"]
         result = "correct" if correct else "wrong"
-        reward = 1 - 4 * (int(correct) - bet) ** 2
+        reward = 1 - 4 * (int(correct) - cert) ** 2
         responded = True
 
     res = dict(
@@ -455,6 +458,7 @@ def run_trial(exp, info):
         result=result,
         reward=reward,
         bet=bet,
+        cert=cert,
         rt=np.nan,
     )
 
