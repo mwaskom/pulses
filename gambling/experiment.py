@@ -1,6 +1,8 @@
 from __future__ import division
+import os
 import json
 import time
+from glob import glob
 
 import numpy as np
 import pandas as pd
@@ -494,21 +496,53 @@ def compute_performance(self):
 
     if self.trial_data:
         data = pd.DataFrame([t for t, _ in self.trial_data])
-        total_reward = np.round(10 * data["reward"].sum())
+        total_trials = len(data)
+        total_reward = data["reward"].sum()
         mean_correct = data[data.responded].correct.mean()
-        return total_reward, mean_correct
+        return total_reward, mean_correct, total_trials
     else:
-        return None, None
+        return None, None, None
 
 
-def show_performance(exp, total_reward, mean_correct):
+def show_performance(exp, run_reward, run_correct, run_trials):
 
     lines = ["End of the run!"]
 
-    if exp.p.training and mean_correct is not None:
-        lines.extend(["", "You got {:.0%} correct!".format(mean_correct)])
-    elif total_reward is not None:
-        lines.extend(["", "You earned {:.0f} points!".format(total_reward)])
+    prior_trials = prior_correct = prior_reward = 0
+
+    output_dir = os.path.dirname(exp.output_stem)
+    prior_fnames = glob(os.path.join(output_dir, "*_trials.csv"))
+    if prior_fnames:
+        prior_data = pd.concat([pd.read_csv(f) for f in prior_fnames])
+        prior_trials = len(prior_data)
+        if prior_trials:
+            prior_correct = prior_data.correct.mean()
+            prior_reward = prior_data.reward.fillna(0).sum()
+
+    if exp.p.training and run_correct is not None:
+
+        lines.extend([
+            "", "You got {:.0%} correct!".format(run_correct),
+        ])
+
+        total_correct = np.average([prior_correct, run_correct],
+                                   weights=[prior_trials, run_trials])
+
+        lines.extend([
+            "", "You've gotten {:.0%} correct today!".format(total_correct),
+        ])
+
+    elif run_reward is not None:
+
+        lines.extend([
+            "", "You earned {:.0f} points!".format(10 * run_reward)
+        ])
+
+        total_reward = prior_reward + run_reward
+
+        lines.extend([
+            "", "You've earned {:.0f} points today!".format(10 * total_reward)
+        ])
 
     n = len(lines)
     height = .5
