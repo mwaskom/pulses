@@ -11,6 +11,7 @@ from scipy import stats, signal
 import pyglet
 import sounddevice
 from psychopy.visual import GratingStim, TextStim, Polygon
+from psychopy.event import waitKeys
 from visigoth.stimuli import Point, Pattern
 from visigoth import flexible_values
 
@@ -574,3 +575,58 @@ def save_data(exp):
 
         out_joydat_fname = exp.output_stem + "_joydat.csv"
         exp.s.joystick.log.to_csv(out_joydat_fname, index=False)
+
+
+def demo_mode(exp):
+
+    exp.s.fix.color = exp.p.fix_iti_color
+    exp.draw(["fix"])
+    waitKeys(["space"])
+    exp.check_abort()
+
+    exp.s.fix.color = exp.p.fix_trial_color
+    exp.draw(["fix"])
+    waitKeys(["space"])
+    exp.check_abort()
+
+    exp.s.pattern.contrast = 10 ** np.mean(exp.p.dist_means)
+
+    exp.draw(["pattern", "fix"])
+    waitKeys(["space"])
+    exp.check_abort()
+
+    for frame in exp.frame_range(seconds=1):
+        exp.draw(["fix"])
+
+    for frame in exp.frame_range(seconds=exp.p.pulse_dur):
+        exp.draw(["pattern", "fix"])
+
+    exp.draw(["fix"])
+    waitKeys(["space"])
+    exp.check_abort()
+
+    exp.s.pattern.contrast = 10 ** (exp.p.dist_means[1] + exp.p.dist_sds[1])
+    exp.draw(["pattern", "fix"])
+    waitKeys(["space"])
+    exp.check_abort()
+
+    exp.s.pattern.contrast = 10 ** (exp.p.dist_means[0] - exp.p.dist_sds[0])
+    exp.draw(["pattern", "fix"])
+    waitKeys(["space"])
+    exp.check_abort()
+
+    exp.draw(["fix"])
+    waitKeys(["space"])
+    exp.check_abort()
+
+    exp.sounds["correct"].play()
+    waitKeys(["space"])
+    exp.check_abort()
+
+    exp.sounds["wrong"].play()
+    waitKeys(["space"])
+    exp.check_abort()
+
+    exp.sounds["fixbreak"].play()
+    waitKeys(["space"])
+    exp.check_abort()
