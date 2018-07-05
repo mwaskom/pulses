@@ -55,6 +55,39 @@ class Gague(object):
         self._val = val
 
 
+class Feedback(object):
+
+    def __init__(self, win):
+
+        # TODO use params.py?
+
+        self.stim = Polygon(win,
+                            lineColor=None,
+                            opacity=.3,
+                            autoLog=False)
+
+        self.text = TextStim(win,
+                             pos=(0, 0),
+                             height=.75,
+                             color=-.75)
+
+        self.reward = 0
+        self.colors = [(1, -.7, -.6), (-.8, .5, -.8)]
+
+    def draw(self):
+
+        correct = self.reward > 0
+
+        self.stim.ori = 180 * int(~correct)
+        self.stim.radius = 1 + .75 * abs(self.reward)
+        self.stim.fillColor = self.colors[int(correct)]
+
+        self.text.text = "{:+.0f}".format(np.round(10 * self.reward))
+
+        self.stim.draw()
+        self.text.draw()
+
+
 class Joystick(object):
     """Simple interface to a Joystick using pyglet.
 
@@ -159,7 +192,7 @@ def create_stimuli(exp):
                       )
 
     # Contrast pattern stimulus
-    feedback = Polygon(exp.win, lineColor=None, opacity=.3, autoLog=False)
+    feedback = Feedback(exp.win)
 
     return locals()
 
@@ -473,10 +506,7 @@ def run_trial(exp, info):
         exp.wait_until(timeout=exp.p.wait_feedback)
 
     else:
-        exp.s.feedback.radius = .25 + abs(reward)
-        exp.s.feedback.ori = 180 * int(~correct)
-        color_choices = dict(correct=(-.8, .5, -.8), wrong=(1, -.7, -.6))
-        exp.s.feedback.fillColor = color_choices.get(result, exp.win.color)
+        exp.s.feedback.reward = reward
         play_feedback(correct, reward)
         exp.wait_until(timeout=exp.p.wait_feedback, draw="feedback")
 

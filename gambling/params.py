@@ -22,7 +22,7 @@ base = dict(
     stim_size=8,
     stim_gratings=8,
 
-    wait_iti=3,
+    wait_iti=1.5
     wait_fix=20,
     wait_start=0,
     wait_resp=5,
