@@ -33,12 +33,12 @@ def generate_run(d, p, rng=None):
     expected_count_dist = count_pmf * n_trials
 
     count_error = np.inf
-    while count_error > d.max_count_error:
+    while count_error > d.sum_count_error:
 
         pulse_count = flexible_values(p.pulse_count, n_trials, rng,
                                       max=p.pulse_count_max).astype(int)
         count_dist = np.bincount(pulse_count, minlength=p.pulse_count_max + 1)
-        count_error = np.max(np.abs(count_dist[count_support]
+        count_error = np.sum(np.abs(count_dist[count_support]
                                     - expected_count_dist))
 
     # Assign initial ITI to each trial
@@ -102,9 +102,11 @@ def generate_run(d, p, rng=None):
 
     llr_mean = np.inf
     llr_sd = np.inf
+    acc = np.inf
 
     while (not_in_range(llr_mean, d.mean_range)
-           or not_in_range(llr_sd, d.sd_range)):
+           or not_in_range(llr_sd, d.sd_range)
+           or not_in_range(acc, d.acc_range)):
 
         for t in [0, 1]:
             dist = "norm", p.dist_means[t], p.dist_sds[1]
@@ -114,10 +116,14 @@ def generate_run(d, p, rng=None):
                                                  max=max_contrast)
 
         pulse_llr = compute_llr(log_contrast, p)
-        high_llr = np.where(pulse_target, pulse_llr, -1 * pulse_llr)
+        target_llr = np.where(pulse_target, pulse_llr, -1 * pulse_llr)
 
-        llr_mean = high_llr.mean()
-        llr_sd = high_llr.std()
+        llr_mean = target_llr.mean()
+        llr_sd = target_llr.std()
+
+        dv = pd.Series(target_llr).groupby(pd.Series(trial)).sum()
+        dv_sd = np.sqrt(d.sigma ** 2 * pulse_count)
+        acc = stats.norm(dv, dv_sd).sf(0).mean()
 
     # --- Update the trial_info structure
 
@@ -169,11 +175,13 @@ def compute_llr(c, p):
 
 if __name__ == "__main__":
 
+    # --- Design information
+
+    # Experimental parameters
     import params
     p = Bunch(params.base)
 
-    # --- Design information
-
+    # Design constraints
     d = Bunch(
 
         trials_per_run=20,
@@ -181,13 +189,22 @@ if __name__ == "__main__":
         max_stim_repeat=3,
         max_targ_repeat=4,
 
-        max_count_error=2,
+        sum_count_error=3,
+
+        sigma=.5,
 
         mean_range=(.36, .4),
         sd_range=(.56, .61),
+        acc_range=(.77, .83),
         iti_range=(140, 160),
-        run_range=(468, 474),
+        run_range=(468, 472),
 
     )
 
-    trial_info, pulse_info = generate_run(d, p)
+    n_designs = 100
+
+    for i in range(n_designs):
+
+        trials, pulses = generate_run(d, p)
+        trials.to_csv("designs/trial_info_{:03d}.csv".format(i), index=False)
+        pulses.to_csv("designs/pulse_info_{:03d}.csv".format(i), index=False)
