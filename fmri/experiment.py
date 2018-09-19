@@ -90,7 +90,6 @@ def generate_trials(exp):
     # Add in information that's not part of the saved design
 
     gen_dist = all_trials["gen_dist"]
-    all_trials["cue_pos"] = gen_dist
     all_trials["gen_mean"] = np.take(exp.p.dist_means, gen_dist)
     all_trials["gen_sd"] = np.take(exp.p.dist_sds, gen_dist)
     all_trials["target"] = np.take(exp.p.dist_targets, gen_dist)
@@ -111,6 +110,7 @@ def generate_trials(exp):
     for col in timing_cols:
         all_trials[col] = np.nan
 
+    all_trials["fixbreaks"] = 0
     all_trials["responded"] = False
     result_cols = ["result", "response", "correct", "rt"]
     for col in result_cols:
@@ -121,8 +121,6 @@ def generate_trials(exp):
     all_pulses["dropped_frames"] = 0
     all_pulses["pulse_onset"] = np.nan
     all_pulses["pulse_offset"] = np.nan
-
-    # TODO we want to track fixation breaks during the scan session
 
     # TODO add wait_iti differently for training (and psych?)
 
@@ -149,7 +147,8 @@ def run_trial(exp, info):
     t_info, p_info = info
 
     # ~~~ Set trial-constant attributes of the stimuli
-    exp.s.cue.pos = exp.p.stim_pos[t_info.cue_pos]
+    exp.s.cue.pos = exp.p.stim_pos[t_info.stim_pos]
+    exp.s.pattern.pos = exp.p.stim_pos[t_info.stim_pos]
 
     # ~~~ Inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color
@@ -179,13 +178,15 @@ def run_trial(exp, info):
 
     for frame, skipped in prestim_frames:
 
-        if not exp.check_fixation(allow_blinks=True) and exp.p.enforce_fix:
-            exp.sounds.fixbreak.play()
-            exp.flicker("fix")
-            t_info["result"] = "fixbreak"
-            t_info["fixbreak_early"] = True
-            t_info["offset_cue"] = exp.clock.getTime()
-            return t_info, p_info
+        if not exp.check_fixation(allow_blinks=True):
+            if exp.p.enforce_fix:
+                exp.sounds.fixbreak.play()
+                exp.flicker("fix")
+                t_info["result"] = "fixbreak"
+                t_info["offset_cue"] = exp.clock.getTime()
+                return t_info, p_info
+            else:
+                t_info["fixbreaks"] += 1
 
         flip_time = exp.draw(["fix", "cue", "targets"])
 
@@ -199,20 +200,21 @@ def run_trial(exp, info):
     for p, info in p_info.iterrows():
 
         # Update the pattern
-        # TODO we're dropping cue invalidity so this is now trial-level info
-        exp.s.pattern.pos = exp.p.stim_pos[info.stim_pos]
         exp.s.pattern.contrast = info.contrast
         exp.s.pattern.randomize_phases()
 
         # Show each frame of the stimulus
         for frame in exp.frame_range(seconds=info.pulse_dur):
 
-            if not exp.check_fixation(allow_blinks=True) and exp.p.enforce_fix:
-                exp.sounds.fixbreak.play()
-                exp.flicker("fix")
-                t_info["result"] = "fixbreak"
-                t_info["offset_cue"] = exp.clock.getTime()
-                return t_info, p_info
+            if not exp.check_fixation(allow_blinks=True):
+                if exp.p.enforce_fix:
+                    exp.sounds.fixbreak.play()
+                    exp.flicker("fix")
+                    t_info["result"] = "fixbreak"
+                    t_info["offset_cue"] = exp.clock.getTime()
+                    return t_info, p_info
+                else:
+                    t_info["fixbreaks"] += 1
 
             stims = ["fix", "cue", "targets", "pattern"]
             flip_time = exp.draw(stims)
@@ -234,12 +236,15 @@ def run_trial(exp, info):
 
         for frame in gap_frames:
 
-            if not exp.check_fixation(allow_blinks=True) and exp.p.enforce_fix:
-                exp.sounds.fixbreak.play()
-                exp.flicker("fix")
-                t_info["result"] = "fixbreak"
-                t_info["offset_cue"] = exp.clock.getTime()
-                return t_info, p_info
+            if not exp.check_fixation(allow_blinks=True):
+                if exp.p.enforce_fix:
+                    exp.sounds.fixbreak.play()
+                    exp.flicker("fix")
+                    t_info["result"] = "fixbreak"
+                    t_info["offset_cue"] = exp.clock.getTime()
+                    return t_info, p_info
+                else:
+                    t_info["fixbreaks"] += 1
 
             flip_time = exp.draw(["fix", "cue", "targets"])
 
@@ -283,6 +288,8 @@ def serialize_trial_info(exp, info):
 
 
 def compute_performance(self):
+
+    # TODO Track fixation breaks here? Also in the remote?
 
     if self.trial_data:
         data = pd.DataFrame([t for t, _ in self.trial_data])

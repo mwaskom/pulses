@@ -85,7 +85,6 @@ train.update(
 scan = base.copy()
 scan.update(
 
-    # TODO we may not enforce fixbreaks but we want to track them!
     enforce_fix=False,
     display_name="nyu-cbi-propixx",
     eye_host_address="192.168.1.5",

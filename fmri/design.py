@@ -22,9 +22,9 @@ def generate_run(d, p, rng=None):
 
     # Assign the target to a side
 
-    target = np.repeat([0, 1], n_trials // 2)
-    while max_repeat(target) > d["max_targ_repeat"]:
-        target = rng.permutation(target)
+    gen_dist = np.repeat([0, 1], n_trials // 2)
+    while max_repeat(gen_dist) > d["max_dist_repeat"]:
+        gen_dist = rng.permutation(gen_dist)
 
     # Assign pulse counts to each trial
 
@@ -56,7 +56,7 @@ def generate_run(d, p, rng=None):
 
     trial_info = pd.DataFrame(dict(
         trial=trial,
-        target=target,
+        gen_dist=gen_dist,
         stim_pos=stim_pos,
         pulse_count=pulse_count.astype(int),
         wait_iti=wait_iti,
@@ -96,38 +96,34 @@ def generate_run(d, p, rng=None):
 
     max_contrast = 1 / np.sqrt(p.stim_gratings)
     log_contrast = np.zeros(n_pulses)
-    pulse_target = np.concatenate([
-        np.full(n, t) for n, t in zip(pulse_count, target)
+    pulse_dist = np.concatenate([
+        np.full(n, i) for n, i in zip(pulse_count, gen_dist)
     ])
 
     llr_mean = np.inf
     llr_sd = np.inf
-    acc = np.inf
+    expected_acc = np.inf
 
     while (not_in_range(llr_mean, d.mean_range)
            or not_in_range(llr_sd, d.sd_range)
-           or not_in_range(acc, d.acc_range)):
+           or not_in_range(expected_acc, d.acc_range)):
 
-        for t in [0, 1]:
-            dist = "norm", p.dist_means[t], p.dist_sds[1]
-            rows = pulse_target == t
+        for i in [0, 1]:
+            dist = "norm", p.dist_means[i], p.dist_sds[i]
+            rows = pulse_dist == i
             n = rows.sum()
             log_contrast[rows] = flexible_values(dist, n, rng,
                                                  max=max_contrast)
 
         pulse_llr = compute_llr(log_contrast, p)
-        target_llr = np.where(pulse_target, pulse_llr, -1 * pulse_llr)
+        target_llr = np.where(pulse_dist, pulse_llr, -1 * pulse_llr)
 
         llr_mean = target_llr.mean()
         llr_sd = target_llr.std()
 
         dv = pd.Series(target_llr).groupby(pd.Series(trial)).sum()
         dv_sd = np.sqrt(d.sigma ** 2 * pulse_count)
-        acc = stats.norm(dv, dv_sd).sf(0).mean()
-
-    # --- Update the trial_info structure
-
-    trial_info["wait_pre_stim"] = wait_pre_stim
+        expected_acc = stats.norm(dv, dv_sd).sf(0).mean()
 
     # --- Build the pulse_info structure
 
@@ -139,6 +135,19 @@ def generate_run(d, p, rng=None):
         contrast=10 ** log_contrast,
         pulse_llr=pulse_llr,
     ))
+
+    # --- Update the trial_info structure
+
+    trial_info["wait_pre_stim"] = wait_pre_stim
+
+    trial_llr = (pulse_info
+                 .groupby("trial")
+                 .sum()
+                 .loc[:, "pulse_llr"]
+                 .rename("trial_llr"))
+    trial_info = trial_info.join(trial_llr, on="trial")
+
+    # TODO reorder the columns so they are more intuitively organized?
 
     return trial_info, pulse_info
 
@@ -187,7 +196,7 @@ if __name__ == "__main__":
         trials_per_run=20,
 
         max_stim_repeat=3,
-        max_targ_repeat=4,
+        max_dist_repeat=4,
 
         sum_count_error=3,
 
@@ -206,5 +215,5 @@ if __name__ == "__main__":
     for i in range(n_designs):
 
         trials, pulses = generate_run(d, p)
-        trials.to_csv("designs/trial_info_{:03d}.csv".format(i), index=False)
-        pulses.to_csv("designs/pulse_info_{:03d}.csv".format(i), index=False)
+        trials.to_csv("designs/trials_{:03d}.csv".format(i), index=False)
+        pulses.to_csv("designs/pulses_{:03d}.csv".format(i), index=False)
