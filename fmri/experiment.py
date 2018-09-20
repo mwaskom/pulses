@@ -129,7 +129,8 @@ def generate_trials(exp):
 
     # Generate information for each trial
 
-    for trial, trial_info in all_trials.groupby("trial"):
+    all_trials.set_index("trial", drop=False)
+    for trial, trial_info in all_trials.iterrows():
 
         pulse_info = all_pulses.loc[all_pulses["trial"] == trial]
 
