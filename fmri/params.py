@@ -15,7 +15,7 @@ base = dict(
     monitor_eye=True,
 
     fix_window=2,
-    eye_blink_timeout=1,
+    eye_blink_timeout=.5,
     enforce_fix=True,
 
     eye_fixation=True,
@@ -69,7 +69,6 @@ base = dict(
 psych = base.copy()
 psych.update(
 
-    enforce_fix=True,
     display_name="kianilab-ps1",
     output_template="data/{subject}/{session}/psych_{time}",
 

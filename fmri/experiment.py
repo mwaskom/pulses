@@ -1,4 +1,5 @@
 from __future__ import division
+import os
 import json
 
 import numpy as np
@@ -56,7 +57,7 @@ def generate_trials(exp):
 
     # Build the full experimental design
 
-    ftemp = "designs/{}_{:03d}.csv"
+    ftemp = os.path.join(os.path.dirname(__file__), "designs/{}_{:03d}.csv")
 
     all_trials = pd.read_csv(ftemp.format("trials", design_numbers[0]))
     all_pulses = pd.read_csv(ftemp.format("pulses", design_numbers[0]))
@@ -77,7 +78,7 @@ def generate_trials(exp):
     all_trials["wait_pre_stim"] /= exp.p.acceleration
     all_pulses["gap_dur"] /= exp.p.acceleration
 
-    # Add in name information
+    # Add in name information that matches across tables
 
     all_trials["subject"] = exp.p.subject
     all_trials["session"] = exp.p.session
@@ -96,6 +97,8 @@ def generate_trials(exp):
 
     all_trials["wait_resp"] = exp.p.wait_resp
     all_trials["wait_feedback"] = exp.p.wait_feedback
+
+    all_pulses["pulse_dur"] = exp.p.pulse_dur
 
     # Add in blank fields that will be filled in later
 
@@ -123,9 +126,6 @@ def generate_trials(exp):
     all_pulses["pulse_offset"] = np.nan
 
     # TODO add wait_iti differently for training (and psych?)
-
-    # TODO double check that downstream uses the trial field and not the
-    # name of the trial_info series, which will be off by one (or fix?)
 
     # Generate information for each trial
 
@@ -157,14 +157,15 @@ def run_trial(exp, info):
     # ~~~ Trial onset
     t_info["onset_fix"] = exp.clock.getTime()
     exp.s.fix.color = exp.p.fix_ready_color
-    res = exp.wait_until(AcquireFixation(exp),
-                         timeout=exp.p.wait_fix,
-                         draw="fix")
+    if exp.p.enforce_fix:
+        res = exp.wait_until(AcquireFixation(exp),
+                             timeout=exp.p.wait_fix,
+                             draw="fix")
 
-    if res is None:
-        t_info["result"] = "nofix"
-        exp.sounds.nofix.play()
-        return t_info, p_info
+        if res is None:
+            t_info["result"] = "nofix"
+            exp.sounds.nofix.play()
+            return t_info, p_info
 
     for frame in exp.frame_range(seconds=exp.p.wait_start):
 
@@ -193,8 +194,6 @@ def run_trial(exp, info):
         if not frame:
             t_info["onset_targets"] = flip_time
             t_info["onset_cue"] = flip_time
-
-    t_info["fixbreak_early"] = False
 
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
@@ -253,6 +252,10 @@ def run_trial(exp, info):
                 p_info.loc[p, "pulse_offset"] = flip_time
 
     # ~~~ Response period
+
+    # TODO currently the ITI will only start after the response, but
+    # even relatively small response delays will accrue and eat up
+    # all the time we allot for the end of the trial. Need to fix
 
     # Collect the response
     now = exp.clock.getTime()
