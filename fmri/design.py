@@ -94,7 +94,7 @@ def generate_run(d, p, rng=None):
 
     # Assign pulse intensities
 
-    max_contrast = 1 / np.sqrt(p.stim_gratings)
+    max_contrast = np.log10(1 / np.sqrt(p.stim_gratings))
     log_contrast = np.zeros(n_pulses)
     pulse_dist = np.concatenate([
         np.full(n, i) for n, i in zip(pulse_count, gen_dist)
