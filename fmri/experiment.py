@@ -80,50 +80,51 @@ def generate_trials(exp):
 
     # Add in name information that matches across tables
 
-    all_trials.loc[:, "subject"] = exp.p.subject
-    all_trials.loc[:, "session"] = exp.p.session
-    all_trials.loc[:, "run"] = exp.p.run
+    all_trials = all_trials.assign(
+        subject=exp.p.subject,
+        session=exp.p.session,
+        run=exp.p.run
+    )
 
-    all_pulses.loc[:, "subject"] = exp.p.subject
-    all_pulses.loc[:, "session"] = exp.p.session
-    all_pulses.loc[:, "run"] = exp.p.run
+    all_pulses = all_pulses.assign(
+        subject=exp.p.subject,
+        session=exp.p.session,
+        run=exp.p.run
+    )
 
     # Add in information that's not part of the saved design
 
     gen_dist = all_trials["gen_dist"]
-    all_trials.loc[:, "gen_mean"] = np.take(exp.p.dist_means, gen_dist)
-    all_trials.loc[:, "gen_sd"] = np.take(exp.p.dist_sds, gen_dist)
-    all_trials.loc[:, "target"] = np.take(exp.p.dist_targets, gen_dist)
+    all_trials = all_trials.assign(
+        gen_mean=np.take(exp.p.dist_means, gen_dist),
+        gen_sd=np.take(exp.p.dist_sds, gen_dist),
+        target=np.take(exp.p.dist_targets, gen_dist),
+        wait_resp=exp.p.wait_resp,
+        wait_feedback=exp.p.wait_feedback,
+    )
 
-    all_trials.loc[:, "wait_resp"] = exp.p.wait_resp
-    all_trials.loc[:, "wait_feedback"] = exp.p.wait_feedback
-
-    all_pulses.loc[:, "pulse_dur"] = exp.p.pulse_dur
+    all_pulses = all_pulses.assign(pulse_dur=exp.p.pulse_dur)
 
     # Add in blank fields that will be filled in later
 
-    all_trials.loc[:, "trial_llr"] = np.nan
-    all_trials.loc[:, "log_contrast_mean"] = np.nan
-    all_trials.loc[:, "pulse_train_dur"] = np.nan
+    empty_cols = ["onset_fix", "offset_fix",
+                  "onset_cue", "offset_cue",
+                  "onset_targets", "onset_feedback",
+                  "result", "response", "correct", "rt"]
 
-    timing_cols = ["onset_fix", "offset_fix",
-                   "onset_cue", "offset_cue",
-                   "onset_targets", "onset_feedback"]
+    all_trials = all_trials.assign(
+        fixbreaks=0,
+        responded=False,
+        **{col: np.nan for col in empty_cols}
+    )
 
-    for col in timing_cols:
-        all_trials.loc[:, col] = np.nan
-
-    all_trials.loc[:, "fixbreaks"] = 0
-    all_trials.loc[:, "responded"] = False
-    result_cols = ["result", "response", "correct", "rt"]
-    for col in result_cols:
-        all_trials.loc[:, col] = np.nan
-
-    all_pulses.loc[:, "occurred"] = False
-    all_pulses.loc[: "blink"] = False
-    all_pulses.loc[:, "dropped_frames"] = 0
-    all_pulses.loc[:, "pulse_onset"] = np.nan
-    all_pulses.loc[:, "pulse_offset"] = np.nan
+    all_pulses = all_pulses.assign(
+        occurred=False,
+        blink=False,
+        dropped_frames=0,
+        pulse_onset=np.nan,
+        pulse_offset=np.nan,
+    )
 
     # TODO add wait_iti differently for training (and psych?)
 
@@ -133,16 +134,18 @@ def generate_trials(exp):
     trial_pulses = all_pulses.groupby("trial")
 
     pulse_train_dur = trial_pulses.gap_dur.sum() + trial_pulses.pulse_dur.sum()
-    trial_duration = all_trials.loc[:, "wait_pre_stim"] + pulse_train_dur
-
-    all_trials.loc[:, "trial_llr"] = trial_pulses.pulse_llr.sum()
-    all_trials.loc[:, "log_contrast_mean"] = trial_pulses.log_contrast.mean()
-    all_trials.loc[:, "pulse_train_dur"] = pulse_train_dur
-    all_trials.loc[:, "trial_duration"] = trial_duration
+    trial_duration = all_trials["wait_pre_stim"] + pulse_train_dur
 
     start_time = (all_trials["wait_iti"].cumsum()
-                  + all_trials["trial_duration"].shift(1).fillna(0).cumsum())
-    all_trials.loc[:, "start_time"] = start_time
+                  + trial_duration.shift(1).fillna(0).cumsum())
+
+    all_trials = all_trials.assign(
+        trial_llr=trial_pulses.pulse_llr.sum(),
+        log_contrast_mean=trial_pulses.log_contrast.mean(),
+        pulse_train_dur=pulse_train_dur,
+        trial_duration=trial_duration,
+        start_time=start_time,
+    )
 
     # Generate information for each trial
     for trial, trial_info in all_trials.iterrows():
