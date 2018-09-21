@@ -16,7 +16,6 @@ base = dict(
 
     fix_window=2,
     eye_blink_timeout=.5,
-    enforce_fix=True,
 
     eye_fixation=True,
     eye_response=True,
@@ -69,6 +68,11 @@ base = dict(
 psych = base.copy()
 psych.update(
 
+    # TODO Add shorter waits for response etc. here and in scan
+    # but not in train, which we might want to rethink
+
+    enforce_fix=True,
+    keep_on_time=False,
     display_name="kianilab-ps1",
     output_template="data/{subject}/{session}/psych_{time}",
 
@@ -85,6 +89,7 @@ scan = base.copy()
 scan.update(
 
     enforce_fix=False,
+    keep_on_time=True,
     display_name="nyu-cbi-propixx",
     eye_host_address="192.168.1.5",
     trigger=["5", "backtick", "grave"],

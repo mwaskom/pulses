@@ -80,66 +80,73 @@ def generate_trials(exp):
 
     # Add in name information that matches across tables
 
-    all_trials["subject"] = exp.p.subject
-    all_trials["session"] = exp.p.session
-    all_trials["run"] = exp.p.run
+    all_trials.loc[:, "subject"] = exp.p.subject
+    all_trials.loc[:, "session"] = exp.p.session
+    all_trials.loc[:, "run"] = exp.p.run
 
-    all_pulses["subject"] = exp.p.subject
-    all_pulses["session"] = exp.p.session
-    all_pulses["run"] = exp.p.run
+    all_pulses.loc[:, "subject"] = exp.p.subject
+    all_pulses.loc[:, "session"] = exp.p.session
+    all_pulses.loc[:, "run"] = exp.p.run
 
     # Add in information that's not part of the saved design
 
     gen_dist = all_trials["gen_dist"]
-    all_trials["gen_mean"] = np.take(exp.p.dist_means, gen_dist)
-    all_trials["gen_sd"] = np.take(exp.p.dist_sds, gen_dist)
-    all_trials["target"] = np.take(exp.p.dist_targets, gen_dist)
+    all_trials.loc[:, "gen_mean"] = np.take(exp.p.dist_means, gen_dist)
+    all_trials.loc[:, "gen_sd"] = np.take(exp.p.dist_sds, gen_dist)
+    all_trials.loc[:, "target"] = np.take(exp.p.dist_targets, gen_dist)
 
-    all_trials["wait_resp"] = exp.p.wait_resp
-    all_trials["wait_feedback"] = exp.p.wait_feedback
+    all_trials.loc[:, "wait_resp"] = exp.p.wait_resp
+    all_trials.loc[:, "wait_feedback"] = exp.p.wait_feedback
 
-    all_pulses["pulse_dur"] = exp.p.pulse_dur
+    all_pulses.loc[:, "pulse_dur"] = exp.p.pulse_dur
 
     # Add in blank fields that will be filled in later
 
-    all_trials["trial_llr"] = np.nan
-    all_trials["log_contrast_mean"] = np.nan
-    all_trials["pulse_train_dur"] = np.nan
+    all_trials.loc[:, "trial_llr"] = np.nan
+    all_trials.loc[:, "log_contrast_mean"] = np.nan
+    all_trials.loc[:, "pulse_train_dur"] = np.nan
 
     timing_cols = ["onset_fix", "offset_fix",
                    "onset_cue", "offset_cue",
                    "onset_targets", "onset_feedback"]
 
     for col in timing_cols:
-        all_trials[col] = np.nan
+        all_trials.loc[:, col] = np.nan
 
-    all_trials["fixbreaks"] = 0
-    all_trials["responded"] = False
+    all_trials.loc[:, "fixbreaks"] = 0
+    all_trials.loc[:, "responded"] = False
     result_cols = ["result", "response", "correct", "rt"]
     for col in result_cols:
-        all_trials[col] = np.nan
+        all_trials.loc[:, col] = np.nan
 
-    all_pulses["occurred"] = False
-    all_pulses["blink"] = False
-    all_pulses["dropped_frames"] = 0
-    all_pulses["pulse_onset"] = np.nan
-    all_pulses["pulse_offset"] = np.nan
+    all_pulses.loc[:, "occurred"] = False
+    all_pulses.loc[: "blink"] = False
+    all_pulses.loc[:, "dropped_frames"] = 0
+    all_pulses.loc[:, "pulse_onset"] = np.nan
+    all_pulses.loc[:, "pulse_offset"] = np.nan
 
     # TODO add wait_iti differently for training (and psych?)
 
-    # Generate information for each trial
+    # Add trial-level information computed from pulse-level table
 
     all_trials.set_index("trial", drop=False)
+    trial_pulses = all_pulses.groupby("trial")
+
+    pulse_train_dur = trial_pulses.gap_dur.sum() + trial_pulses.pulse_dur.sum()
+    trial_duration = all_trials.loc[:, "wait_pre_stim"] + pulse_train_dur
+
+    all_trials.loc[:, "trial_llr"] = trial_pulses.pulse_llr.sum()
+    all_trials.loc[:, "log_contrast_mean"] = trial_pulses.log_contrast.mean()
+    all_trials.loc[:, "pulse_train_dur"] = pulse_train_dur
+    all_trials.loc[:, "trial_duration"] = trial_duration
+
+    start_time = (all_trials["wait_iti"].cumsum()
+                  + all_trials["trial_duration"].shift(1).fillna(0).cumsum())
+    all_trials.loc[:, "start_time"] = start_time
+
+    # Generate information for each trial
     for trial, trial_info in all_trials.iterrows():
-
         pulse_info = all_pulses.loc[all_pulses["trial"] == trial]
-
-        # Add in more information that's more convenient to compute here
-        trial_info["trial_llr"] = pulse_info["pulse_llr"].sum()
-        trial_info["log_contrast_mean"] = pulse_info["log_contrast"].mean()
-        trial_info["pulse_train_dur"] = (pulse_info["gap_dur"].sum()
-                                         + pulse_info["pulse_dur"].sum())
-
         yield trial_info, pulse_info
 
 
@@ -153,7 +160,10 @@ def run_trial(exp, info):
 
     # ~~~ Inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color
-    exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
+    if exp.p.keep_on_time:
+        exp.wait_until(t_info["start_time"], draw="fix")
+    else:
+        exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
     t_info["onset_fix"] = exp.clock.getTime()
