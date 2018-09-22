@@ -52,7 +52,6 @@ def generate_trials(exp):
     """Yield trial and pulse train info."""
 
     # TODO figure out how we want to control which designs get read in
-    # TODO also track which design each trial came from
 
     total_designs = 100
     design_numbers = np.random.randint(0, total_designs, exp.p.blocks)
@@ -71,6 +70,8 @@ def generate_trials(exp):
 
         trial_part["trial"] += len(all_trials)
         pulse_part["trial"] += len(all_trials)
+
+        trial_part["design"] = i
 
         all_trials = all_trials.append(trial_part, ignore_index=True)
         all_pulses = all_pulses.append(pulse_part, ignore_index=True)
