@@ -12,6 +12,7 @@ from visigoth import AcquireFixation, AcquireTarget
 def define_cmdline_params(self, parser):
 
     parser.add_argument("--acceleration", default=1, type=float)
+    parser.add_argument("--blocks", default=1, type=int)
 
 
 def create_stimuli(exp):
@@ -54,7 +55,7 @@ def generate_trials(exp):
     # TODO also track which design each trial came from
 
     total_designs = 100
-    design_numbers = np.random.randint(0, total_designs, exp.p.acceleration)
+    design_numbers = np.random.randint(0, total_designs, exp.p.blocks)
 
     # Build the full experimental design
 
