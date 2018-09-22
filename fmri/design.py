@@ -188,7 +188,7 @@ if __name__ == "__main__":
 
     # Experimental parameters
     import params
-    p = Bunch(params.base)
+    p = Bunch(params.scan)
 
     # Design constraints
     d = Bunch(

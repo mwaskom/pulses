@@ -126,7 +126,12 @@ def generate_trials(exp):
         pulse_offset=np.nan,
     )
 
-    # TODO add wait_iti differently for training (and psych?)
+    # Optionally override the ITI duration in the design
+
+    if exp.p.iti_source == "params":
+        all_trials = all_trials.assign(wait_iti=exp.p.wait_iti)
+    elif exp.p.iti_source != "design":
+        raise ValueError("`iti_source` must be 'params' or 'design'")
 
     # Add trial-level information computed from pulse-level table
 
@@ -154,6 +159,9 @@ def generate_trials(exp):
 
 
 def run_trial(exp, info):
+
+    # TODO we should check abort in here since otherwise there's no
+    # way to cleanly break in the middle of the trial
 
     t_info, p_info = info
 
@@ -211,6 +219,9 @@ def run_trial(exp, info):
 
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
+
+        # Allow aborts in the middle of a trial
+        exp.check_abort()
 
         # Update the pattern
         exp.s.pattern.contrast = info.contrast

@@ -14,6 +14,9 @@ base = dict(
 
     monitor_eye=True,
 
+    enforce_fix=True,
+    keep_on_time=False,
+
     fix_window=2,
     eye_blink_timeout=.5,
 
@@ -36,11 +39,12 @@ base = dict(
     stim_size=6,
     stim_gratings=8,
 
-    wait_iti=("truncexpon", (10 - 6) / 2, 6, 2),
-    wait_iti_early_fixbreak=1,
+    iti_source="params",
+
+    wait_iti=3,
     wait_fix=5,
     wait_start=.5,
-    wait_resp=2,
+    wait_resp=3,
     wait_feedback=.5,
 
     wait_pre_stim=("truncexpon", (8 - 2) / 2, 2, 2),
@@ -65,31 +69,35 @@ base = dict(
 )
 
 
-psych = base.copy()
-psych.update(
-
-    # TODO Add shorter waits for response etc. here and in scan
-    # but not in train, which we might want to rethink
-
-    enforce_fix=True,
-    keep_on_time=False,
-    display_name="kianilab-ps1",
-    output_template="data/{subject}/{session}/psych_{time}",
-
-)
-
-train = psych.copy()
+train = base.copy()
 train.update(
 
+    display_name="kianilab-ps1",
     output_template="data/{subject}/{session}/train_{time}",
 
 )
 
-scan = base.copy()
+
+psych = train.copy()
+psych.update(
+
+    output_template="data/{subject}/{session}/psych_{time}",
+
+)
+
+
+scan = psych.copy()
 scan.update(
 
     enforce_fix=False,
     keep_on_time=True,
+
+    iti_source="design",
+    wait_iti=("truncexpon", (10 - 6) / 2, 6, 2),
+
+    wait_fix=None,
+    wait_start=0,
+
     display_name="nyu-cbi-propixx",
     eye_host_address="192.168.1.5",
     trigger=["5", "backtick", "grave"],
