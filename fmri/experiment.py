@@ -51,6 +51,7 @@ def generate_trials(exp):
     """Yield trial and pulse train info."""
 
     # TODO figure out how we want to control which designs get read in
+    # TODO also track which design each trial came from
 
     total_designs = 100
     design_numbers = np.random.randint(0, total_designs, exp.p.acceleration)
@@ -121,7 +122,7 @@ def generate_trials(exp):
     all_pulses = all_pulses.assign(
         occurred=False,
         blink=False,
-        dropped_frames=0,
+        dropped_frames=np.nan,
         pulse_onset=np.nan,
         pulse_offset=np.nan,
     )
@@ -154,14 +155,11 @@ def generate_trials(exp):
 
     # Generate information for each trial
     for trial, trial_info in all_trials.iterrows():
-        pulse_info = all_pulses.loc[all_pulses["trial"] == trial]
+        pulse_info = all_pulses.loc[all_pulses["trial"] == trial].copy()
         yield trial_info, pulse_info
 
 
 def run_trial(exp, info):
-
-    # TODO we should check abort in here since otherwise there's no
-    # way to cleanly break in the middle of the trial
 
     t_info, p_info = info
 
@@ -253,12 +251,10 @@ def run_trial(exp, info):
             p_info.loc[p, "blink"] |= blink
 
         # This counter is reset at beginning of frame_range
-        # so it should could to frames dropped during the stim
+        # so it should correspond to frames dropped during the stim
         p_info.loc[p, "dropped_frames"] = exp.win.nDroppedFrames
 
-        gap_frames = exp.frame_range(seconds=info.gap_dur)
-
-        for frame in gap_frames:
+        for frame in exp.frame_range(seconds=info.gap_dur):
 
             if not exp.check_fixation(allow_blinks=True):
                 if exp.p.enforce_fix:
