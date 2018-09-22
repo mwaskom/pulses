@@ -135,7 +135,7 @@ def generate_trials(exp):
 
     # Add trial-level information computed from pulse-level table
 
-    all_trials.set_index("trial", drop=False)
+    all_trials = all_trials.set_index("trial", drop=False)
     trial_pulses = all_pulses.groupby("trial")
 
     pulse_train_dur = trial_pulses.gap_dur.sum() + trial_pulses.pulse_dur.sum()
