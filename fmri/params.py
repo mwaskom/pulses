@@ -64,7 +64,7 @@ base = dict(
     pulse_single_prob=0,
     pulse_dur=.2,
 
-    perform_acc_target=.8,
+    perform_acc_target=.82,
 
 )
 
