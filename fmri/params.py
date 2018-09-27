@@ -65,6 +65,25 @@ base = dict(
 
     perform_acc_target=.82,
 
+    design_constraints=dict(
+
+        trials_per_run=20,
+
+        max_stim_repeat=2,
+        max_dist_repeat=4,
+
+        sum_count_error=3,
+
+        sigma=.5,
+
+        mean_range=(.36, .4),
+        sd_range=(.56, .61),
+        acc_range=(.77, .83),
+        iti_range=(140, 160),
+        run_range=(468, 472),
+
+    )
+
 )
 
 
