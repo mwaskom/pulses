@@ -21,7 +21,7 @@ def create_stimuli(exp):
     fix = Point(exp.win,
                 exp.p.fix_pos,
                 exp.p.fix_radius,
-                exp.p.fix_trial_color)
+                exp.p.fix_iti_color)
 
     # Spatial cue
     cue = PointCue(exp.win,
@@ -275,10 +275,6 @@ def run_trial(exp, info):
                 p_info.loc[p, "pulse_offset"] = flip_time
 
     # ~~~ Response period
-
-    # TODO currently the ITI will only start after the response, but
-    # even relatively small response delays will accrue and eat up
-    # all the time we allot for the end of the trial. Need to fix
 
     # Collect the response
     now = exp.clock.getTime()

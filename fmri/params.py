@@ -85,6 +85,9 @@ psych.update(
 )
 
 
+# TODO this doesn't let us test scan parameters in the psych rig
+
+
 scan = psych.copy()
 scan.update(
 
