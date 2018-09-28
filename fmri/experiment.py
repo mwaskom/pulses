@@ -52,7 +52,7 @@ def create_stimuli(exp):
 def generate_trials(exp):
     """Yield trial and pulse train info."""
 
-    # TODO let us set random number generator somehow. command line?
+    # TODO let us set random number generator somehow. Command line?
 
     # Build the full experimental design
 
@@ -149,6 +149,7 @@ def generate_trials(exp):
 
 
 def generate_block(constraints, p, rng=None):
+    """Generated a balanced set of trials, might be only part of a run."""
 
     if rng is None:
         rng = np.random.RandomState()
@@ -305,6 +306,9 @@ def generate_block(constraints, p, rng=None):
     return trial_info, pulse_info
 
 
+# --- Support functions for block generation
+
+
 def not_in_range(val, limits):
 
     return val < limits[0] or val > limits[1]
@@ -332,6 +336,9 @@ def compute_llr(c, p):
     l0, l1 = np.log10(d0.pdf(c)), np.log10(d1.pdf(c))
     llr = l1 - l0
     return llr
+
+
+# --- Exeperiment execution
 
 
 def run_trial(exp, info):
