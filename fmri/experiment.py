@@ -458,7 +458,7 @@ def run_trial(exp, info):
                          draw="targets")
 
     if res is None:
-        t_info["result"] = "fixbreak"
+        t_info["result"] = "nochoice"
     else:
         t_info.update(pd.Series(res))
 
