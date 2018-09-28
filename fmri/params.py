@@ -104,6 +104,8 @@ psych.update(
     enforce_fix=False,
     wait_fix=None,
     wait_start=0,
+    eye_target_wait=3,
+    eye_target_hold=0,
 
 )
 
