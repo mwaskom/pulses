@@ -96,16 +96,12 @@ train.update(
 
 
 psych = train.copy()
+psych.update(
 
-
-scantest = psych.copy()
-scantest.update(
-
-    enforce_fix=False,
     keep_on_time=True,
-
     wait_iti=("truncexpon", (10 - 6) / 2, 6, 2),
 
+    enforce_fix=False,
     wait_fix=None,
     wait_start=0,
 
