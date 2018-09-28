@@ -1,23 +1,26 @@
 from __future__ import division
+import os
 import json
+from glob import glob
 
 import numpy as np
 import pandas as pd
 from scipy import stats
 
+from psychopy.visual import TextStim
 from visigoth.stimuli import Point, Points, PointCue, Pattern
 from visigoth import AcquireFixation, AcquireTarget, flexible_values
 from visigoth.ext.bunch import Bunch
 
 
 def define_cmdline_params(self, parser):
-
+    """Add extra parameters to be defined at runtime."""
     parser.add_argument("--acceleration", default=1, type=float)
     parser.add_argument("--blocks", default=1, type=int)
 
 
 def create_stimuli(exp):
-
+    """Initialize stimulus objects."""
     # Fixation point
     fix = Point(exp.win,
                 exp.p.fix_pos,
@@ -51,7 +54,6 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
     """Yield trial and pulse train info."""
-
     # TODO let us set random number generator somehow. Command line?
 
     # Build the full experimental design
@@ -150,7 +152,6 @@ def generate_trials(exp):
 
 def generate_block(constraints, p, rng=None):
     """Generated a balanced set of trials, might be only part of a run."""
-
     if rng is None:
         rng = np.random.RandomState()
 
@@ -310,26 +311,26 @@ def generate_block(constraints, p, rng=None):
 
 
 def not_in_range(val, limits):
-
+    """False if val is outside of limits."""
     return val < limits[0] or val > limits[1]
 
 
 def max_repeat(s):
-
+    """Maximumum number of times the same value repeats in sequence."""
     s = pd.Series(s)
     switch = s != s.shift(1)
     return switch.groupby(switch.cumsum()).cumcount().max() + 1
 
 
 def trunc_geom_pmf(support, p):
-
+    """Probability mass given truncated geometric distribution."""
     a, b = min(support) - 1, max(support)
     dist = stats.geom(p=p, loc=a)
     return dist.pmf(support) / (dist.cdf(b) - dist.cdf(a))
 
 
 def compute_llr(c, p):
-
+    """Signed LLR of pulse based on contrast and generating distributions."""
     m0, m1 = p.dist_means
     s0, s1 = p.dist_sds
     d0, d1 = stats.norm(m0, s0), stats.norm(m1, s1)
@@ -342,7 +343,7 @@ def compute_llr(c, p):
 
 
 def run_trial(exp, info):
-
+    """Function that executes what happens in each trial."""
     t_info, p_info = info
 
     # ~~~ Set trial-constant attributes of the stimuli
@@ -484,25 +485,62 @@ def run_trial(exp, info):
 
 
 def serialize_trial_info(exp, info):
-
+    """Package trial information for the remote."""
     t_info, _ = info
     return t_info.to_json()
 
 
 def compute_performance(self):
-
+    """Compute run-wise performance information."""
     # TODO Track fixation breaks here? Also in the remote?
 
     if self.trial_data:
         data = pd.DataFrame([t for t, _ in self.trial_data])
         mean_acc = data["correct"].mean()
-        return mean_acc, None
+        responses = data["responded"].sum()
+        return mean_acc, responses
     else:
         return None, None
 
 
-def save_data(exp):
+def show_performance(exp, run_correct, run_trials):
+    """Show the subject a report of their performance."""
+    lines = ["End of the run!"]
 
+    prior_trials = prior_correct = 0
+
+    output_dir = os.path.dirname(exp.output_stem)
+    prior_fnames = glob(os.path.join(output_dir, "*_trials.csv"))
+    if prior_fnames:
+        prior_data = pd.concat([pd.read_csv(f) for f in prior_fnames])
+        prior_trials = len(prior_data)
+        if prior_trials:
+            prior_correct = prior_data["correct"].mean()
+
+    if run_correct is not None:
+
+        lines.extend([
+            "", "You got {:.0%} correct!".format(run_correct),
+        ])
+
+        total_correct = np.average([prior_correct, run_correct],
+                                   weights=[prior_trials, run_trials])
+
+        lines.extend([
+            "", "You've gotten {:.0%} correct today!".format(total_correct),
+        ])
+
+    n = len(lines)
+    height = .5
+    heights = (np.arange(n)[::-1] - (n / 2 - .5)) * height
+    for line, y in zip(lines, heights):
+        TextStim(exp.win, line, pos=(0, y), height=height).draw()
+
+    exp.win.flip()
+
+
+def save_data(exp):
+    """Output data files to disk."""
     if exp.trial_data and exp.p.save_data:
 
         trial_data = [t_data for t_data, _ in exp.trial_data]
