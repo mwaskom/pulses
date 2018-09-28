@@ -38,8 +38,6 @@ base = dict(
     stim_size=6,
     stim_gratings=8,
 
-    iti_source="params",
-
     wait_iti=3,
     wait_fix=5,
     wait_start=.5,
@@ -62,6 +60,8 @@ base = dict(
     pulse_count_max=5,
     pulse_single_prob=0,
     pulse_dur=.2,
+
+    output_template="data/{subject}/{session}/{paramset}_{time}",
 
     perform_acc_target=.82,
 
@@ -91,37 +91,32 @@ train = base.copy()
 train.update(
 
     display_name="kianilab-ps1",
-    output_template="data/{subject}/{session}/train_{time}",
 
 )
 
 
 psych = train.copy()
-psych.update(
-
-    output_template="data/{subject}/{session}/psych_{time}",
-
-)
 
 
-# TODO this doesn't let us test scan parameters in the psych rig
-
-
-scan = psych.copy()
-scan.update(
+scantest = psych.copy()
+scantest.update(
 
     enforce_fix=False,
     keep_on_time=True,
 
-    iti_source="design",
     wait_iti=("truncexpon", (10 - 6) / 2, 6, 2),
 
     wait_fix=None,
     wait_start=0,
 
+)
+
+
+scan = psych.copy()
+scan.update(
+
     display_name="nyu-cbi-propixx",
     eye_host_address="192.168.1.5",
     trigger=["5", "backtick", "grave"],
-    output_template="data/{subject}/{session}/scan_{time}",
 
 )

@@ -123,13 +123,6 @@ def generate_trials(exp):
         pulse_offset=np.nan,
     )
 
-    # Optionally override the ITI duration in the design
-
-    if exp.p.iti_source == "params":
-        all_trials = all_trials.assign(wait_iti=exp.p.wait_iti)
-    elif exp.p.iti_source != "design":
-        raise ValueError("`iti_source` must be 'params' or 'design'")
-
     # Add trial-level information computed from pulse-level table
 
     all_trials = all_trials.set_index("trial", drop=False)
@@ -200,6 +193,11 @@ def generate_block(constraints, p, rng=None):
             wait_iti[0] = 0
         total_iti = wait_iti.sum()
 
+        # Use the first random sample if we're not being precise
+        # about the overall time of the run (i.e. in psychophys rig)
+        if not p.keep_on_time:
+            break
+
     # --- Build the trial_info structure
 
     trial = np.arange(1, n_trials + 1)
@@ -217,7 +215,7 @@ def generate_block(constraints, p, rng=None):
     # Map from trial to pulse
 
     trial = np.concatenate([
-        np.full(c, i) for i, c in enumerate(pulse_count, 1)
+        np.full(c, i, dtype=np.int) for i, c in enumerate(pulse_count, 1)
     ])
     pulse = np.concatenate([
         np.arange(c) + 1 for c in pulse_count
@@ -242,12 +240,17 @@ def generate_block(constraints, p, rng=None):
 
         ])
 
+        # Use the first random sample if we're not being precise
+        # about the overall time of the run (i.e. in psychophys rig)
+        if not p.keep_on_time:
+            break
+
     # Assign pulse intensities
 
     max_contrast = np.log10(1 / np.sqrt(p.stim_gratings))
     log_contrast = np.zeros(n_pulses)
     pulse_dist = np.concatenate([
-        np.full(n, i) for n, i in zip(pulse_count, gen_dist)
+        np.full(n, i, dtype=np.int) for n, i in zip(pulse_count, gen_dist)
     ])
 
     llr_mean = np.inf
