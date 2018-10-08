@@ -562,22 +562,17 @@ def save_data(exp):
 
 def demo_mode(exp):
 
-    exp.draw(["fix"])
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", draw="fix", check_abort=True)
 
     exp.s.fix.color = exp.p.fix_trial_color
-    exp.draw(["fix"])
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", draw=["fix", "targets"], check_abort=True)
 
+    all_stims = ["fix", "targets", "cue", "pattern"]
     exp.s.pattern.contrast = 10 ** np.mean(exp.p.dist_means)
     for pos in [0, 1]:
         exp.s.cue.pos = exp.p.stim_pos[pos]
         exp.s.pattern.pos = exp.p.stim_pos[pos]
-        exp.draw(["fix", "targets", "cue", "pattern"])
-        exp.wait_until("space")
-        exp.check_abort()
+        exp.wait_until("space", draw=all_stims, check_abort=True)
 
     for frame in exp.frame_range(seconds=1):
         exp.draw(["fix", "targets", "cue"])
@@ -585,32 +580,21 @@ def demo_mode(exp):
     for frame in exp.frame_range(seconds=exp.p.pulse_dur):
         exp.draw(["pattern", "fix"])
 
-    exp.draw(["fix"])
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", draw="fix", check_abort=True)
 
     exp.s.pattern.contrast = 10 ** (exp.p.dist_means[1] + exp.p.dist_sds[1])
-    exp.draw(["pattern", "fix"])
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", draw=["pattern", "fix"], check_abort=True)
 
     exp.s.pattern.contrast = 10 ** (exp.p.dist_means[0] - exp.p.dist_sds[0])
-    exp.draw(["pattern", "fix"])
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", ["pattern", "fix"], check_abort=True)
 
-    exp.draw(["fix"])
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", draw="fix", check_abort=True)
 
     exp.sounds["correct"].play()
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", draw="fix", check_abort=True)
 
     exp.sounds["wrong"].play()
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", draw="fix", check_abort=True)
 
     exp.sounds["fixbreak"].play()
-    exp.wait_until("space")
-    exp.check_abort()
+    exp.wait_until("space", draw="fix", check_abort=True)
