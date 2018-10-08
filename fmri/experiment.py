@@ -580,7 +580,7 @@ def demo_mode(exp):
     for frame in exp.frame_range(seconds=exp.p.pulse_dur):
         exp.draw(all_stims)
 
-    exp.wait_until("space", draw=["fix" "targets", "cue"], check_abort=True)
+    exp.wait_until("space", draw=["fix", "targets", "cue"], check_abort=True)
 
     exp.s.pattern.contrast = 10 ** (exp.p.dist_means[1] + exp.p.dist_sds[1])
     exp.wait_until("space", draw=all_stims, check_abort=True)
