@@ -407,6 +407,7 @@ def run_trial(exp, info):
         # Update the pattern
         exp.s.pattern.contrast = info.contrast
         exp.s.pattern.randomize_phases()
+        p_info.loc[p, "phases"] = exp.s.pattern.array.phases
 
         # Show each frame of the stimulus
         for frame in exp.frame_range(seconds=info.pulse_dur):
@@ -557,3 +558,59 @@ def save_data(exp):
         out_json_fname = exp.output_stem + "_params.json"
         with open(out_json_fname, "w") as fid:
             json.dump(exp.p, fid, sort_keys=True, indent=4)
+
+
+def demo_mode(exp):
+
+    exp.draw(["fix"])
+    exp.wait_until("space")
+    exp.check_abort()
+
+    exp.s.fix.color = exp.p.fix_trial_color
+    exp.draw(["fix"])
+    exp.wait_until("space")
+    exp.check_abort()
+
+    exp.s.pattern.contrast = 10 ** np.mean(exp.p.dist_means)
+    for pos in [0, 1]:
+        exp.s.cue.pos = exp.p.stim_pos[pos]
+        exp.s.pattern.pos = exp.p.stim_pos[pos]
+        exp.draw(["fix", "targets", "cue", "pattern"])
+        exp.wait_until("space")
+        exp.check_abort()
+
+    for frame in exp.frame_range(seconds=1):
+        exp.draw(["fix", "targets", "cue"])
+
+    for frame in exp.frame_range(seconds=exp.p.pulse_dur):
+        exp.draw(["pattern", "fix"])
+
+    exp.draw(["fix"])
+    exp.wait_until("space")
+    exp.check_abort()
+
+    exp.s.pattern.contrast = 10 ** (exp.p.dist_means[1] + exp.p.dist_sds[1])
+    exp.draw(["pattern", "fix"])
+    exp.wait_until("space")
+    exp.check_abort()
+
+    exp.s.pattern.contrast = 10 ** (exp.p.dist_means[0] - exp.p.dist_sds[0])
+    exp.draw(["pattern", "fix"])
+    exp.wait_until("space")
+    exp.check_abort()
+
+    exp.draw(["fix"])
+    exp.wait_until("space")
+    exp.check_abort()
+
+    exp.sounds["correct"].play()
+    exp.wait_until("space")
+    exp.check_abort()
+
+    exp.sounds["wrong"].play()
+    exp.wait_until("space")
+    exp.check_abort()
+
+    exp.sounds["fixbreak"].play()
+    exp.wait_until("space")
+    exp.check_abort()
