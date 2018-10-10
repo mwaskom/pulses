@@ -407,7 +407,10 @@ def run_trial(exp, info):
         # Update the pattern
         exp.s.pattern.contrast = info.contrast
         exp.s.pattern.randomize_phases()
-        p_info.loc[p, "phases"] = exp.s.pattern.array.phases
+
+        # TODO commenting out until we get a good solution for saving these
+        # Currently it errors out (maybe because the info df isn't seeded?)
+        # p_info.loc[p, "phases"] = exp.s.pattern.array.phases
 
         # Show each frame of the stimulus
         for frame in exp.frame_range(seconds=info.pulse_dur):
