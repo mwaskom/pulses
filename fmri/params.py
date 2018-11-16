@@ -48,9 +48,6 @@ base = dict(
     pulse_gap=("truncexpon", (8 - 2) / 2, 2, 2),
     pulse_train_max=28,
 
-    finish_min=6,
-    finish_max=16,
-
     skip_first_iti=True,
 
     pre_trigger_stim="fix",
@@ -100,6 +97,8 @@ psych.update(
 
     keep_on_time=True,
     wait_iti=("truncexpon", (10 - 6) / 2, 6, 2),
+
+    run_duration=480,
 
     enforce_fix=False,
     wait_fix=None,
