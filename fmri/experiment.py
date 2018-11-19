@@ -527,12 +527,13 @@ def show_performance(exp, run_correct, run_trials):
             "", "You got {:.0%} correct!".format(run_correct),
         ])
 
-        total_correct = np.average([prior_correct, run_correct],
-                                   weights=[prior_trials, run_trials])
+        if (prior_trials + run_trials):
+            total_correct = np.average([prior_correct, run_correct],
+                                       weights=[prior_trials, run_trials])
 
-        lines.extend([
-            "", "You've gotten {:.0%} correct today!".format(total_correct),
-        ])
+            lines.extend([
+                "", "You're at {:.0%} correct today!".format(total_correct),
+            ])
 
     n = len(lines)
     height = .5
