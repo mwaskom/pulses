@@ -11,7 +11,9 @@ base = dict(
     pre_trigger_stim="fix",
     final_stim="fix",
 
-    run_duration=6000,
+    run_duration=600,
+
+    output_template="data/{subject}/{session}/rest_{time}",
 
 )
 
