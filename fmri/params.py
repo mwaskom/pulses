@@ -114,6 +114,8 @@ scan.update(
 
     display_name="nyu-cbi-propixx",
     eye_host_address="192.168.1.5",
-    trigger=["5", "backtick", "grave"],
+    trigger=["5"],
+
+    aperture_radius=12,
 
 )
