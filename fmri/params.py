@@ -116,7 +116,7 @@ scan.update(
     eye_host_address="192.168.1.5",
     trigger=["5"],
 
-    aperture_radius=15,
-    aperture_center=(0, -3),
+    aperture_radius=18,
+    aperture_center=(0, -6.8),
 
 )
