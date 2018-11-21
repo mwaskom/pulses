@@ -120,3 +120,19 @@ scan.update(
     aperture_center=(0, -7.2),
 
 )
+
+
+localizer = scan.copy()
+localizer.update(
+
+    stim_gratings=5,
+
+    run_duration=240,
+
+    n_blocks=8,
+    block_dur=15,
+    update_hz=3,
+
+    fix_color_hazard=.1,
+
+)
