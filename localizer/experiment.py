@@ -32,9 +32,10 @@ def generate_trials(exp):
     """Yield block information."""
     for block in range(exp.p.n_blocks):
         for stim_pos in range(2):
+            block_time = (block * 2 + stim_pos) * exp.p.block_dur
             info = pd.Series(dict(
                 block=block,
-                block_time=(block * 2 + stim_pos) * exp.p.block_dur,
+                block_time=block_time,
                 block_onset=None,
                 stim_pos=stim_pos,
             ), dtype=np.object)
