@@ -25,7 +25,7 @@ base = dict(
 
     eye_target_wait=.5,
     eye_target_hold=.1,
-    target_window=6,
+    target_window=5,
 
     dist_means=[-1.1, -0.9],
     dist_sds=[.15, .15],

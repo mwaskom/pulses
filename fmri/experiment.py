@@ -465,7 +465,9 @@ def run_trial(exp, info):
     now = exp.clock.getTime()
     t_info["offset_fix"] = now
     t_info["offset_cue"] = now
-    res = exp.wait_until(AcquireTarget(exp, t_info.target),
+    response_handler = AcquireTarget(exp, t_info.target,
+                                     allow_retry=not exp.p.enforce_fix),
+    res = exp.wait_until(response_handler,
                          timeout=exp.p.wait_resp,
                          draw="targets")
 
