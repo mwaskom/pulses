@@ -1,6 +1,6 @@
 base = dict(
 
-    display_luminance=0,
+    display_luminance=15,
 
     monitor_eye=True,
 
