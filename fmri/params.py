@@ -120,8 +120,8 @@ scan.update(
 )
 
 
-localizer = scan.copy()
-localizer.update(
+loc = scan.copy()
+loc.update(
 
     stim_gratings=5,
 
