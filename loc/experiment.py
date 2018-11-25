@@ -1,8 +1,8 @@
 from __future__ import division
 
+from itertools import cycle
 import numpy as np
 import pandas as pd
-from colorspacious import cspace_convert
 
 from visigoth.stimuli import Point, Pattern
 
@@ -13,7 +13,7 @@ def create_stimuli(exp):
     fix = Point(exp.win,
                 exp.p.fix_pos,
                 exp.p.fix_radius,
-                exp.p.fix_iti_color)
+                exp.p.fix_colors[1])
 
     # Average of multiple sinusoidal grating stimulus
     pattern = Pattern(exp.win,
@@ -30,6 +30,8 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
     """Yield block information."""
+    exp.fix_colors = cycle(exp.p.fix_colors)
+
     for block in range(exp.p.n_blocks):
         for stim_pos in range(2):
             block_time = (block * 2 + stim_pos) * exp.p.block_dur
@@ -52,9 +54,8 @@ def run_trial(exp, info):
     for i in range(block_dur * update_hz):
 
         if np.random.rand() < exp.p.fix_color_hazard:
-            jch = 60, 50, np.random.uniform(0, 360)
-            rgb = np.clip(cspace_convert(jch, "JCh", "sRGB1"), 0, 1)
-            exp.s.fix.color = rgb * 2 - 1
+            exp.s.fix.color = next(exp.fix_colors)
+            print(exp.s.fix.color)
 
         exp.s.pattern.randomize_phases(limits=(.2, .8))
         end = info["block_time"] + (i + 1) * (1 / update_hz)

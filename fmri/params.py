@@ -127,10 +127,12 @@ loc.update(
 
     run_duration=240,
 
+    fix_colors=['#86ade2', '#70bc83'],
+
     n_blocks=8,
     block_dur=15,
     update_hz=3,
 
-    fix_color_hazard=.1,
+    fix_color_hazard=.02,
 
 )
