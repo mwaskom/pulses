@@ -55,7 +55,6 @@ def run_trial(exp, info):
 
         if np.random.rand() < exp.p.fix_color_hazard:
             exp.s.fix.color = next(exp.fix_colors)
-            print(exp.s.fix.color)
 
         exp.s.pattern.randomize_phases(limits=(.2, .8))
         end = info["block_time"] + (i + 1) * (1 / update_hz)
