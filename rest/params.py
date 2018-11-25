@@ -27,4 +27,7 @@ scan.update(
     wait_pre_run=0,
     monitor_eye=True,
 
+    aperture_radius=19,
+    aperture_center=(0, -7.2),
+
 )
