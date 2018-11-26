@@ -4,6 +4,8 @@ from psychopy import visual
 
 class Crosshair(object):
 
+    pos = (0, 0)
+
     def __init__(self, exp):
 
         radius = exp.p.fix_size / 2
