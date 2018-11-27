@@ -4,11 +4,8 @@ import shutil
 
 # Set an interactive backend
 # The default on MacOS seems not to respond to keypress events?
-# Qt backends look nicer but I'm not sure how to generically use either
-# Qt5 or Qt4 and different systems currently vary in which they have
-# So, ugly but reliable Tk it is ...
 import matplotlib
-matplotlib.use("tkagg")
+matplotlib.use("qt5agg")
 
 import numpy as np
 import pandas as pd
