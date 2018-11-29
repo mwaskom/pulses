@@ -1,5 +1,6 @@
 from __future__ import division
 from psychopy import visual
+import pandas as pd
 
 
 class Crosshair(object):
@@ -35,7 +36,7 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
 
-    yield None
+    yield pd.Series([])
 
 
 def run_trial(exp, info):
@@ -45,6 +46,8 @@ def run_trial(exp, info):
         if exp.p.monitor_eye:
             exp.check_fixation()
         exp.check_abort()
+
+    return info
 
 
 def save_data(exp):
