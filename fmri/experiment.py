@@ -120,6 +120,7 @@ def generate_trials(exp):
     all_pulses = all_pulses.assign(
         occurred=False,
         blink=False,
+        blink_pad=np.nan,
         dropped_frames=np.nan,
         pulse_onset=np.nan,
         pulse_offset=np.nan,
@@ -353,9 +354,10 @@ def run_trial(exp, info):
     # ~~~ Inter-trial interval
     exp.s.fix.color = exp.p.fix_iti_color
     if exp.p.keep_on_time:
-        exp.wait_until(t_info["start_time"], draw="fix")
+        exp.wait_until(t_info["start_time"], draw="fix", check_abort=True)
     else:
-        exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
+        exp.wait_until(exp.iti_end, draw="fix", check_abort=True,
+                       iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
     t_info["onset_fix"] = exp.clock.getTime()
@@ -411,6 +413,19 @@ def run_trial(exp, info):
         # TODO commenting out until we get a good solution for saving these
         # Currently it errors out (maybe because the info df isn't seeded?)
         # p_info.loc[p, "phases"] = exp.s.pattern.array.phases
+
+        # Check if the eye is blinking and possibly wait a bit if so
+        blink_pad_start = exp.clock.getTime()
+        for frame in exp.frame_range(seconds=exp.p.blink_pad_timeout):
+            if exp.check_fixation():
+                break
+            exp.draw(["fix", "cue", "targets"])
+        # TODO do we want to wait a smidge if they were blinking before
+        # showing the stimulus? How much vision do people have right when
+        # they come out of the blink (according to Eyelink?)
+        # TODO can we make life easier later by updating the gap duration
+        # information or are we just going to have to deal?
+        p_info.loc[p, "blink_pad"] = exp.clock.getTime() - blink_pad_start
 
         # Show each frame of the stimulus
         for frame in exp.frame_range(seconds=info.pulse_dur):

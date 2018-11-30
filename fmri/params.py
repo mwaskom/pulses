@@ -19,6 +19,7 @@ base = dict(
 
     fix_window=2,
     eye_blink_timeout=.5,
+    blink_pad_timeout=.2,
 
     eye_fixation=True,
     eye_response=True,
