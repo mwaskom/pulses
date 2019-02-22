@@ -332,8 +332,6 @@ def generate_block(constraints, p, rng=None):
     total_iti = np.inf
     while not_in_range(total_iti, constraints.iti_range):
         wait_iti = flexible_values(p.wait_iti, n_trials, rng)
-        if p.skip_first_iti:
-            wait_iti[0] = 0
         total_iti = wait_iti.sum()
 
         # Use the first random sample if we're not being precise
