@@ -223,6 +223,14 @@ def generate_trials(exp):
     all_trials["wait_pre_stim"] /= exp.p.acceleration
     all_pulses["gap_dur"] /= exp.p.acceleration
 
+    # Determine the stick direction for this trial
+    try:
+        subject_number = int(exp.p.subject[-1])
+        stick_direction = 1 if subject_number % 2 else -1
+    except ValueError:
+        stick_direction = 1
+    all_trials = all_trials.assign(stick_direction=stick_direction)
+
     # Add in name information that matches across tables
 
     all_trials = all_trials.assign(
@@ -256,7 +264,7 @@ def generate_trials(exp):
                   "onset_cue", "offset_cue",
                   "onset_gague", "offset_gauge",
                   "result", "response", "correct", "rt",
-                  "bet", "cert", "reward", "stick_direction"]
+                  "bet", "cert", "reward"]
 
     all_trials = all_trials.assign(
         responded=False,
