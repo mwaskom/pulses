@@ -62,6 +62,9 @@ base = dict(
 
     ),
 
+    blocks=1,
+    acceleration=1,
+
     output_template="data/{subject}/{session}/gambling_{time}",
 
 )
