@@ -42,6 +42,8 @@ base = dict(
     pulse_count_max=5,
     pulse_dur=.2,
 
+    keep_on_time=False,
+
     design_constraints=dict(
 
         trials_per_run=50,
