@@ -11,7 +11,7 @@ from scipy import stats, signal
 import pyglet
 import sounddevice
 from psychopy.visual import GratingStim, TextStim, Polygon
-from psychopy.event import waitKeys
+from psychopy.event import waitKeys, Mouse
 from visigoth.stimuli import Point, Pattern
 from visigoth import flexible_values
 from visigoth.ext.bunch import Bunch
@@ -103,15 +103,18 @@ class Joystick(object):
     """
     def __init__(self, exp):
 
-        devices = pyglet.input.get_joysticks()
-        assert len(devices) == 1
-        self.device = devices[0]
-
         self.exp = exp
         self.log_timestamps = []
         self.log_angles = []
         self.log_triggers = []
         self.log_readtimes = []
+        self.setup_device()
+
+    def setup_device(self):
+
+        devices = pyglet.input.get_joysticks()
+        assert len(devices) == 1
+        self.device = devices[0]
 
     def read(self, log=True):
         """Return rotational angle and trigger status; log with time info."""
@@ -131,6 +134,10 @@ class Joystick(object):
 
         return angle, trigger
 
+    def reset(self):
+
+        pass
+
     @property
     def log(self):
         if self.log_timestamps:
@@ -142,6 +149,37 @@ class Joystick(object):
                 columns=["time", "angle", "trigger", "readtime"]
             )
         return df
+
+
+class ScrollWheel(Joystick):
+
+    # TODO the psychopy mouse object logs everything, but we would like to
+    # turn that off for efficiency. We can easily overwrite the pyglet event
+    # handler, but I am not doing that yet.
+
+    def setup_device(self):
+
+        self.device = Mouse(visible=False)
+        self.reset()
+
+    def reset(self):
+
+        self.angle = 0
+
+    def read(self, log=True):
+        """Return rotational angle and key status; log with time info."""
+        timestamp = self.exp.clock.getTime()
+        trigger = any(self.device.getPressed())
+        x_scroll, y_scroll = self.device.getWheelRel()
+        self.angle += y_scroll / 10
+
+        if log:
+            self.log_timestamps.append(timestamp)
+            self.log_angles.append(self.angle)
+            self.log_triggers.append(trigger)
+            self.log_readtimes.append(np.nan)
+
+        return self.angle, trigger
 
 
 def play_feedback(correct, reward):
@@ -171,7 +209,8 @@ def define_cmdline_params(self, parser):
 def create_stimuli(exp):
 
     # Joystick (not a stimulus but needed here
-    joystick = Joystick(exp)
+    # joystick = Joystick(exp)
+    joystick = ScrollWheel(exp)
 
     # Fixation point
     fix = Point(exp.win,
@@ -494,6 +533,7 @@ def run_trial(exp, info):
     exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
+    exp.s.joystick.reset()
     t_info["onset_fix"] = exp.clock.getTime()
     exp.s.fix.color = exp.p.fix_ready_color
     while exp.clock.getTime() < (t_info["onset_fix"] + exp.p.wait_fix):

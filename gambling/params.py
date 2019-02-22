@@ -28,7 +28,7 @@ base = dict(
     wait_resp=5,
     wait_feedback=1,
 
-    start_stick_thresh=.3,
+    start_stick_thresh=10000,
     resp_stick_thresh=.3,
 
     wait_pre_stim=("truncexpon", (3 - 1.5) / .5, 1.5, .5),
