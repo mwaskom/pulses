@@ -42,7 +42,23 @@ base = dict(
     pulse_count_max=5,
     pulse_dur=.2,
 
-    trials_per_run=50,
+    design_constraints=dict(
+
+        trials_per_run=50,
+
+        max_dist_repeat=10,
+
+        sum_count_error=3,
+
+        sigma=.4,
+
+        mean_range=(.36, .4),
+        sd_range=(.56, .61),
+        acc_range=(.77, .83),
+        iti_range=None,
+        run_range=None,
+
+    ),
 
     output_template="data/{subject}/{session}/gambling_{time}",
 

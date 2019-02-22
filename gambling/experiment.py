@@ -14,6 +14,7 @@ from psychopy.visual import GratingStim, TextStim, Polygon
 from psychopy.event import waitKeys
 from visigoth.stimuli import Point, Pattern
 from visigoth import flexible_values
+from visigoth.ext.bunch import Bunch
 
 
 class Gague(object):
@@ -199,144 +200,280 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
     """Yield trial and pulse train info."""
-    for t in exp.trial_count(exp.p.trials_per_run):
+    # TODO let us set random number generator somehow. Command line?
 
-        # Sample parameters for a trial
-        t_info, p_info = generate_trial_info(exp, t)
-        yield t_info, p_info
+    # Build the full experimental design
 
+    constraints = Bunch(exp.p.design_constraints)
 
-def generate_trial_info(exp, t):
+    all_trials, all_pulses = generate_block(constraints, exp.p)
 
-    # Schedule the next trial
-    wait_iti = flexible_values(exp.p.wait_iti)
+    for i in range(exp.p.blocks - 1):
 
-    # Determine the stimulus parameters for this trial
-    gen_dist = flexible_values(list(range(len(exp.p.dist_means))))
-    gen_mean = exp.p.dist_means[gen_dist]
-    gen_sd = exp.p.dist_sds[gen_dist]
-    target = exp.p.dist_targets[gen_dist]
+        trial_part, pulse_part = generate_block(constraints, exp.p)
 
-    # Determine the stick direction for this trial
-    try:
-        subject_number = int(exp.p.subject[-1])
-        stick_direction = 1 if subject_number % 2 else -1
-    except ValueError:
-        stick_direction = 1
+        trial_part["trial"] += len(all_trials)
+        pulse_part["trial"] += len(all_trials)
 
-    trial_info = exp.trial_info(
+        all_trials = all_trials.append(trial_part, ignore_index=True)
+        all_pulses = all_pulses.append(pulse_part, ignore_index=True)
 
-        # Stimulus parameters
-        gen_dist=gen_dist,
-        gen_mean=gen_mean,
-        gen_sd=gen_sd,
-        target=target,
+    # Adjust the timing of some components for training
 
-        # Pulse info (filled in below)
-        log_contrast_mean=np.nan,
-        pulse_count=np.nan,
-        pulse_train_dur=np.nan,
+    all_trials["wait_pre_stim"] /= exp.p.acceleration
+    all_pulses["gap_dur"] /= exp.p.acceleration
 
-        # Timing parameters
-        wait_iti=wait_iti,
-        wait_pre_stim=flexible_values(exp.p.wait_pre_stim) * exp.p.timing,
-        wait_resp=flexible_values(exp.p.wait_resp),
-        wait_feedback=flexible_values(exp.p.wait_feedback),
+    # Add in name information that matches across tables
 
-        # Track fixbreaks before pulses
-        fixbreak_early=np.nan,
-
-        # Extra behavioral fields
-        stick_direction=stick_direction,
-        bet=np.nan,
-        reward=np.nan,
-        cert=np.nan,
-
-        # Achieved timing data
-        onset_fix=np.nan,
-        offset_fix=np.nan,
-        onset_gauge=np.nan,
-        offset_gauge=np.nan,
-
-    )
-
-    t_info = pd.Series(trial_info, dtype=np.object)
-    p_info = generate_pulse_info(exp, t_info)
-
-    # Insert trial-level information determined by pulse schedule
-    t_info["log_contrast_mean"] = p_info["log_contrast"].mean()
-    t_info["trial_llr"] = p_info["pulse_llr"].sum()
-    t_info["pulse_count"] = len(p_info)
-    t_info["pulse_train_dur"] = (p_info["gap_dur"].sum()
-                                 + p_info["pulse_dur"].sum())
-
-    return t_info, p_info
-
-
-def generate_pulse_info(exp, t_info):
-    """Generate the pulse train for a given trial."""
-    rng = np.random.RandomState()
-
-    # Randomly sample the pulse count for this trial
-    count = int(flexible_values(exp.p.pulse_count, random_state=rng,
-                                max=exp.p.pulse_count_max))
-
-    # Account for the duration of each pulse
-    pulse_dur = flexible_values(exp.p.pulse_dur, count, rng)
-    total_pulse_dur = np.sum(pulse_dur)
-
-    # Randomly sample gap durations with a constraint on trial duration
-    train_dur = np.inf
-    while train_dur > (exp.p.pulse_train_max * exp.p.timing):
-
-        gap_dur = flexible_values(exp.p.pulse_gap, count, rng) * exp.p.timing
-        train_dur = np.sum(gap_dur) + total_pulse_dur
-
-    # Generate the stimulus strength for each pulse
-    max_contrast = 1 / np.sqrt(exp.p.stim_gratings)
-    contrast_dist = "norm", t_info["gen_mean"], t_info["gen_sd"]
-    log_contrast = flexible_values(contrast_dist, count, rng,
-                                   max=np.log10(max_contrast))
-
-    # Define the LLR of each pulse
-    pulse_llr = compute_llr(log_contrast, exp.p.dist_means, exp.p.dist_sds)
-
-    p_info = pd.DataFrame(dict(
-
-        # Basic trial information
+    all_trials = all_trials.assign(
         subject=exp.p.subject,
         session=exp.p.session,
-        run=exp.p.run,
-        trial=t_info["trial"],
+        run=exp.p.run
+    )
 
-        # Pulse information
-        pulse=np.arange(1, count + 1),
+    all_pulses = all_pulses.assign(
+        subject=exp.p.subject,
+        session=exp.p.session,
+        run=exp.p.run
+    )
+
+    # Add in information that's not part of the saved design
+
+    gen_dist = all_trials["gen_dist"]
+    all_trials = all_trials.assign(
+        gen_mean=np.take(exp.p.dist_means, gen_dist),
+        gen_sd=np.take(exp.p.dist_sds, gen_dist),
+        target=np.take(exp.p.dist_targets, gen_dist),
+        wait_resp=exp.p.wait_resp,
+        wait_feedback=exp.p.wait_feedback,
+    )
+
+    all_pulses = all_pulses.assign(pulse_dur=exp.p.pulse_dur)
+
+    # Add in blank fields that will be filled in later
+
+    empty_cols = ["onset_fix", "offset_fix",
+                  "onset_cue", "offset_cue",
+                  "onset_gague", "offset_gauge",
+                  "result", "response", "correct", "rt",
+                  "bet", "cert", "reward", "stick_direction"]
+
+    all_trials = all_trials.assign(
+        responded=False,
+        **{col: np.nan for col in empty_cols}
+    )
+
+    all_pulses = all_pulses.assign(
+        occurred=False,
+        blink=False,
+        blink_pad=np.nan,
+        dropped_frames=np.nan,
+        pulse_onset=np.nan,
+        pulse_offset=np.nan,
+    )
+
+    # Add trial-level information computed from pulse-level table
+
+    all_trials = all_trials.set_index("trial", drop=False)
+    trial_pulses = all_pulses.groupby("trial")
+
+    pulse_train_dur = trial_pulses.gap_dur.sum() + trial_pulses.pulse_dur.sum()
+    trial_duration = all_trials["wait_pre_stim"] + pulse_train_dur
+
+    start_time = (all_trials["wait_iti"].cumsum()
+                  + trial_duration.shift(1).fillna(0).cumsum())
+
+    all_trials = all_trials.assign(
+        trial_llr=trial_pulses.pulse_llr.sum(),
+        log_contrast_mean=trial_pulses.log_contrast.mean(),
+        pulse_train_dur=pulse_train_dur,
+        trial_duration=trial_duration,
+        start_time=start_time,
+    )
+
+    # Generate information for each trial
+    for trial, trial_info in all_trials.iterrows():
+        pulse_info = all_pulses.loc[all_pulses["trial"] == trial].copy()
+        yield trial_info, pulse_info
+
+
+def generate_block(constraints, p, rng=None):
+    """Generated a balanced set of trials, might be only part of a run."""
+    if rng is None:
+        rng = np.random.RandomState()
+
+    n_trials = constraints.trials_per_run
+
+    # --- Assign trial components
+
+    # Assign the target to a side
+
+    gen_dist = np.repeat([0, 1], n_trials // 2)
+    while max_repeat(gen_dist) > constraints.max_dist_repeat:
+        gen_dist = rng.permutation(gen_dist)
+
+    # Assign pulse counts to each trial
+
+    count_support = np.arange(p.pulse_count[-1], p.pulse_count_max) + 1
+    count_pmf = trunc_geom_pmf(count_support, p.pulse_count[1])
+    expected_count_dist = count_pmf * n_trials
+
+    count_error = np.inf
+    while count_error > constraints.sum_count_error:
+
+        pulse_count = flexible_values(p.pulse_count, n_trials, rng,
+                                      max=p.pulse_count_max).astype(int)
+        count_dist = np.bincount(pulse_count, minlength=p.pulse_count_max + 1)
+        count_error = np.sum(np.abs(count_dist[count_support]
+                                    - expected_count_dist))
+
+    # Assign initial ITI to each trial
+
+    total_iti = np.inf
+    while not_in_range(total_iti, constraints.iti_range):
+        wait_iti = flexible_values(p.wait_iti, n_trials, rng)
+        if p.skip_first_iti:
+            wait_iti[0] = 0
+        total_iti = wait_iti.sum()
+
+        # Use the first random sample if we're not being precise
+        # about the overall time of the run (i.e. in psychophys rig)
+        if not p.keep_on_time:
+            break
+
+    # --- Build the trial_info structure
+
+    trial = np.arange(1, n_trials + 1)
+
+    trial_info = pd.DataFrame(dict(
+        trial=trial,
+        gen_dist=gen_dist,
+        pulse_count=pulse_count.astype(int),
+        wait_iti=wait_iti,
+    ))
+
+    # --- Assign trial components
+
+    # Map from trial to pulse
+
+    trial = np.concatenate([
+        np.full(c, i, dtype=np.int) for i, c in enumerate(pulse_count, 1)
+    ])
+    pulse = np.concatenate([
+        np.arange(c) + 1 for c in pulse_count
+    ])
+
+    n_pulses = pulse_count.sum()
+
+    # Assign gaps between pulses
+
+    run_duration = np.inf
+    while not_in_range(run_duration, constraints.run_range):
+
+        wait_pre_stim = flexible_values(p.pulse_gap, n_trials, rng)
+        gap_dur = flexible_values(p.pulse_gap, n_pulses, rng)
+
+        run_duration = np.sum([
+
+            wait_iti.sum(),
+            wait_pre_stim.sum(),
+            gap_dur.sum(),
+            p.pulse_dur * n_pulses,
+
+        ])
+
+        # Use the first random sample if we're not being precise
+        # about the overall time of the run (i.e. in psychophys rig)
+        if not p.keep_on_time:
+            break
+
+    # Assign pulse intensities
+
+    max_contrast = np.log10(1 / np.sqrt(p.stim_gratings))
+    log_contrast = np.zeros(n_pulses)
+    pulse_dist = np.concatenate([
+        np.full(n, i, dtype=np.int) for n, i in zip(pulse_count, gen_dist)
+    ])
+
+    llr_mean = np.inf
+    llr_sd = np.inf
+    expected_acc = np.inf
+
+    while (not_in_range(llr_mean, constraints.mean_range)
+           or not_in_range(llr_sd, constraints.sd_range)
+           or not_in_range(expected_acc, constraints.acc_range)):
+
+        for i in [0, 1]:
+            dist = "norm", p.dist_means[i], p.dist_sds[i]
+            rows = pulse_dist == i
+            n = rows.sum()
+            log_contrast[rows] = flexible_values(dist, n, rng,
+                                                 max=max_contrast)
+
+        pulse_llr = compute_llr(log_contrast, p)
+        target_llr = np.where(pulse_dist, pulse_llr, -1 * pulse_llr)
+
+        llr_mean = target_llr.mean()
+        llr_sd = target_llr.std()
+
+        dv = pd.Series(target_llr).groupby(pd.Series(trial)).sum()
+        dv_sd = np.sqrt(constraints.sigma ** 2 * pulse_count)
+        expected_acc = stats.norm(dv, dv_sd).sf(0).mean()
+
+    # --- Build the pulse_info structure
+
+    pulse_info = pd.DataFrame(dict(
+        trial=trial,
+        pulse=pulse,
+        gap_dur=gap_dur,
         log_contrast=log_contrast,
         contrast=10 ** log_contrast,
         pulse_llr=pulse_llr,
-        pulse_dur=pulse_dur,
-        gap_dur=gap_dur,
-
-        # Achieved performance
-        occurred=False,
-        blink=False,
-        pulse_onset=np.nan,
-        pulse_offset=np.nan,
-        dropped_frames=np.nan,
-
     ))
 
-    return p_info
+    # --- Update the trial_info structure
+
+    trial_info["wait_pre_stim"] = wait_pre_stim
+
+    trial_llr = (pulse_info
+                 .groupby("trial")
+                 .sum()
+                 .loc[:, "pulse_llr"]
+                 .rename("trial_llr"))
+    trial_info = trial_info.join(trial_llr, on="trial")
+
+    # TODO reorder the columns so they are more intuitively organized?
+
+    return trial_info, pulse_info
 
 
-def compute_llr(c, means, sds):
-    """Compute the pulse log-likelihood supporting Target 1."""
-    # Define the generating distributions
-    m0, m1 = means
-    s0, s1 = sds
+# --- Support functions for block generation
+
+
+def not_in_range(val, limits):
+    """False if val is outside of limits."""
+    return limits is None or val < limits[0] or val > limits[1]
+
+
+def max_repeat(s):
+    """Maximumum number of times the same value repeats in sequence."""
+    s = pd.Series(s)
+    switch = s != s.shift(1)
+    return switch.groupby(switch.cumsum()).cumcount().max() + 1
+
+
+def trunc_geom_pmf(support, p):
+    """Probability mass given truncated geometric distribution."""
+    a, b = min(support) - 1, max(support)
+    dist = stats.geom(p=p, loc=a)
+    return dist.pmf(support) / (dist.cdf(b) - dist.cdf(a))
+
+
+def compute_llr(c, p):
+    """Signed LLR of pulse based on contrast and generating distributions."""
+    m0, m1 = p.dist_means
+    s0, s1 = p.dist_sds
     d0, d1 = stats.norm(m0, s0), stats.norm(m1, s1)
-
-    # Compute LLR of each pulse
     l0, l1 = np.log10(d0.pdf(c)), np.log10(d1.pdf(c))
     llr = l1 - l0
     return llr
@@ -386,15 +523,12 @@ def run_trial(exp, info):
             exp.sounds.fixbreak.play()
             exp.flicker("fix")
             t_info["result"] = "fixbreak"
-            t_info["fixbreak_early"] = True
             return t_info, p_info
 
         flip_time = exp.draw(stims)
 
         if not frame:
             t_info["onset_gauge"] = flip_time
-
-    t_info["fixbreak_early"] = False
 
     # ~~~ Stimulus period
     for p, info in p_info.iterrows():
