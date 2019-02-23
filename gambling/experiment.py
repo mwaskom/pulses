@@ -180,7 +180,7 @@ class Mouse(Joystick):
 
         self.angle = 0
         self.device.setPos((0, 0))
-        self.device.getPos()
+        self.device.lastPos = np.array([0, 0])
         self.device.setVisible(False)
 
     def limit(self):
