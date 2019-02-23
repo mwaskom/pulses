@@ -146,6 +146,10 @@ class Joystick(object):
 
         pass
 
+    def limit(self):
+
+        pass
+
     @property
     def log(self):
         if self.log_timestamps:
@@ -176,19 +180,26 @@ class Mouse(Joystick):
         self.device.setPos((0, 0))
         self.device.setVisible(False)
 
+    def limit(self):
+        """Keep the mouse no further than the edge of the response range.
+
+        We do this outside the read method because it's too slow to get
+        and set the position within a single screen refresh, and logically we
+        can do this at the onset of each pulse without issues (I think).
+
+        """
+        norm = self.exp.p.mouse_norm
+        x_pos, y_pos = self.device.getPos().copy()
+        self.device.setPos((np.clip(x_pos, -norm, norm), y_pos))
+
     def read(self, log=True):
         """Return rotational angle and key status; log with time info."""
         timestamp = self.exp.clock.getTime()
         trigger = any(self.device.getPressed())
 
-        x_pos, y_pos = self.device.getPos()
         norm = self.exp.p.mouse_norm
+        x_pos, _ = self.device.getPos()
         self.angle = np.clip(x_pos / norm, -1, 1)
-
-        # Don't let the mouse go outside the response range
-        # TODO This won't catch changes between this read and the next one.
-        # Perhaps it indicates a flaw in this response strategy?
-        self.device.setPos((np.clip(x_pos, -norm, norm), y_pos))
 
         if log:
             self.log_timestamps.append(timestamp)
@@ -620,6 +631,9 @@ def run_trial(exp, info):
         # Update the pattern
         exp.s.pattern.contrast = info.contrast
         exp.s.pattern.randomize_phases()
+
+        # Keep the response device within the relevant range
+        exp.s.resp_dev.limit()
 
         # Show each frame of the stimulus
         for frame in exp.frame_range(seconds=info.pulse_dur):
