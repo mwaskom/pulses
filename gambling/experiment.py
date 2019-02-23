@@ -33,7 +33,7 @@ class Gague(object):
 
         line_points = [(-.75, 0), (0, .75), (.75, 0)]
         line_kws = dict(
-            end=(0, 0), lineColor=(.3, .3, .3), lineWidth=2, autoLog=False,
+            end=(0, 0), lineColor=(.1, .1, .1), lineWidth=2, autoLog=False,
         )
         self.lines = [Line(win, start=p, **line_kws)for p in line_points]
 
@@ -50,25 +50,9 @@ class Gague(object):
         angle, _ = self.resp_dev.read()
         self.value = angle
         self.bg.draw()
-
-        # Put only the relevant line segment behind the gauge
-        if angle < 0:
-            self.lines[0].draw()
-            self.stim.draw()
-            self.lines[1].draw()
-            self.lines[2].draw()
-
-        elif angle > 0:
-            self.lines[2].draw()
-            self.stim.draw()
-            self.lines[0].draw()
-            self.lines[1].draw()
-
-        else:
-            self.lines[1].draw()
-            self.stim.draw()
-            self.lines[0].draw()
-            self.lines[2].draw()
+        self.stim.draw()
+        for line in self.lines:
+            line.draw()
 
     @property
     def value(self):
