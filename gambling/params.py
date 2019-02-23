@@ -10,6 +10,9 @@ base = dict(
     monitor_eye=True,
     enforce_fixation=False,
 
+    response_mode="mouse",
+    mouse_norm=7,
+
     dist_means=[-1.1, -0.9],
     dist_sds=[.15, .15],
     dist_targets=[0, 1],

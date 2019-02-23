@@ -19,7 +19,7 @@ from visigoth.ext.bunch import Bunch
 
 class Gague(object):
 
-    def __init__(self, win, joystick):
+    def __init__(self, win, resp_dev):
 
         tex = np.array([[0, 1], [0, 1]])
         self.stim = GratingStim(win,
@@ -38,10 +38,10 @@ class Gague(object):
                               color=win.color,
                               autoLog=False)
 
-        self.joystick = joystick
+        self.resp_dev = resp_dev
 
     def draw(self):
-        angle, _ = self.joystick.read()
+        angle, _ = self.resp_dev.read()
         self.value = angle
         self.bg.draw()
         self.stim.draw()
@@ -173,8 +173,13 @@ class Mouse(Joystick):
         """Return rotational angle and key status; log with time info."""
         timestamp = self.exp.clock.getTime()
         trigger = any(self.device.getPressed())
-        x_pos, _ = self.device.getPos()
-        self.angle = np.clip(x_pos / 5, -1, 1)
+
+        x_pos, y_pos = self.device.getPos()
+        norm = self.exp.p.mouse_norm
+        self.angle = np.clip(x_pos / norm, -1, 1)
+
+        # Don't let the mouse go outside the response range
+        self.device.setPos((np.clip(x_pos, -norm, norm), y_pos))
 
         if log:
             self.log_timestamps.append(timestamp)
@@ -229,10 +234,11 @@ def define_cmdline_params(self, parser):
 
 def create_stimuli(exp):
 
-    # Joystick (not a stimulus but needed here
-    # joystick = Joystick(exp)
-    # joystick = ScrollWheel(exp)
-    joystick = Mouse(exp)
+    # Get the response device (not a stimulus but needed here)
+    response_devices = {
+        "mouse": Mouse, "scroll": ScrollWheel, "joystick": Joystick
+    }
+    resp_dev = response_devices[exp.p.response_mode](exp)
 
     # Fixation point
     fix = Point(exp.win,
@@ -241,7 +247,7 @@ def create_stimuli(exp):
                 exp.p.fix_trial_color)
 
     # Current gamble state
-    gauge = Gague(exp.win, joystick)
+    gauge = Gague(exp.win, resp_dev)
 
     # Contrast pattern stimulus
     pattern = Pattern(exp.win,
@@ -555,11 +561,11 @@ def run_trial(exp, info):
     exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
-    exp.s.joystick.reset()
+    exp.s.resp_dev.reset()
     t_info["onset_fix"] = exp.clock.getTime()
     exp.s.fix.color = exp.p.fix_ready_color
     while exp.clock.getTime() < (t_info["onset_fix"] + exp.p.wait_fix):
-        bet, trigger = exp.s.joystick.read()
+        bet, trigger = exp.s.resp_dev.read()
         fix = exp.check_fixation() or not exp.p.enforce_fixation
         if fix and trigger and np.abs(bet) < exp.p.start_stick_thresh:
             break
@@ -664,7 +670,7 @@ def run_trial(exp, info):
         response = None
 
         while exp.clock.getTime() < (t_info["offset_fix"] + exp.p.wait_resp):
-            pos, _ = exp.s.joystick.read()
+            pos, _ = exp.s.resp_dev.read()
             if abs(pos) > exp.p.resp_stick_thresh:
 
                 pos *= t_info["stick_direction"]
@@ -683,7 +689,7 @@ def run_trial(exp, info):
 
     else:
 
-        bet, _ = exp.s.joystick.read()
+        bet, _ = exp.s.resp_dev.read()
         bet *= t_info["stick_direction"]
         response = int(bet > 0)
         cert = abs(bet) / 2 + .5
@@ -809,7 +815,7 @@ def save_data(exp):
             json.dump(exp.p, fid, sort_keys=True, indent=4)
 
         out_joydat_fname = exp.output_stem + "_joydat.csv"
-        exp.s.joystick.log.to_csv(out_joydat_fname, index=False)
+        exp.s.resp_dev.log.to_csv(out_joydat_fname, index=False)
 
 
 def demo_mode(exp):
