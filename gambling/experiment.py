@@ -270,7 +270,7 @@ def create_stimuli(exp):
                 exp.p.fix_trial_color)
 
     # Current gamble state
-    gauge = Gauge(exp.win, resp_dev, exp.p.show_lines)
+    gauge = Gauge(exp.win, resp_dev, exp.p.show_gauge_lines)
 
     # Contrast pattern stimulus
     pattern = Pattern(exp.win,
