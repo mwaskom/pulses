@@ -17,9 +17,9 @@ from visigoth import flexible_values
 from visigoth.ext.bunch import Bunch
 
 
-class Gague(object):
+class Gauge(object):
 
-    def __init__(self, win, resp_dev):
+    def __init__(self, win, resp_dev, show_lines):
 
         tex = np.array([[0, 1], [0, 1]])
         self.stim = GratingStim(win,
@@ -36,6 +36,7 @@ class Gague(object):
             end=(0, 0), lineColor=(.1, .1, .1), lineWidth=2, autoLog=False,
         )
         self.lines = [Line(win, start=p, **line_kws)for p in line_points]
+        self.show_lines = show_lines
 
         self.bg = GratingStim(win,
                               tex=None,
@@ -51,8 +52,9 @@ class Gague(object):
         self.value = angle
         self.bg.draw()
         self.stim.draw()
-        for line in self.lines:
-            line.draw()
+        if self.show_lines:
+            for line in self.lines:
+                line.draw()
 
     @property
     def value(self):
@@ -267,7 +269,7 @@ def create_stimuli(exp):
                 exp.p.fix_trial_color)
 
     # Current gamble state
-    gauge = Gague(exp.win, resp_dev)
+    gauge = Gauge(exp.win, resp_dev, exp.p.show_lines)
 
     # Contrast pattern stimulus
     pattern = Pattern(exp.win,
@@ -287,7 +289,6 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
     """Yield trial and pulse train info."""
-    # TODO let us set random number generator somehow. Command line?
 
     # Build the full experimental design
 

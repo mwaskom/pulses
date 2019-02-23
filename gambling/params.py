@@ -33,6 +33,8 @@ base = dict(
     start_stick_thresh=10000,
     resp_stick_thresh=.3,
 
+    show_gauge_lines=True,
+
     wait_pre_stim=("truncexpon", (3 - 1.5) / .5, 1.5, .5),
     pulse_gap=("truncexpon", (3 - 1.5) / .5, 1.5, .5),
     pulse_train_max=28,
