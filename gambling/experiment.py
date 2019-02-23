@@ -200,9 +200,12 @@ class Mouse(Joystick):
         trigger = any(self.device.getPressed())
 
         norm = self.exp.p.mouse_norm
+
         # x_pos, _ = self.device.getPos()
-        x_pos, _ = self.device.getRel()
-        self.angle = np.clip(x_pos / norm, -1, 1)
+        # self.angle = np.clip(x_pos / norm, -1, 1)
+
+        x_rel, _ = self.device.getRel()
+        self.angle = np.clip(self.angle + x_rel / norm, -1, 1)
 
         if log:
             self.log_timestamps.append(timestamp)
