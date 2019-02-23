@@ -165,7 +165,6 @@ class Mouse(Joystick):
     def reset(self):
 
         self.angle = 0
-        print(self.device.getPos())
         self.device.setPos((0, 0))
         self.device.setVisible(False)
 
