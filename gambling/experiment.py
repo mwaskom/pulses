@@ -200,7 +200,8 @@ class Mouse(Joystick):
         trigger = any(self.device.getPressed())
 
         norm = self.exp.p.mouse_norm
-        x_pos, _ = self.device.getPos()
+        # x_pos, _ = self.device.getPos()
+        x_pos, _ = self.device.getRel()
         self.angle = np.clip(x_pos / norm, -1, 1)
 
         if log:
@@ -634,7 +635,7 @@ def run_trial(exp, info):
         exp.s.pattern.randomize_phases()
 
         # Keep the response device within the relevant range
-        exp.s.resp_dev.limit()
+        # exp.s.resp_dev.limit()
 
         # Show each frame of the stimulus
         for frame in exp.frame_range(seconds=info.pulse_dur):
