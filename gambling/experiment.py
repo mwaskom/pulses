@@ -32,10 +32,10 @@ class Gague(object):
                                 autoLog=False)
 
         self.line = Line(win,
-                         start=(-1.5, 0),
-                         end=(+1.5, 0),
+                         start=(-.75, 0),
+                         end=(+.75, 0),
                          lineColor=(.5, .5, .5),
-                         lineWidth=3,
+                         lineWidth=2,
                          autoLog=False)
 
         self.bg = GratingStim(win,
@@ -51,8 +51,8 @@ class Gague(object):
         angle, _ = self.resp_dev.read()
         self.value = angle
         self.bg.draw()
-        self.line.draw()
         self.stim.draw()
+        self.line.draw()
 
     @property
     def value(self):
