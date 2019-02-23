@@ -33,7 +33,7 @@ class Gague(object):
 
         line_points = [(-.75, 0), (0, .75), (.75, 0)]
         line_kws = dict(
-            end=(0, 0), lineColor=(.3, .3, .3), linewidth=2, autoLog=False,
+            end=(0, 0), lineColor=(.3, .3, .3), lineWidth=2, autoLog=False,
         )
         self.lines = [Line(win, start=p, **line_kws)for p in line_points]
 
