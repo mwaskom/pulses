@@ -11,7 +11,7 @@ from scipy import stats, signal
 import pyglet
 import sounddevice
 from psychopy.visual import GratingStim, TextStim, Polygon
-from psychopy.event import waitKeys, Mouse
+from psychopy import event
 from visigoth.stimuli import Point, Pattern
 from visigoth import flexible_values
 from visigoth.ext.bunch import Bunch
@@ -151,7 +151,7 @@ class Joystick(object):
         return df
 
 
-class ScrollWheel(Joystick):
+class Mouse(Joystick):
 
     # TODO the psychopy mouse object logs everything, but we would like to
     # turn that off for efficiency. We can easily overwrite the pyglet event
@@ -159,18 +159,39 @@ class ScrollWheel(Joystick):
 
     def setup_device(self):
 
-        self.device = Mouse(visible=False)
+        self.device = event.Mouse(visible=False)
         self.reset()
 
     def reset(self):
 
         self.angle = 0
+        print(self.device.getPos())
+        self.device.setPos((0, 0))
+        self.device.setVisible(False)
 
     def read(self, log=True):
         """Return rotational angle and key status; log with time info."""
         timestamp = self.exp.clock.getTime()
         trigger = any(self.device.getPressed())
-        x_scroll, y_scroll = self.device.getWheelRel()
+        x_pos, _ = self.device.getPos()
+        self.angle = np.clip(x_pos / 5, -1, 1)
+
+        if log:
+            self.log_timestamps.append(timestamp)
+            self.log_angles.append(self.angle)
+            self.log_triggers.append(trigger)
+            self.log_readtimes.append(np.nan)
+
+        return self.angle, trigger
+
+
+class ScrollWheel(Mouse):
+
+    def read(self, log=True):
+        """Return rotational angle and key status; log with time info."""
+        timestamp = self.exp.clock.getTime()
+        trigger = any(self.device.getPressed())
+        _, y_scroll = self.device.getWheelRel()
         self.angle += y_scroll / 10
 
         if log:
@@ -210,7 +231,8 @@ def create_stimuli(exp):
 
     # Joystick (not a stimulus but needed here
     # joystick = Joystick(exp)
-    joystick = ScrollWheel(exp)
+    # joystick = ScrollWheel(exp)
+    joystick = Mouse(exp)
 
     # Fixation point
     fix = Point(exp.win,
@@ -538,7 +560,7 @@ def run_trial(exp, info):
     exp.s.fix.color = exp.p.fix_ready_color
     while exp.clock.getTime() < (t_info["onset_fix"] + exp.p.wait_fix):
         bet, trigger = exp.s.joystick.read()
-        fix = exp.check_fixation()
+        fix = exp.check_fixation() or not exp.p.enforce_fixation
         if fix and trigger and np.abs(bet) < exp.p.start_stick_thresh:
             break
         exp.check_abort()
@@ -566,10 +588,11 @@ def run_trial(exp, info):
     for frame, skipped in prestim_frames:
 
         if not exp.check_fixation(allow_blinks=True):
-            exp.sounds.fixbreak.play()
-            exp.flicker("fix")
-            t_info["result"] = "fixbreak"
-            return t_info, p_info
+            if exp.p.enforce_fixation:
+                exp.sounds.fixbreak.play()
+                exp.flicker("fix")
+                t_info["result"] = "fixbreak"
+                return t_info, p_info
 
         flip_time = exp.draw(stims)
 
@@ -587,11 +610,12 @@ def run_trial(exp, info):
         for frame in exp.frame_range(seconds=info.pulse_dur):
 
             if not exp.check_fixation(allow_blinks=True):
-                exp.sounds.fixbreak.play()
-                exp.flicker("fix")
-                t_info["result"] = "fixbreak"
-                t_info["offset_cue"] = exp.clock.getTime()
-                return t_info, p_info
+                if exp.p.enforce_fixation:
+                    exp.sounds.fixbreak.play()
+                    exp.flicker("fix")
+                    t_info["result"] = "fixbreak"
+                    t_info["offset_cue"] = exp.clock.getTime()
+                    return t_info, p_info
 
             flip_time = exp.draw(["pattern"] + stims)
 
@@ -613,10 +637,11 @@ def run_trial(exp, info):
         for frame in gap_frames:
 
             if not exp.check_fixation(allow_blinks=True):
-                exp.sounds.fixbreak.play()
-                exp.flicker("fix")
-                t_info["result"] = "fixbreak"
-                return t_info, p_info
+                if exp.p.enforce_fixation:
+                    exp.sounds.fixbreak.play()
+                    exp.flicker("fix")
+                    t_info["result"] = "fixbreak"
+                    return t_info, p_info
 
             flip_time = exp.draw(stims)
 
@@ -791,18 +816,18 @@ def demo_mode(exp):
 
     exp.s.fix.color = exp.p.fix_iti_color
     exp.draw(["fix"])
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     exp.s.fix.color = exp.p.fix_trial_color
     exp.draw(["fix"])
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     exp.s.pattern.contrast = 10 ** np.mean(exp.p.dist_means)
 
     exp.draw(["pattern", "fix"])
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     for frame in exp.frame_range(seconds=1):
@@ -812,31 +837,31 @@ def demo_mode(exp):
         exp.draw(["pattern", "fix"])
 
     exp.draw(["fix"])
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     exp.s.pattern.contrast = 10 ** (exp.p.dist_means[1] + exp.p.dist_sds[1])
     exp.draw(["pattern", "fix"])
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     exp.s.pattern.contrast = 10 ** (exp.p.dist_means[0] - exp.p.dist_sds[0])
     exp.draw(["pattern", "fix"])
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     exp.draw(["fix"])
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     exp.sounds["correct"].play()
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     exp.sounds["wrong"].play()
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()
 
     exp.sounds["fixbreak"].play()
-    waitKeys(["space"])
+    event.waitKeys(["space"])
     exp.check_abort()

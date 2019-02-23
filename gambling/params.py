@@ -8,8 +8,7 @@ base = dict(
     fix_window=3.5,
 
     monitor_eye=True,
-
-    eye_fixation=True,
+    enforce_fixation=False,
 
     dist_means=[-1.1, -0.9],
     dist_sds=[.15, .15],
