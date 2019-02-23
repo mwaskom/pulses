@@ -10,7 +10,7 @@ from scipy import stats, signal
 
 import pyglet
 import sounddevice
-from psychopy.visual import GratingStim, TextStim, Polygon
+from psychopy.visual import GratingStim, TextStim, Polygon, Line
 from psychopy import event
 from visigoth.stimuli import Point, Pattern
 from visigoth import flexible_values
@@ -31,6 +31,13 @@ class Gague(object):
                                 color=win.color,
                                 autoLog=False)
 
+        self.line = Line(win,
+                         start=(-1.5, 0),
+                         end=(+1.5, 0),
+                         lineColor=(.5, .5, .5),
+                         lineWidth=3,
+                         autoLog=False)
+
         self.bg = GratingStim(win,
                               tex=None,
                               mask="gauss",
@@ -44,6 +51,7 @@ class Gague(object):
         angle, _ = self.resp_dev.read()
         self.value = angle
         self.bg.draw()
+        self.line.draw()
         self.stim.draw()
 
     @property
@@ -178,6 +186,8 @@ class Mouse(Joystick):
         self.angle = np.clip(x_pos / norm, -1, 1)
 
         # Don't let the mouse go outside the response range
+        # TODO This won't catch changes between this read and the next one.
+        # Perhaps it indicates a flaw in this response strategy?
         self.device.setPos((np.clip(x_pos, -norm, norm), y_pos))
 
         if log:
