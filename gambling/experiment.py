@@ -10,8 +10,9 @@ from scipy import stats, signal
 
 import pyglet
 import sounddevice
-from psychopy.visual import GratingStim, TextStim, Polygon, Line
 from psychopy import event
+from psychopy.visual import GratingStim, TextStim, Polygon, Line
+
 from visigoth.stimuli import Point, Pattern
 from visigoth import flexible_values
 from visigoth.ext.bunch import Bunch
@@ -179,16 +180,24 @@ class Mouse(Joystick):
     def reset(self):
 
         self.angle = 0
-        self.device.setPos((0, 0))
+
+        # self.device.setPos((0, 0))
+        # Work around psychopy retina bug
+        win = self.exp.win
+        denom = 4 if win.useRetina else 2
+        x, y = np.divide(win.size, denom).astype(int)
+        win.winHandle.set_mouse_position(x, y)
+        win.winHandle._mouse_x = x
+        win.winHandle._mouse_y = y
+
         self.device.lastPos = np.array([0, 0])
-        self.device.setVisible(False)
 
     def limit(self):
         """Keep the mouse no further than the edge of the response range.
 
         We do this outside the read method because it's too slow to get
         and set the position within a single screen refresh, and logically we
-        can do this at the onset of each pulse without issues (I think).
+        can do this at the onset of each pulse without too many issues.
 
         """
         norm = self.exp.p.mouse_norm
@@ -587,7 +596,6 @@ def run_trial(exp, info):
     exp.wait_until(exp.iti_end, draw="fix", iti_duration=t_info.wait_iti)
 
     # ~~~ Trial onset
-    exp.s.resp_dev.reset()
     t_info["onset_fix"] = exp.clock.getTime()
     exp.s.fix.color = exp.p.fix_ready_color
     while exp.clock.getTime() < (t_info["onset_fix"] + exp.p.wait_fix):
@@ -613,6 +621,7 @@ def run_trial(exp, info):
         stims = ["gauge", "fix"]
 
     # ~~~ Pre-stimulus period
+    exp.s.resp_dev.reset()
     exp.s.fix.color = exp.p.fix_trial_color
     prestim_frames = exp.frame_range(seconds=t_info.wait_pre_stim,
                                      yield_skipped=True)
