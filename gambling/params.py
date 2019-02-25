@@ -4,8 +4,9 @@ base = dict(
     display_name="kianilab-ps1",
     display_luminance=35,
 
-    fix_iti_color=(.6, .6, .6),
-    fix_window=3.5,
+    fix_iti_color=None,
+    fix_ready_color=(.6, .6, .6),
+    fix_window=2.5,
 
     monitor_eye=True,
     enforce_fixation=True,
