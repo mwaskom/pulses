@@ -688,6 +688,8 @@ def run_trial(exp, info):
         reward = np.nan
         response = None
 
+        exp.p.resp_dev.reset()
+
         while exp.clock.getTime() < (t_info["offset_fix"] + exp.p.wait_resp):
             pos, _ = exp.s.resp_dev.read()
             if abs(pos) > exp.p.resp_stick_thresh:
