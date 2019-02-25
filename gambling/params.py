@@ -8,7 +8,7 @@ base = dict(
     fix_window=3.5,
 
     monitor_eye=True,
-    enforce_fixation=False,
+    enforce_fixation=True,
 
     response_mode="mouse",
     mouse_norm=7,
