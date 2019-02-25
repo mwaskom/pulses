@@ -688,7 +688,7 @@ def run_trial(exp, info):
         reward = np.nan
         response = None
 
-        exp.p.resp_dev.reset()
+        exp.s.resp_dev.reset()
 
         while exp.clock.getTime() < (t_info["offset_fix"] + exp.p.wait_resp):
             pos, _ = exp.s.resp_dev.read()
