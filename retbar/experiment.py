@@ -2,6 +2,7 @@ from __future__ import division
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
+from visigoth.tools import flexible_values
 from visigoth.stimuli import ElementArray, Point
 from psychopy import visual
 
@@ -9,19 +10,20 @@ from psychopy import visual
 class RetBar(object):
 
     def __init__(self, win, field_size, bar_width,
-                 element_size, element_tex, element_mask, element_sf,
-                 drift_rate):
+                 element_size, element_tex, element_mask,
+                 sf_distr, prop_color, drift_rate):
 
         bar_length = field_size + 2 * element_size
         xys = poisson_disc_sample(bar_length, bar_width, element_size / 4)
         self.xys = xys
         self.edge_offset = bar_width / 2 + element_size / 2
         self.drift_step = drift_rate / win.framerate
+        self.sf_distr = sf_distr
+        self.prop_color = prop_color
 
         self.element_size = element_size
         self.element_tex = element_tex
         self.element_mask = element_mask
-        self.element_sf = element_sf
 
         self.array = ElementArray(
 
@@ -29,7 +31,6 @@ class RetBar(object):
             xys=xys,
             nElements=len(xys),
             sizes=element_size,
-            sfs=element_sf,
             elementTex=element_tex,
             elementMask=element_mask,
             colorSpace="hsv",
@@ -73,11 +74,12 @@ class RetBar(object):
         self.array.phases = np.random.uniform(0, 1, n)
 
         # TODO make parameter
-        self.array.sfs = np.random.uniform(.25, 4, n)
+        # self.array.sfs = np.random.uniform(.25, 4, n)
+        self.array.sfs = flexible_values(self.sf_distr, n)
 
         hsv = np.c_[
             np.random.uniform(0, 360, n),
-            np.where(np.random.rand(n) < .5, 1, 0),  # TODO make parameter
+            np.where(np.random.rand(n) < self.prop_color, 1, 0),
             np.ones(n),
         ]
         self.array.colors = hsv
@@ -167,7 +169,8 @@ def create_stimuli(exp):
         exp.p.element_size,
         exp.p.element_tex,
         exp.p.element_mask,
-        exp.p.element_sf,
+        exp.p.sf_distr,
+        exp.p.prop_color,
         exp.p.drift_rate,
     )
 
@@ -188,17 +191,18 @@ def generate_trials(exp):
             x = y = a = np.full(n, np.nan)
         return np.stack([b, x, y, a], 1)
 
-    field_radius = exp.p.field_size / 2
-    diag = np.cos(np.pi / 4) * field_radius
+    FR = exp.p.field_size / 2
+    HW = exp.p.bar_width / 2
+    D = np.cos(np.pi / 4) * (FR - HW)
 
-    L = -field_radius, 0
-    R = +field_radius, 0
-    T = 0, +field_radius
-    B = 0, -field_radius
-    TL = -diag, +diag
-    TR = +diag, +diag
-    BL = -diag, -diag
-    BR = +diag, -diag
+    L = -FR + HW, 0
+    R = +FR - HW, 0
+    T = 0, +FR - HW
+    B = 0, -FR + HW
+    TL = -D, +D
+    TR = +D, +D
+    BL = -D, -D
+    BR = +D, -D
     C = 0, 0
 
     steps = [

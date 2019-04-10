@@ -12,12 +12,14 @@ base = dict(
     field_size=24,
     step_duration=1.5,
 
-    bar_width=1.5,
+    bar_width=8 / 3.,
 
     element_size=2,
     element_tex="sin",
     element_mask="gauss",
-    element_sf=1.5,
+
+    sf_distr=("truncexpon", 3.5 / 2, .5, 2),
+    prop_color=.5,
 
     update_rate=2,
     drift_rate=.5,
