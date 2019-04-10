@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 from visigoth.stimuli import ElementArray, Point
-from psychopy import visual, event
+from psychopy import visual
 
 
 class RetBar(object):
@@ -174,7 +174,9 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
 
-    for pos in np.linspace(-8, 8, 12):
+    """
+    w = exp.p.field_size / 2
+    for pos in np.tile(np.linspace(-w, w, 12), 12):
 
         trial = pd.Series(dict(
             pos=pos,
@@ -182,10 +184,51 @@ def generate_trials(exp):
         ))
 
         yield trial
+    """
+
+    def steps(bar, n, start=None, end=None, a=None):
+        if bar:
+            b = np.ones(n)
+            x = np.linspace(start[0], end[0], n)
+            y = np.linspace(start[1], end[1], n)
+            a = np.full(n, a, np.float)
+        else:
+            b = np.zeros(n)
+            x = y = a = np.full(n, np.nan)
+        return np.stack([b, x, y, a], 1)
+
+    field_radius = exp.p.field_size / 2
+    diag = np.cos(np.pi / 4) * field_radius
+
+    L = -field_radius, 0
+    R = +field_radius, 0
+    T = 0, +field_radius
+    B = 0, -field_radius
+    TL = -diag, +diag
+    TR = +diag, +diag
+    BL = -diag, -diag
+    BR = +diag, -diag
+    C = 0, 0
+
+    steps = [
+        steps(True, 16, L, R, 90), steps(True, 8, BR, C, 45), steps(False, 8),
+        steps(True, 16, T, B, 0), steps(True, 8, BL, C, -45), steps(False, 8),
+        steps(True, 16, R, L, 90), steps(True, 8, TL, C, 45), steps(False, 8),
+        steps(True, 16, B, T, 0), steps(True, 8, TR, C, -45), steps(False, 8),
+    ]
+
+    dur = exp.p.step_duration
+    steps = np.concatenate(steps, 0)
+    steps = pd.DataFrame(steps, columns=["bar", "x", "y", "a"])
+    steps["offset"] = np.arange(len(steps)) * dur + dur
+
+    for step, info in steps.iterrows():
+        yield info
 
 
 def run_trial(exp, info):
 
+    """
     exp.s.bar.update_pos(info.pos, 0, info.ori)
     for frame, skipped in exp.frame_range(seconds=1.5,
                                           yield_skipped=True):
@@ -197,5 +240,55 @@ def run_trial(exp, info):
             exp.s.bar.update_elements()
 
         exp.draw(["bar", "ring", "fix"])
+    """
+
+    if info.bar:
+        exp.s.bar.update_pos(info.x, info.y, info.a)
+
+    exp.s.bar.update_elements()
+
+    for frame, skipped in exp.frame_range(exp.p.step_duration,
+                                          expected_offset=info.offset,
+                                          yield_skipped=True):
+
+        update = (((frame % (60 / exp.p.update_rate)) == 0)
+                  or (any(np.mod(skipped, (60 / exp.p.update_rate)) == 0)))
+        if update:
+            exp.s.bar.update_elements()
+
+        """
+        update = (frame in update_frames
+                  or any(update_frames & set(dropped)))
+        if update:
+
+            oddball = oddballer()
+
+            if step.bar:
+                sf = exp.p.oddball_sf if oddball else exp.p.element_sf
+                exp.s.bar.update_elements(sf)
+                exp.s.fix.color = exp.p.fix_bar_color
+            else:
+                if oddball:
+                    exp.s.fix.color = exp.p.fix_odd_color
+                else:
+                    exp.s.fix.color = exp.p.fix_fix_color
+        """
+
+        if info.bar:
+            stims = ["bar", "ring", "fix"]
+        else:
+            stims = ["ring", "fix"]
+        t = exp.draw(stims)
+
+        # if not frame:
+        #    stim_data.append((t, step.bar, step.x, step.y, step.a))
+
+        # if update and oddball:
+        #     kind = "bar" if step.bar else "fix"
+        #    task_data.append((t, kind))
+
+    exp.check_abort()
 
     return info
+
+
