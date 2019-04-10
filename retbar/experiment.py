@@ -342,6 +342,6 @@ def save_data(exp):
         events.to_csv(out_fname, index=False)
 
     if exp.trial_data:
-        barpos = pd.concat(exp.trial_data)
+        barpos = pd.DataFrame(exp.trial_data)
         out_fname = exp.output_stem + "_barpos.csv"
         barpos.to_csv(out_fname, index=False)
