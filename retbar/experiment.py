@@ -146,11 +146,13 @@ def create_stimuli(exp):
         exp.p.field_size
     )
 
-    fix = Point(
+    fix = FixationTask(
         exp.win,
-        exp.p.fix_pos,
+        exp.clock,
+        exp.p.fix_colors,
+        exp.p.fix_duration,
         exp.p.fix_radius,
-        exp.p.fix_color
+        exp.p.fix_pos,
     )
 
     ring = visual.GratingStim(
@@ -254,3 +256,43 @@ def run_trial(exp, info):
     exp.check_abort()
 
     return info
+
+
+def save_data(exp):
+
+    if exp.trial_data:
+
+        # Work out task performance
+        # TODO move into the FixationTask object, or elsewhere in visigoth?
+        change_times = exp.s.fix.change_times
+        key_presses = event.getKeys(exp.p.resp_keys, timeStamped=exp.clock)
+        if key_presses:
+            _, press_times = list(zip(*key_presses))
+        else:
+            press_times = []
+
+        change_times = np.array(change_times)
+        press_times = np.array(press_times)
+
+        events = []
+        for t in change_times:
+            deltas = press_times - t
+            hit = np.any((0 < deltas) & (deltas < exp.p.resp_thresh))
+            events.append((t, "hit" if hit else "miss"))
+
+        for t in press_times:
+            deltas = t - change_times
+            fa = ~np.any((0 < deltas) & (deltas < exp.p.resp_thresh))
+            if fa:
+                events.append((t, "fa"))
+
+        events = pd.DataFrame(events, columns=["time", "event"])
+        hit_rate = ((events["event"] == "hit").sum()
+                    / events["event"].isin(["hit", "miss"]).sum())
+
+        false_alarms = events["event"].value_counts()["fa"]
+
+        print("Hit rate: {:.2%}".format(hit_rate))
+        print("False alarms: {:d}".format(false_alarms))
+
+        print(events)
