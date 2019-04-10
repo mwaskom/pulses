@@ -258,12 +258,19 @@ def run_trial(exp, info):
     return info
 
 
-def save_data(exp):
+def summarize_task_performance(exp):
 
-    if exp.trial_data:
+    # TODO should this code, and the code that computes hit rates /false alarms
+    # go into the fixation task object? Probably!
 
-        # Work out task performance
-        # TODO move into the FixationTask object, or elsewhere in visigoth?
+    if not exp.trial_data:
+        return None
+
+    if hasattr(exp, "task_events"):
+        return exp.task_events
+
+    else:
+
         change_times = exp.s.fix.change_times
         key_presses = event.getKeys(exp.p.resp_keys, timeStamped=exp.clock)
         if key_presses:
@@ -287,12 +294,54 @@ def save_data(exp):
                 events.append((t, "fa"))
 
         events = pd.DataFrame(events, columns=["time", "event"])
+        exp.task_events = events
+
+        return events
+
+
+def compute_performance(exp):
+
+    events = summarize_task_performance(exp)
+    if events is None:
+        hit_rate = false_alarms = None
+    else:
+
         hit_rate = ((events["event"] == "hit").sum()
                     / events["event"].isin(["hit", "miss"]).sum())
+        false_alarms = (events["event"] == "fa").sum()
+        return hit_rate, false_alarms
 
-        false_alarms = events["event"].value_counts()["fa"]
 
-        print("Hit rate: {:.2%}".format(hit_rate))
-        print("False alarms: {:d}".format(false_alarms))
+def show_performance(exp, hit_rate, false_alarms):
 
-        print(events)
+    lines = ["End of the run!"]
+
+    if hit_rate is not None:
+        lines.append("")
+        lines.append(
+            "You detected {:.0%} of the color changes,".format(hit_rate)
+            )
+        lines.append(
+            "with {:0d} false alarms.".format(false_alarms)
+            )
+
+    n = len(lines)
+    height = .5
+    heights = (np.arange(n)[::-1] - (n / 2 - .5)) * height
+    for line, y in zip(lines, heights):
+        visual.TextStim(exp.win, line,
+                        pos=(0, y), height=height).draw()
+    exp.win.flip()
+
+
+def save_data(exp):
+
+    events = summarize_task_performance(exp)
+    if events is not None:
+        out_fname = exp.output_stem + "_events.csv"
+        events.to_csv(out_fname, index=False)
+
+    if exp.trial_data:
+        barpos = pd.concat(exp.trial_data)
+        out_fname = exp.output_stem + "_barpos.csv"
+        barpos.to_csv(out_fname, index=False)
