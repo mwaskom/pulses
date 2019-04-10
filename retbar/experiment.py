@@ -9,21 +9,18 @@ from psychopy import visual
 class RetBar(object):
 
     def __init__(self, win, field_size, bar_width,
-                 element_size, element_tex, element_sf,
+                 element_size, element_tex, element_mask, element_sf,
                  drift_rate):
 
         bar_length = field_size + 2 * element_size
         xys = poisson_disc_sample(bar_length, bar_width, element_size / 4)
-        print(xys.size)
-        # xys = np.random.uniform(-1, 1, (50, 2))
-        # xys[:, 0] *= bar_length / 2
-        # xys[:, 1] *= bar_width / 2
         self.xys = xys
         self.edge_offset = bar_width / 2 + element_size / 2
         self.drift_step = drift_rate / win.framerate
 
         self.element_size = element_size
         self.element_tex = element_tex
+        self.element_mask = element_mask
         self.element_sf = element_sf
 
         self.array = ElementArray(
@@ -33,8 +30,8 @@ class RetBar(object):
             nElements=len(xys),
             sizes=element_size,
             sfs=element_sf,
-            elementTex="sin",
-            elementMask="gauss",
+            elementTex=element_tex,
+            elementMask=element_mask,
             colorSpace="hsv",
 
         )
@@ -53,7 +50,7 @@ class RetBar(object):
         ]
 
     def update_pos(self, x, y, a):
-
+        """Set bar at x, y position with angle a in degrees."""
         theta = np.deg2rad(a)
         mat = np.array([[np.cos(theta), -np.sin(theta)],
                         [np.sin(theta), np.cos(theta)]])
@@ -66,21 +63,24 @@ class RetBar(object):
         self.edges[1].ori = -a
 
     def update_elements(self, sf=None):
+        """Randomize the constituent elements of the bar."""
+
+        # TODO add control of RNG as simple way to allow repeats for n back
 
         n = len(self.xys)
         self.array.xys = np.random.permutation(self.array.xys)
         self.array.oris = np.random.uniform(0, 360, n)
         self.array.phases = np.random.uniform(0, 1, n)
-        self.array.sfs = sf or self.element_sf
+
+        # TODO make parameter
+        self.array.sfs = np.random.uniform(.25, 4, n)
 
         hsv = np.c_[
             np.random.uniform(0, 360, n),
-            np.where(np.random.rand(n) < .5, 1, 0),
+            np.where(np.random.rand(n) < .5, 1, 0),  # TODO make parameter
             np.ones(n),
         ]
         self.array.colors = hsv
-        # self.array.sizes = np.random.uniform(.5, 4, n)
-        self.array.sfs = np.random.uniform(.25, 4, n)
 
     def draw(self):
 
@@ -91,7 +91,7 @@ class RetBar(object):
 
 
 def poisson_disc_sample(length, width, radius=.5, candidates=20, seed=None):
-    """Find positions using poisson-disc sampling."""
+    """Find roughly gridded positions using poisson-disc sampling."""
     # See http://bost.ocks.org/mike/algorithms/
     rs = np.random.RandomState(seed)
     uniform = rs.uniform
@@ -151,12 +151,13 @@ def create_stimuli(exp):
         exp.p.fix_color
     )
 
-    # TODO incorporate fixation drift warning for training?
-    ring = Point(
+    ring = visual.GratingStim(
         exp.win,
-        exp.p.fix_pos,
-        exp.p.fix_radius * 1.5,
-        exp.win.color,
+        tex=None,
+        mask="gauss",
+        color=exp.win.color,
+        pos=exp.p.fix_pos,
+        size=exp.p.fix_radius * 2,
     )
 
     bar = RetBar(
@@ -165,6 +166,7 @@ def create_stimuli(exp):
         exp.p.bar_width,
         exp.p.element_size,
         exp.p.element_tex,
+        exp.p.element_mask,
         exp.p.element_sf,
         exp.p.drift_rate,
     )
@@ -174,19 +176,8 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
 
-    """
-    w = exp.p.field_size / 2
-    for pos in np.tile(np.linspace(-w, w, 12), 12):
-
-        trial = pd.Series(dict(
-            pos=pos,
-            ori=90,
-        ))
-
-        yield trial
-    """
-
     def steps(bar, n, start=None, end=None, a=None):
+        """Function to generate bar information for sweep types."""
         if bar:
             b = np.ones(n)
             x = np.linspace(start[0], end[0], n)
@@ -221,6 +212,7 @@ def generate_trials(exp):
     steps = np.concatenate(steps, 0)
     steps = pd.DataFrame(steps, columns=["bar", "x", "y", "a"])
     steps["offset"] = np.arange(len(steps)) * dur + dur
+    steps["onset_time"] = np.nan
 
     for step, info in steps.iterrows():
         yield info
@@ -228,51 +220,22 @@ def generate_trials(exp):
 
 def run_trial(exp, info):
 
-    """
-    exp.s.bar.update_pos(info.pos, 0, info.ori)
-    for frame, skipped in exp.frame_range(seconds=1.5,
-                                          yield_skipped=True):
-
-        update = (((frame % (60 / exp.p.update_rate)) == 0)
-                  or (any(np.mod(skipped, (60 / exp.p.update_rate)) == 0)))
-
-        if update:
-            exp.s.bar.update_elements()
-
-        exp.draw(["bar", "ring", "fix"])
-    """
-
     if info.bar:
         exp.s.bar.update_pos(info.x, info.y, info.a)
 
     exp.s.bar.update_elements()
 
+    frames_per_step = exp.p.step_duration * exp.win.framerate
+    frames_per_update = exp.win.framerate / exp.p.update_rate
+    update_frames = set(np.arange(0, frames_per_step, frames_per_update))
+
     for frame, skipped in exp.frame_range(exp.p.step_duration,
                                           expected_offset=info.offset,
                                           yield_skipped=True):
 
-        update = (((frame % (60 / exp.p.update_rate)) == 0)
-                  or (any(np.mod(skipped, (60 / exp.p.update_rate)) == 0)))
+        update = frame in update_frames or any(update_frames & set(skipped))
         if update:
             exp.s.bar.update_elements()
-
-        """
-        update = (frame in update_frames
-                  or any(update_frames & set(dropped)))
-        if update:
-
-            oddball = oddballer()
-
-            if step.bar:
-                sf = exp.p.oddball_sf if oddball else exp.p.element_sf
-                exp.s.bar.update_elements(sf)
-                exp.s.fix.color = exp.p.fix_bar_color
-            else:
-                if oddball:
-                    exp.s.fix.color = exp.p.fix_odd_color
-                else:
-                    exp.s.fix.color = exp.p.fix_fix_color
-        """
 
         if info.bar:
             stims = ["bar", "ring", "fix"]
@@ -280,15 +243,9 @@ def run_trial(exp, info):
             stims = ["ring", "fix"]
         t = exp.draw(stims)
 
-        # if not frame:
-        #    stim_data.append((t, step.bar, step.x, step.y, step.a))
-
-        # if update and oddball:
-        #     kind = "bar" if step.bar else "fix"
-        #    task_data.append((t, kind))
+        if not frame:
+            info["onset_time"] = t
 
     exp.check_abort()
 
     return info
-
-

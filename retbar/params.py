@@ -3,7 +3,7 @@ base = dict(
     display_name="mlw-mbpro",
     display_luminance=50,
 
-    fix_radius=.2,
+    fix_radius=.15,
 
     fix_bar_color=(.8, .6, -.8),
     fix_fix_color=(.8, .6, -.8),
@@ -12,18 +12,12 @@ base = dict(
     field_size=24,
     step_duration=1.5,
 
-    bar_width=2,
+    bar_width=1.5,
 
     element_size=2,
-    element_tex="saw",
+    element_tex="sin",
+    element_mask="gauss",
     element_sf=1.5,
-
-
-    oddball_sf=2,
-    oddball_prob=.1,
-    oddball_refract=3,
-
-    response_window=1,
 
     update_rate=2,
     drift_rate=.5,
