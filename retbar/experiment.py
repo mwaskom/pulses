@@ -3,14 +3,14 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 from visigoth.tools import flexible_values
-from visigoth.stimuli import ElementArray, Point
-from psychopy import visual
+from visigoth.stimuli import ElementArray, FixationTask
+from psychopy import visual, event
 
 
 class RetBar(object):
 
     def __init__(self, win, field_size, bar_width,
-                 element_size, element_tex, element_mask,
+                 element_size, element_tex, element_mask, contrast,
                  sf_distr, prop_color, drift_rate):
 
         bar_length = field_size + 2 * element_size
@@ -36,7 +36,7 @@ class RetBar(object):
             colorSpace="hsv",
 
         )
-        self.array.pedestal_contrs = 1
+        self.array.pedestal_contrs = contrast
         self.update_elements()
 
         self.edges = [
@@ -169,6 +169,7 @@ def create_stimuli(exp):
         exp.p.element_size,
         exp.p.element_tex,
         exp.p.element_mask,
+        exp.p.contrast,
         exp.p.sf_distr,
         exp.p.prop_color,
         exp.p.drift_rate,
@@ -191,14 +192,14 @@ def generate_trials(exp):
             x = y = a = np.full(n, np.nan)
         return np.stack([b, x, y, a], 1)
 
-    FR = exp.p.field_size / 2
-    HW = exp.p.bar_width / 2
-    D = np.cos(np.pi / 4) * (FR - HW)
+    F = exp.p.field_size / 2
+    E = exp.p.bar_width / 2 if exp.p.full_edges else 0
+    D = np.cos(np.pi / 4) * (F - E)
 
-    L = -FR + HW, 0
-    R = +FR - HW, 0
-    T = 0, +FR - HW
-    B = 0, -FR + HW
+    L = -F + E, 0
+    R = +F - E, 0
+    T = 0, +F - E
+    B = 0, -F + E
     TL = -D, +D
     TR = +D, +D
     BL = -D, -D
