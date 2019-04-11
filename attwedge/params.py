@@ -5,11 +5,14 @@ base = dict(
     display_luminance=50,
     monitor_eye=True,
 
+    # Do the potentially slow trial generation prior to experiment start
+    initialize_trial_generator=True,
+
     # Size of the fixation point
     fix_radius=.15,
 
     # Size of the gap between fixation point and wedge
-    ring_radius=2,
+    ring_radius=1.5,
 
     # Full width (or height) of the mappable area, in degrees
     field_size=24,
@@ -33,8 +36,8 @@ base = dict(
     time_on=.4,
     time_off=.1,
 
-    # Parameters of the constituent gabors in the bar
-    element_size=2,
+    # Parameters of the constituent gabors in the wedge
+    element_size=3,
     element_tex="sin",
     element_mask="gauss",
 
@@ -56,7 +59,7 @@ base = dict(
     # Acceptable keys to indicate pattern repeat
     resp_keys=["space"],
 
-    # Delay after change for which responses will count as a hit
+    # Delay after repeat for which responses will count as a hit
     resp_thresh=1,
 
     # How to save the output data

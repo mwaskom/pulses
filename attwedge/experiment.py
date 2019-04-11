@@ -76,20 +76,19 @@ class AttWedge(object):
         self.edges[0].vertices = rotmat(a + p).dot(self.edge_verts[0].T).T
         self.edges[1].vertices = rotmat(a - p).dot(self.edge_verts[1].T).T
 
-    def update_elements(self, sf=None):
+    def update_elements(self, seed=None):
         """Randomize the constituent elements of the bar."""
-
-        # TODO add control of RNG as simple way to allow repeats for n back
+        rng = np.random.RandomState(seed)
 
         n = len(self.xys)
-        self.array.xys = np.random.permutation(self.array.xys)
-        self.array.oris = np.random.uniform(0, 360, n)
-        self.array.phases = np.random.uniform(0, 1, n)
-        self.array.sfs = flexible_values(self.sf_distr, n)
+        self.array.xys = rng.permutation(self.array.xys)
+        self.array.oris = rng.uniform(0, 360, n)
+        self.array.phases = rng.uniform(0, 1, n)
+        self.array.sfs = flexible_values(self.sf_distr, n, rng)
 
         hsv = np.c_[
-            np.random.uniform(0, 360, n),
-            np.where(np.random.rand(n) < self.prop_color, 1, 0),
+            rng.uniform(0, 360, n),
+            np.where(rng.rand(n) < self.prop_color, 1, 0),
             np.ones(n),
         ]
         self.array.colors = hsv
@@ -195,7 +194,7 @@ def generate_trials(exp):
     step_angles = np.repeat(exp.p.step_angles, trials_per_step)
     angle = np.tile(step_angles, exp.p.num_cycles)
 
-    step_trial = np.tile(np.arange(trials_per_step),
+    step_trial = np.tile(np.arange(trials_per_step) + 1,
                          len(exp.p.step_angles) * exp.p.num_cycles)
 
     full_dur = trial_dur * len(angle)
@@ -210,7 +209,26 @@ def generate_trials(exp):
         flip_time=np.nan,
     ))
 
-    # TODO implement repeats
+    satisfied = False
+    while not satisfied:
+        repeat = np.random.choice(trial_data.index,
+                                  int(exp.p.repeat_prop * len(trial_data)),
+                                  replace=False)
+
+        repeat = np.sort(repeat)
+        double_repeat = (np.diff(repeat) < 2).any()
+        cross_step_repeat = (trial_data.loc[repeat, "step_trial"] == 1).any()
+        if not (double_repeat or cross_step_repeat):
+            satisfied = True
+
+    seed = np.random.randint(0, 2 ** 15, len(trial_data))
+    seed[repeat] = seed[repeat - 1]
+    trial_data["seed"] = seed
+
+    trial_data["repeat"] = False
+    trial_data.loc[repeat, "repeat"] = True
+
+    yield
 
     for _, info in trial_data.iterrows():
         yield info
@@ -219,7 +237,7 @@ def generate_trials(exp):
 def run_trial(exp, info):
 
     exp.s.wedge.update_angle(info["angle"])
-    exp.s.wedge.update_elements()
+    exp.s.wedge.update_elements(seed=int(info["seed"]))
 
     for frame, skipped in exp.frame_range(exp.p.time_on,
                                           expected_offset=info["offset"],
@@ -232,3 +250,75 @@ def run_trial(exp, info):
     exp.wait_until(timeout=exp.p.time_off, draw="fix")
 
     return info
+
+
+def summarize_task_performance(exp):
+
+    if not exp.trial_data:
+        return None, None
+
+    trial_data = pd.DataFrame(exp.trial_data)
+    trial_data["hit"] = False
+    repeat_times = trial_data.loc[trial_data["repeat"], "flip_time"]
+
+    key_presses = event.getKeys(exp.p.resp_keys, timeStamped=exp.clock)
+    if key_presses:
+        _, press_times = list(zip(*key_presses))
+    else:
+        press_times = []
+    press_times = np.array(press_times)
+
+    for t, time in repeat_times.iteritems():
+        deltas = press_times - time
+        hit = np.any((0 < deltas) & (deltas < exp.p.resp_thresh))
+        trial_data.loc[t, "hit"] = hit
+
+    false_alarms = 0
+    for t in press_times:
+        deltas = t - np.asarray(repeat_times)
+        if ~np.any((0 < deltas) & (deltas < exp.p.resp_thresh)):
+            false_alarms += 1
+
+    return trial_data, false_alarms
+
+
+def compute_performance(exp):
+
+    trial_data, false_alarms = summarize_task_performance(exp)
+
+    if trial_data is None:
+        return None, None
+
+    repeat_trials = trial_data.loc[trial_data["repeat"]]
+    hit_rate = repeat_trials["hit"].mean()
+    return hit_rate, false_alarms
+
+
+def show_performance(exp, hit_rate, false_alarms):
+
+    lines = ["End of the run!"]
+
+    if hit_rate is not None:
+        lines.append("")
+        lines.append(
+            "You detected {:.0%} of the repeats,".format(hit_rate)
+            )
+        lines.append(
+            "with {:0d} false alarms.".format(false_alarms)
+            )
+
+    n = len(lines)
+    height = .5
+    heights = (np.arange(n)[::-1] - (n / 2 - .5)) * height
+    for line, y in zip(lines, heights):
+        visual.TextStim(exp.win, line,
+                        pos=(0, y), height=height).draw()
+    exp.win.flip()
+
+
+def save_data(exp):
+
+    trial_data, _ = summarize_task_performance(exp)
+    if trial_data is not None:
+        out_fname = exp.output_stem + "_trials.csv"
+        trial_data.to_csv(out_fname, index=False)
