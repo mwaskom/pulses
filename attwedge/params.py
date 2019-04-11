@@ -8,21 +8,21 @@ base = dict(
     # Size of the fixation point
     fix_radius=.15,
 
-    # Colors to cycle through and distribution for timing the changes
-    fix_colors=['#86ade2', '#70bc83'],
-    fix_duration=("truncexpon", (12 - 4) / 4, 4, 4),
-
     # Full width (or height) of the mappable area, in degrees
     field_size=24,
 
     # Duration of each bar step, in seconds
-    step_duration=1.5,
+    step_duration=12,
 
-    # True if the full width of the bar is visible at the edges
-    full_edges=False,  # True,
+    # Width of the wedge size, in degrees
+    wedge_angle=25,
 
-    # Width of the bar, in degrees
-    bar_width=3,  # 8 / 3.,
+    # Proportion of repeated patterns
+    repeat_prop=.1,
+
+    # Timing to show and now show the wedge (in frames, not seconds)
+    frames_on=24,  # .4 s at 60 Hz
+    frames_off=7,  # .1 s at 60 Hz
 
     # Parameters of the constituent gabors in the bar
     element_size=2,
@@ -44,14 +44,14 @@ base = dict(
     # Rate at which the gabors drift, in cycles per second
     drift_rate=.5,
 
-    # Acceptable keys to indicate fixation change detection
+    # Acceptable keys to indicate pattern repeat
     resp_keys=["space"],
 
     # Delay after change for which responses will count as a hit
     resp_thresh=1,
 
     # How to save the output data
-    output_template="data/{subject}/{session}/retbar_{time}",
+    output_template="data/{subject}/{session}/attwedge_{time}",
 
 )
 

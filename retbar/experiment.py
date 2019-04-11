@@ -72,9 +72,6 @@ class RetBar(object):
         self.array.xys = np.random.permutation(self.array.xys)
         self.array.oris = np.random.uniform(0, 360, n)
         self.array.phases = np.random.uniform(0, 1, n)
-
-        # TODO make parameter
-        # self.array.sfs = np.random.uniform(.25, 4, n)
         self.array.sfs = flexible_values(self.sf_distr, n)
 
         hsv = np.c_[
