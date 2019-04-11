@@ -163,6 +163,13 @@ def create_stimuli(exp):
         exp.p.fix_color,
     )
 
+    ring = Point(
+        exp.win,
+        exp.p.fix_pos,
+        exp.p.ring_radius,
+        exp.win.color,
+    )
+
     wedge = AttWedge(
         exp.win,
         exp.p.field_size,
@@ -181,26 +188,47 @@ def create_stimuli(exp):
 
 def generate_trials(exp):
 
-    yield
+    trial_dur = exp.p.time_on + exp.p.time_off
+    trials_per_step = exp.p.step_duration / trial_dur
+    assert trials_per_step == int(trials_per_step)
+
+    step_angles = np.repeat(exp.p.step_angles, trials_per_step)
+    angle = np.tile(step_angles, exp.p.num_cycles)
+
+    step_trial = np.tile(np.arange(trials_per_step),
+                         len(exp.p.step_angles) * exp.p.num_cycles)
+
+    full_dur = trial_dur * len(angle)
+    onset = np.arange(0, full_dur, trial_dur)
+    offset = onset + exp.p.time_on
+
+    trial_data = pd.DataFrame(dict(
+        step_trial=step_trial,
+        angle=angle,
+        onset=onset,
+        offset=offset,
+        flip_time=np.nan,
+    ))
+
+    # TODO implement repeats
+
+    for _, info in trial_data.iterrows():
+        yield info
 
 
 def run_trial(exp, info):
 
-    frames_per_step = exp.p.step_duration * exp.win.framerate
-    frames_per_update = exp.win.framerate / exp.p.update_rate
-    update_frames = set(np.arange(0, frames_per_step, frames_per_update))
+    exp.s.wedge.update_angle(info["angle"])
+    exp.s.wedge.update_elements()
 
-    for angle in [0, 90, 180, 270]:
+    for frame, skipped in exp.frame_range(exp.p.time_on,
+                                          expected_offset=info["offset"],
+                                          yield_skipped=True):
 
-        exp.s.wedge.update_angle(angle)
+        t = exp.draw(["wedge", "ring", "fix"])
+        if not frame:
+            info["flip_time"] = t
 
-        for frame, skipped in exp.frame_range(exp.p.step_duration,
-                                              # expected_offset=info.offset,
-                                              yield_skipped=True):
+    exp.wait_until(timeout=exp.p.time_off, draw="fix")
 
-            update = (frame in update_frames
-                      or any(update_frames & set(skipped)))
-            if update:
-                exp.s.wedge.update_elements()
-
-            exp.draw(["wedge", "fix"])
+    return info

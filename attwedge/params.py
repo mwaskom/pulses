@@ -8,11 +8,11 @@ base = dict(
     # Size of the fixation point
     fix_radius=.15,
 
+    # Size of the gap between fixation point and wedge
+    ring_radius=2,
+
     # Full width (or height) of the mappable area, in degrees
     field_size=24,
-
-    # Duration of each bar step, in seconds
-    step_duration=12,
 
     # Width of the wedge size, in degrees
     wedge_angle=25,
@@ -20,9 +20,18 @@ base = dict(
     # Proportion of repeated patterns
     repeat_prop=.1,
 
+    # Duration of each bar step, in seconds
+    step_duration=12,
+
+    # Angles for each step of the wedge
+    step_angles=[0, 90, 180, 270],
+
+    # Number of cycles
+    num_cycles=4,
+
     # Timing to show and now show the wedge (in frames, not seconds)
-    frames_on=24,  # .4 s at 60 Hz
-    frames_off=7,  # .1 s at 60 Hz
+    time_on=.4,
+    time_off=.1,
 
     # Parameters of the constituent gabors in the bar
     element_size=2,
@@ -33,7 +42,7 @@ base = dict(
     contrast=1,
 
     # Distribution of gabor spatial frequencies
-    sf_distr=("truncexpon", 3.5 / 2, .5, 2),
+    sf_distr=("truncexpon", 1.5 / 2, .5, 2),
 
     # Proportion of gabors with chromatic rather than luminance contrast
     prop_color=.5,
