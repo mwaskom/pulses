@@ -12,7 +12,7 @@ base = dict(
     fix_radius=.15,
 
     # Color of the fixation point (usually and for oddballs)
-    fix_color=.2,
+    fix_color=.5,
     fix_oddball_color=(.8, .6, -.8),
 
     # Size of the gap between fixation point and wedge
