@@ -11,6 +11,10 @@ base = dict(
     # Size of the fixation point
     fix_radius=.15,
 
+    # Color of the fixation point (usually and for oddballs)
+    fix_color=.2,
+    fix_oddball_color=(.8, .6, -.8),
+
     # Size of the gap between fixation point and wedge
     ring_radius=1,
 
@@ -18,7 +22,7 @@ base = dict(
     field_size=24,
 
     # Width of the wedge size, in degrees
-    wedge_angle=25,
+    wedge_angle=30,
 
     # Proportion of oddball patterns
     oddball_prop=.1,
@@ -32,7 +36,7 @@ base = dict(
     # Number of cycles
     num_cycles=4,
 
-    # Timing to show and now show the wedge (in frames, not seconds)
+    # Timing to show and not show the wedge (in frames, not seconds)
     time_on=.5,
     time_off=0,
 

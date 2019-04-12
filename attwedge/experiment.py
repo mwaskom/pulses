@@ -11,7 +11,7 @@ class AttWedge(object):
 
     def __init__(self, win, field_size, wedge_angle,
                  element_size, element_tex, element_mask, contrast,
-                 sf_distr, prop_color, drift_rate):
+                 sf_distr, prop_color, drift_rate, oddball_coherence):
 
         self.length = length = field_size / 2 + 2 * element_size
         self.width = width = 2 * np.tan(np.deg2rad(wedge_angle) / 2) * length
@@ -57,6 +57,8 @@ class AttWedge(object):
             for verts in self.edge_verts
         ]
 
+        self.oddball_coherence = oddball_coherence
+
         self.array.pedestal_contrs = contrast
         self.update_angle(0)
         self.update_elements()
@@ -64,6 +66,8 @@ class AttWedge(object):
     def update_angle(self, a):
         """Set bar at x, y position with angle a in degrees."""
         from numpy import sin, cos
+
+        self.angle = a
 
         def rotmat(a):
             th = np.deg2rad(a)
@@ -76,15 +80,19 @@ class AttWedge(object):
         self.edges[0].vertices = rotmat(a + p).dot(self.edge_verts[0].T).T
         self.edges[1].vertices = rotmat(a - p).dot(self.edge_verts[1].T).T
 
-    def update_elements(self, seed=None):
+    def update_elements(self, oddball=False, seed=None):
         """Randomize the constituent elements of the bar."""
         rng = np.random.RandomState(seed)
 
         n = len(self.xys)
         self.array.xys = rng.permutation(self.array.xys)
-        self.array.oris = rng.uniform(0, 360, n)
         self.array.phases = rng.uniform(0, 1, n)
         self.array.sfs = flexible_values(self.sf_distr, n, rng)
+
+        self.array.oris = rng.uniform(0, 360, n)
+        if oddball:
+            align = rng.rand(n) < self.oddball_coherence
+            self.array.oris[align] = self.angle
 
         hsv = np.c_[
             rng.uniform(0, 360, n),
@@ -179,14 +187,16 @@ def create_stimuli(exp):
         exp.p.contrast,
         exp.p.sf_distr,
         exp.p.prop_color,
-        exp.p.drift_rate
+        exp.p.drift_rate,
+        exp.p.oddball_coherence,
     )
 
     return locals()
 
 
 def define_cmdline_params(self, parser):
-    parser.add_argument("--oddball_align", default=.8, type=float)
+    parser.add_argument("--oddball_coherence", default=.8, type=float)
+    parser.add_argument("--signal_oddballs", action="store_true")
 
 
 def generate_trials(exp):
@@ -234,16 +244,16 @@ def generate_trials(exp):
 def run_trial(exp, info):
 
     exp.s.wedge.update_angle(info["angle"])
-    exp.s.wedge.update_elements()
+    exp.s.wedge.update_elements(oddball=info["oddball"])
+
+    if info["oddball"] and exp.p.signal_oddballs:
+        exp.s.fix.color = exp.p.fix_oddball_color
+    else:
+        exp.s.fix.color = exp.p.fix_color
 
     for frame, skipped in exp.frame_range(exp.p.time_on,
                                           expected_offset=info["offset"],
                                           yield_skipped=True):
-
-        if info["oddball"]:
-            n = len(exp.s.wedge.array.oris)
-            align = np.random.rand(n) < exp.p.oddball_align
-            exp.s.wedge.array.oris[align] = info["angle"]
 
         t = exp.draw(["wedge", "ring", "fix"])
         if not frame:
