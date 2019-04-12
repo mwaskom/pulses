@@ -66,6 +66,10 @@ base = dict(
     # Delay after oddball for which responses will count as a hit
     resp_thresh=1,
 
+    # Total duration to run the the experiment for and stim to show at end
+    run_duration=198,
+    final_stim="fix",
+
     # How to save the output data
     output_template="data/{subject}/{session}/attwedge_{time}",
 
