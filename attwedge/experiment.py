@@ -185,6 +185,10 @@ def create_stimuli(exp):
     return locals()
 
 
+def define_cmdline_params(self, parser):
+    parser.add_argument("--oddball_align", default=.8, type=float)
+
+
 def generate_trials(exp):
 
     trial_dur = exp.p.time_on + exp.p.time_off
@@ -206,27 +210,20 @@ def generate_trials(exp):
         angle=angle,
         onset=onset,
         offset=offset,
+        oddball=False,
         flip_time=np.nan,
     ))
 
     satisfied = False
     while not satisfied:
-        repeat = np.random.choice(trial_data.index,
-                                  int(exp.p.repeat_prop * len(trial_data)),
-                                  replace=False)
+        oddball = np.random.choice(trial_data.index,
+                                   int(exp.p.oddball_prop * len(trial_data)),
+                                   replace=False)
 
-        repeat = np.sort(repeat)
-        double_repeat = (np.diff(repeat) < 2).any()
-        cross_step_repeat = (trial_data.loc[repeat, "step_trial"] == 1).any()
-        if not (double_repeat or cross_step_repeat):
+        oddball = np.sort(oddball)
+        if not (np.diff(np.sort(oddball)) < 3).any():
             satisfied = True
-
-    seed = np.random.randint(0, 2 ** 15, len(trial_data))
-    seed[repeat] = seed[repeat - 1]
-    trial_data["seed"] = seed
-
-    trial_data["repeat"] = False
-    trial_data.loc[repeat, "repeat"] = True
+    trial_data.loc[oddball, "oddball"] = True
 
     yield
 
@@ -237,11 +234,16 @@ def generate_trials(exp):
 def run_trial(exp, info):
 
     exp.s.wedge.update_angle(info["angle"])
-    exp.s.wedge.update_elements(seed=int(info["seed"]))
+    exp.s.wedge.update_elements()
 
     for frame, skipped in exp.frame_range(exp.p.time_on,
                                           expected_offset=info["offset"],
                                           yield_skipped=True):
+
+        if info["oddball"]:
+            n = len(exp.s.wedge.array.oris)
+            align = np.random.rand(n) < exp.p.oddball_align
+            exp.s.wedge.array.oris[align] = info["angle"]
 
         t = exp.draw(["wedge", "ring", "fix"])
         if not frame:
@@ -259,7 +261,7 @@ def summarize_task_performance(exp):
 
     trial_data = pd.DataFrame(exp.trial_data)
     trial_data["hit"] = False
-    repeat_times = trial_data.loc[trial_data["repeat"], "flip_time"]
+    oddball_times = trial_data.loc[trial_data["oddball"], "flip_time"]
 
     key_presses = event.getKeys(exp.p.resp_keys, timeStamped=exp.clock)
     if key_presses:
@@ -268,14 +270,14 @@ def summarize_task_performance(exp):
         press_times = []
     press_times = np.array(press_times)
 
-    for t, time in repeat_times.iteritems():
+    for t, time in oddball_times.iteritems():
         deltas = press_times - time
         hit = np.any((0 < deltas) & (deltas < exp.p.resp_thresh))
         trial_data.loc[t, "hit"] = hit
 
     false_alarms = 0
     for t in press_times:
-        deltas = t - np.asarray(repeat_times)
+        deltas = t - np.asarray(oddball_times)
         if ~np.any((0 < deltas) & (deltas < exp.p.resp_thresh)):
             false_alarms += 1
 
@@ -289,8 +291,8 @@ def compute_performance(exp):
     if trial_data is None:
         return None, None
 
-    repeat_trials = trial_data.loc[trial_data["repeat"]]
-    hit_rate = repeat_trials["hit"].mean()
+    oddball_trials = trial_data.loc[trial_data["oddball"]]
+    hit_rate = oddball_trials["hit"].mean()
     return hit_rate, false_alarms
 
 
@@ -301,7 +303,7 @@ def show_performance(exp, hit_rate, false_alarms):
     if hit_rate is not None:
         lines.append("")
         lines.append(
-            "You detected {:.0%} of the repeats,".format(hit_rate)
+            "You detected {:.0%} of the oddballs,".format(hit_rate)
             )
         lines.append(
             "with {:0d} false alarms.".format(false_alarms)

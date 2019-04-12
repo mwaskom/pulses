@@ -12,7 +12,7 @@ base = dict(
     fix_radius=.15,
 
     # Size of the gap between fixation point and wedge
-    ring_radius=1.5,
+    ring_radius=1,
 
     # Full width (or height) of the mappable area, in degrees
     field_size=24,
@@ -20,8 +20,8 @@ base = dict(
     # Width of the wedge size, in degrees
     wedge_angle=25,
 
-    # Proportion of repeated patterns
-    repeat_prop=.1,
+    # Proportion of oddball patterns
+    oddball_prop=.1,
 
     # Duration of each bar step, in seconds
     step_duration=12,
@@ -33,11 +33,11 @@ base = dict(
     num_cycles=4,
 
     # Timing to show and now show the wedge (in frames, not seconds)
-    time_on=.4,
-    time_off=.1,
+    time_on=.5,
+    time_off=0,
 
     # Parameters of the constituent gabors in the wedge
-    element_size=3,
+    element_size=2,
     element_tex="sin",
     element_mask="gauss",
 
@@ -45,7 +45,7 @@ base = dict(
     contrast=1,
 
     # Distribution of gabor spatial frequencies
-    sf_distr=("truncexpon", 1.5 / 2, .5, 2),
+    sf_distr=("truncexpon", 2.5 / 1.5, .5, 1.5),
 
     # Proportion of gabors with chromatic rather than luminance contrast
     prop_color=.5,
@@ -56,10 +56,10 @@ base = dict(
     # Rate at which the gabors drift, in cycles per second
     drift_rate=.5,
 
-    # Acceptable keys to indicate pattern repeat
+    # Acceptable keys to indicate oddball
     resp_keys=["space"],
 
-    # Delay after repeat for which responses will count as a hit
+    # Delay after oddball for which responses will count as a hit
     resp_thresh=1,
 
     # How to save the output data
