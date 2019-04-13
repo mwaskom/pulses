@@ -203,13 +203,20 @@ def generate_trials(exp):
     TR = +D, +D
     BL = -D, -D
     BR = +D, -D
-    C = 0, 0
 
     steps = [
-        steps(True, 16, L, R, 90), steps(True, 8, BR, C, 45), steps(False, 8),
-        steps(True, 16, T, B, 0), steps(True, 8, BL, C, -45), steps(False, 8),
-        steps(True, 16, R, L, 90), steps(True, 8, TL, C, 45), steps(False, 8),
-        steps(True, 16, B, T, 0), steps(True, 8, TR, C, -45), steps(False, 8),
+        steps(True, 16, L, R, 90),
+        steps(True, 16, BR, TL, 45)[:8],
+        steps(False, 8),
+        steps(True, 16, T, B, 0),
+        steps(True, 16, BL, TR, -45)[:8],
+        steps(False, 8),
+        steps(True, 16, R, L, 90),
+        steps(True, 16, TL, BR, 45)[:8],
+        steps(False, 8),
+        steps(True, 16, B, T, 0),
+        steps(True, 16, TR, BL, -45)[:8],
+        steps(False, 8),
     ]
 
     dur = exp.p.step_duration
