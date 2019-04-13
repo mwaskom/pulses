@@ -77,7 +77,8 @@ scan.update(
     contrast=1,
 
     # Aperture to avoid bright screen spilling over bore screen edges
-    aperture_radius=19,
-    aperture_center=(0, -7.2),
+    # TODO this interacts poorly with the aperture we use to define the stim!
+    # aperture_radius=19,
+    # aperture_center=(0, -7.2),
 
 )

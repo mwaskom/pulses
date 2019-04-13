@@ -13,34 +13,28 @@ class AttWedge(object):
                  element_size, element_tex, element_mask, contrast,
                  sf_distr, prop_color, drift_rate, oddball_coherence):
 
+        # Define the length and width of the rectangular area with stims
         self.length = length = field_size / 2 + 2 * element_size
         self.width = width = 2 * np.tan(np.deg2rad(wedge_angle) / 2) * length
 
+        # Use poisson disc sampling to get roughly uniform coverage of the area
         xys = poisson_disc_sample(length, width, element_size / 4)
         self.xys = xys
+
+        # Assign parameters we will need when drawing the stimulus
         self.edge_offset = width / 2 + element_size / 2
         self.drift_step = drift_rate / win.framerate
         self.sf_distr = sf_distr
         self.prop_color = prop_color
-
         self.wedge_angle = wedge_angle
+        self.oddball_coherence = oddball_coherence
 
         self.element_size = element_size
         self.element_tex = element_tex
         self.element_mask = element_mask
 
-        self.array = ElementArray(
-
-            win,
-            xys=xys,
-            nElements=len(xys),
-            sizes=element_size,
-            elementTex=element_tex,
-            elementMask=element_mask,
-            colorSpace="hsv",
-
-        )
-
+        # Initialize the angled bars that will be superimposed to define
+        # the "wedge" shape of the stimulus
         l, w, o = length, width, 2 * element_size
         self.edge_verts = [
             np.array([(-o, 0), (l + o, 0), (l + o, +w), (-o, +w)]),
@@ -57,7 +51,18 @@ class AttWedge(object):
             for verts in self.edge_verts
         ]
 
-        self.oddball_coherence = oddball_coherence
+        # Initialize the ElementArray object
+        self.array = ElementArray(
+
+            win,
+            xys=xys,
+            nElements=len(xys),
+            sizes=element_size,
+            elementTex=element_tex,
+            elementMask=element_mask,
+            colorSpace="hsv",
+
+        )
 
         self.array.pedestal_contrs = contrast
         self.update_angle(0)
@@ -156,13 +161,16 @@ def poisson_disc_sample(length, width, radius=.5, candidates=20, seed=None):
 
 def create_stimuli(exp):
 
+    # Needed to enable aperture
     exp.win.allowStencil = True
 
+    # Circular aperture will clip the stimulus
     aperture = visual.Aperture(
         exp.win,
         exp.p.field_size
     )
 
+    # Simple fixation point
     fix = Point(
         exp.win,
         exp.p.fix_pos,
@@ -170,6 +178,7 @@ def create_stimuli(exp):
         exp.p.fix_color,
     )
 
+    # Ring around the fixation point to clip stimulus
     ring = Point(
         exp.win,
         exp.p.fix_pos,
@@ -177,6 +186,7 @@ def create_stimuli(exp):
         exp.win.color,
     )
 
+    # Main stimulus object
     wedge = AttWedge(
         exp.win,
         exp.p.field_size,
@@ -195,7 +205,11 @@ def create_stimuli(exp):
 
 
 def define_cmdline_params(self, parser):
-    parser.add_argument("--oddball_coherence", default=.8, type=float)
+
+    # Proportion of constituent stimuli that align in an oddball
+    parser.add_argument("--oddball_coherence", default=.85, type=float)
+
+    # If True, fixation point color signals oddball stimuli
     parser.add_argument("--signal_oddballs", action="store_true")
 
 
@@ -225,6 +239,7 @@ def generate_trials(exp):
         flip_time=np.nan,
     ))
 
+    # Define oddball stimuli, with refractory period
     satisfied = False
     while not satisfied:
         oddball = np.random.choice(trial_data.index,
@@ -236,6 +251,9 @@ def generate_trials(exp):
             satisfied = True
     trial_data.loc[oddball, "oddball"] = True
 
+    # Yield here because the above can take some time.
+    # Clock won't start until after it is finished
+    # (assumes that `initialize_trial_generator` is set to True.
     yield
 
     for _, info in trial_data.iterrows():
