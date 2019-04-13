@@ -22,7 +22,7 @@ base = dict(
     full_edges=False,  # True,
 
     # Width of the bar, in degrees
-    bar_width=3,  # 8 / 3.,
+    bar_width=2.4,  # 8 / 3.,
 
     # Parameters of the constituent gabors in the bar
     element_size=2,

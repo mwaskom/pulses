@@ -215,8 +215,9 @@ def generate_trials(exp):
     dur = exp.p.step_duration
     steps = np.concatenate(steps, 0)
     steps = pd.DataFrame(steps, columns=["bar", "x", "y", "a"])
-    steps["offset"] = np.arange(len(steps)) * dur + dur
-    steps["onset_time"] = np.nan
+    steps["expected_onset"] = np.arange(len(steps)) * dur
+    steps["expected_offset"] = steps["expected_onset"] + dur
+    steps["flip_time"] = np.nan
 
     for step, info in steps.iterrows():
         yield info
@@ -233,11 +234,11 @@ def run_trial(exp, info):
     frames_per_update = exp.win.framerate / exp.p.update_rate
     update_frames = set(np.arange(0, frames_per_step, frames_per_update))
 
-    for frame, skipped in exp.frame_range(exp.p.step_duration,
-                                          expected_offset=info.offset,
-                                          yield_skipped=True):
+    for frame, skip in exp.frame_range(exp.p.step_duration,
+                                       expected_offset=info["expected_offset"],
+                                       yield_skipped=True):
 
-        update = frame in update_frames or any(update_frames & set(skipped))
+        update = frame in update_frames or any(update_frames & set(skip))
         if update:
             exp.s.bar.update_elements()
 
@@ -248,7 +249,7 @@ def run_trial(exp, info):
         t = exp.draw(stims)
 
         if not frame:
-            info["onset_time"] = t
+            info["flip_time"] = t
 
     exp.check_abort()
 
