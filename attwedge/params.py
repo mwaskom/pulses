@@ -27,14 +27,16 @@ base = dict(
     # Proportion of oddball patterns
     oddball_prop=.1,
 
-    # Duration of each bar step, in seconds
-    step_duration=12,
+    # Duration of each position block, in seconds
+    block_duration=12,
 
     # Angles for each step of the wedge
-    step_angles=[0, 90, 180, 270],
-
-    # Number of cycles
-    num_cycles=4,
+    angles=[
+        180, 0, 90, 270,
+        0, 180, 270, 90,
+        0, 180, 90, 270,
+        180, 0, 270, 90
+    ],
 
     # Timing to show and not show the wedge (in frames, not seconds)
     time_on=.5,

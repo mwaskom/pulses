@@ -202,24 +202,25 @@ def define_cmdline_params(self, parser):
 def generate_trials(exp):
 
     trial_dur = exp.p.time_on + exp.p.time_off
-    trials_per_step = exp.p.step_duration / trial_dur
-    assert trials_per_step == int(trials_per_step)
+    trials_per_block = exp.p.block_duration / trial_dur
+    assert trials_per_block == int(trials_per_block)
 
-    step_angles = np.repeat(exp.p.step_angles, trials_per_step)
-    angle = np.tile(step_angles, exp.p.num_cycles)
-
-    step_trial = np.tile(np.arange(trials_per_step) + 1,
-                         len(exp.p.step_angles) * exp.p.num_cycles)
+    block_trial = np.tile(np.arange(trials_per_block) + 1, len(exp.p.angles))
+    angle = np.repeat(exp.p.angles, trials_per_block)
+    block = np.repeat(np.arange(len(exp.p.angles)) + 1, trials_per_block)
+    trial = np.arange(len(angle)) + 1
 
     full_dur = trial_dur * len(angle)
-    onset = np.arange(0, full_dur, trial_dur)
-    offset = onset + exp.p.time_on
+    expected_onset = np.arange(0, full_dur, trial_dur)
+    expected_offset = expected_onset + exp.p.time_on
 
     trial_data = pd.DataFrame(dict(
-        step_trial=step_trial,
+        trial=trial,
+        block=block,
+        block_trial=block_trial,
         angle=angle,
-        onset=onset,
-        offset=offset,
+        expected_onset=expected_onset,
+        expected_offset=expected_offset,
         oddball=False,
         flip_time=np.nan,
     ))
@@ -251,15 +252,15 @@ def run_trial(exp, info):
     else:
         exp.s.fix.color = exp.p.fix_color
 
-    for frame, skipped in exp.frame_range(exp.p.time_on,
-                                          expected_offset=info["offset"],
-                                          yield_skipped=True):
+    for frame in exp.frame_range(exp.p.time_on,
+                                 expected_offset=info["expected_offset"]):
 
         t = exp.draw(["wedge", "ring", "fix"])
         if not frame:
             info["flip_time"] = t
 
-    exp.wait_until(timeout=exp.p.time_off, draw="fix")
+    if exp.p.time_off:
+        exp.wait_until(timeout=exp.p.time_off, draw="fix")
 
     return info
 
