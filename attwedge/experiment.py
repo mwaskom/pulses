@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 from visigoth.tools import flexible_values
-from visigoth.stimuli import ElementArray, Point
+from visigoth.stimuli import ElementArray, Point, StimAperture
 from psychopy import visual, event
 
 
@@ -50,6 +50,12 @@ class AttWedge(object):
             )
             for verts in self.edge_verts
         ]
+
+        # Initialize the circular aperture
+        self.aperture = StimAperture(
+            win,
+            field_size / 2,
+        )
 
         # Initialize the ElementArray object
         self.array = ElementArray(
@@ -112,6 +118,7 @@ class AttWedge(object):
         self.array.draw()
         for edge in self.edges:
             edge.draw()
+        self.aperture.draw()
 
 
 def poisson_disc_sample(length, width, radius=.5, candidates=20, seed=None):
@@ -160,15 +167,6 @@ def poisson_disc_sample(length, width, radius=.5, candidates=20, seed=None):
 
 
 def create_stimuli(exp):
-
-    # Needed to enable aperture
-    exp.win.allowStencil = True
-
-    # Circular aperture will clip the stimulus
-    aperture = visual.Aperture(
-        exp.win,
-        exp.p.field_size
-    )
 
     # Simple fixation point
     fix = Point(

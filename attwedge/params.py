@@ -95,12 +95,10 @@ scan.update(
 
     resp_keys=["1", "2", "3", "4", "6", "7", "8", "9"],
 
-    # TODO check that contrast of 1 is ok at the scanner
     contrast=1,
 
     # Aperture to avoid bright screen spilling over bore screen edges
-    # TODO this interacts poorly with the aperture we use to define the stim!
-    # aperture_radius=19,
-    # aperture_center=(0, -7.2),
+    aperture_radius=19.5,
+    aperture_center=(0, -7.2),
 
 )

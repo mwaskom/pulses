@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
 from visigoth.tools import flexible_values
-from visigoth.stimuli import ElementArray, FixationTask
+from visigoth.stimuli import ElementArray, FixationTask, StimAperture
 from psychopy import visual, event
 
 
@@ -50,6 +50,11 @@ class RetBar(object):
             for _ in ["top", "bottom"]
         ]
 
+        self.aperture = StimAperture(
+            win,
+            field_size / 2,
+        )
+
     def update_pos(self, x, y, a):
         """Set bar at x, y position with angle a in degrees."""
         theta = np.deg2rad(a)
@@ -87,6 +92,7 @@ class RetBar(object):
         self.array.draw()
         for edge in self.edges:
             edge.draw()
+        self.aperture.draw()
 
 
 def poisson_disc_sample(length, width, radius=.5, candidates=20, seed=None):
@@ -138,9 +144,9 @@ def create_stimuli(exp):
 
     exp.win.allowStencil = True
 
-    aperture = visual.Aperture(
+    aperture = StimAperture(
         exp.win,
-        exp.p.field_size
+        exp.p.field_size / 2,
     )
 
     fix = FixationTask(
