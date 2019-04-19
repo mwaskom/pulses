@@ -4,16 +4,22 @@ from itertools import cycle
 import numpy as np
 import pandas as pd
 
-from visigoth.stimuli import Point, Pattern
+from psychopy import visual, event
+from visigoth.stimuli import Pattern, FixationTask
 
 
 def create_stimuli(exp):
     """Initialize stimulus objects."""
-    # Fixation point
-    fix = Point(exp.win,
-                exp.p.fix_pos,
-                exp.p.fix_radius,
-                exp.p.fix_colors[1])
+
+    # Fixation point, with color change detection task
+    fix = FixationTask(
+        exp.win,
+        exp.clock,
+        exp.p.fix_colors,
+        exp.p.fix_duration,
+        exp.p.fix_radius,
+        exp.p.fix_pos,
+    )
 
     # Average of multiple sinusoidal grating stimulus
     pattern = Pattern(exp.win,
@@ -53,9 +59,6 @@ def run_trial(exp, info):
 
     for i in range(block_dur * update_hz):
 
-        if np.random.rand() < exp.p.fix_color_hazard:
-            exp.s.fix.color = next(exp.fix_colors)
-
         exp.s.pattern.randomize_phases(limits=(.2, .8))
         end = info["block_time"] + (i + 1) * (1 / update_hz)
 
@@ -67,3 +70,79 @@ def run_trial(exp, info):
         exp.check_abort()
 
     return info
+
+
+def summarize_task_performance(exp):
+
+    # TODO should this code, and the code that computes hit rates /false alarms
+    # go into the fixation task object? Probably!
+
+    if not exp.trial_data:
+        return None
+
+    if hasattr(exp, "task_events"):
+        return exp.task_events
+
+    else:
+
+        change_times = exp.s.fix.change_times
+        key_presses = event.getKeys(exp.p.resp_keys, timeStamped=exp.clock)
+        if key_presses:
+            _, press_times = list(zip(*key_presses))
+        else:
+            press_times = []
+
+        change_times = np.array(change_times)
+        press_times = np.array(press_times)
+
+        events = []
+        for t in change_times:
+            deltas = press_times - t
+            hit = np.any((0 < deltas) & (deltas < exp.p.resp_thresh))
+            events.append((t, "hit" if hit else "miss"))
+
+        for t in press_times:
+            deltas = t - change_times
+            fa = ~np.any((0 < deltas) & (deltas < exp.p.resp_thresh))
+            if fa:
+                events.append((t, "fa"))
+
+        events = pd.DataFrame(events, columns=["time", "event"])
+        exp.task_events = events
+
+        return events
+
+
+def compute_performance(exp):
+
+    events = summarize_task_performance(exp)
+    if events is None:
+        hit_rate = false_alarms = None
+    else:
+
+        hit_rate = ((events["event"] == "hit").sum()
+                    / events["event"].isin(["hit", "miss"]).sum())
+        false_alarms = (events["event"] == "fa").sum()
+        return hit_rate, false_alarms
+
+
+def show_performance(exp, hit_rate, false_alarms):
+
+    lines = ["End of the run!"]
+
+    if hit_rate is not None:
+        lines.append("")
+        lines.append(
+            "You detected {:.0%} of the color changes,".format(hit_rate)
+            )
+        lines.append(
+            "with {:0d} false alarms.".format(false_alarms)
+            )
+
+    n = len(lines)
+    height = .5
+    heights = (np.arange(n)[::-1] - (n / 2 - .5)) * height
+    for line, y in zip(lines, heights):
+        visual.TextStim(exp.win, line,
+                        pos=(0, y), height=height).draw()
+    exp.win.flip()

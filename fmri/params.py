@@ -128,12 +128,16 @@ loc.update(
 
     run_duration=240,
 
-    fix_colors=['#86ade2', '#70bc83'],
-
     n_blocks=8,
     block_dur=15,
     update_hz=3,
 
-    fix_color_hazard=.02,
+    # Colors to cycle through and distribution for timing the changes
+    fix_colors=['#86ade2', '#70bc83'],
+    fix_duration=("truncexpon", (12 - 4) / 4, 4, 4),
+
+    # Parameters for keypress response on fixation task
+    resp_keys=["1", "2", "3", "4", "6", "7", "8", "9"],
+    resp_thresh=1,
 
 )
