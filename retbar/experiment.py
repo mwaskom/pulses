@@ -1,4 +1,5 @@
 from __future__ import division
+import json
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
@@ -356,3 +357,7 @@ def save_data(exp):
         barpos = pd.DataFrame(exp.trial_data)
         out_fname = exp.output_stem + "_barpos.csv"
         barpos.to_csv(out_fname, index=False)
+
+    out_json_fname = exp.output_stem + "_params.json"
+    with open(out_json_fname, "w") as fid:
+        json.dump(exp.p, fid, sort_keys=True, indent=4)

@@ -1,4 +1,5 @@
 from __future__ import division
+import json
 import numpy as np
 import pandas as pd
 from scipy.spatial.distance import cdist
@@ -351,3 +352,7 @@ def save_data(exp):
     if trial_data is not None:
         out_fname = exp.output_stem + "_trials.csv"
         trial_data.to_csv(out_fname, index=False)
+
+    out_json_fname = exp.output_stem + "_params.json"
+    with open(out_json_fname, "w") as fid:
+        json.dump(exp.p, fid, sort_keys=True, indent=4)
