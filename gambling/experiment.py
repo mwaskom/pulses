@@ -970,13 +970,13 @@ def demo_mode(exp):
 
     x = 7
     try:
-        flip = int(exp.p.subject[-1]) % 2
+        high_right = int(exp.p.subject[-1]) % 2
     except ValueError:
-        flip = False
-    if flip:
-        x_low, x_high = x, -x
-    else:
+        high_right = True
+    if high_right:
         x_low, x_high = -x, x
+    else:
+        x_low, x_high = x, -x
 
     box_low = StimBox(exp, [x_low, 0], 0)
     box_low.draw()
