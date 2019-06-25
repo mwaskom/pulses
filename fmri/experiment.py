@@ -6,8 +6,9 @@ from glob import glob
 import numpy as np
 import pandas as pd
 from scipy import stats
+from scipy.spatial import distance
 
-from psychopy.visual import TextStim
+from psychopy.visual import TextStim, Rect
 from visigoth.stimuli import Point, Points, PointCue, Pattern
 from visigoth import AcquireFixation, AcquireTarget, flexible_values
 from visigoth.ext.bunch import Bunch
@@ -581,6 +582,11 @@ def save_data(exp):
             json.dump(exp.p, fid, sort_keys=True, indent=4)
 
 
+# ----------------------------------------------------------------------- #
+# Demo-related code
+# ----------------------------------------------------------------------- #
+
+
 def demo_mode(exp):
 
     exp.wait_until("space", draw="fix", check_abort=True)
@@ -611,7 +617,10 @@ def demo_mode(exp):
     exp.s.pattern.contrast = 10 ** (exp.p.dist_means[0] - exp.p.dist_sds[0])
     exp.wait_until("space", draw=all_stims, check_abort=True)
 
-    exp.wait_until("space", draw="fix", check_abort=True)
+    exp.s["box_l"] = StimBox(exp, [-7, 0], 0)
+    exp.s["box_h"] = StimBox(exp, [+7, 0], 1)
+
+    exp.wait_until("space", draw=["fix", "box_h", "box_l"], check_abort=True)
 
     exp.sounds["correct"].play()
     exp.wait_until("space", draw="fix", check_abort=True)
@@ -621,3 +630,89 @@ def demo_mode(exp):
 
     exp.sounds["fixbreak"].play()
     exp.wait_until("space", draw="fix", check_abort=True)
+
+
+def poisson_disc_sample(size, radius, candidates=100, rng=None):
+    """Find positions using poisson-disc sampling."""
+    # TODO make more general and move into visigoth
+    # TODO currently assumes square array
+    # See http://bost.ocks.org/mike/algorithms/
+    if rng is None:
+        rng = np.random.RandomState()
+    uniform = rng.uniform
+    randint = rng.randint
+
+    # Start at a fixed point we know will work
+    start = 0, 0
+    samples = [start]
+    queue = [start]
+
+    while queue:
+
+        # Pick a sample to expand from
+        s_idx = randint(len(queue))
+        s_x, s_y = queue[s_idx]
+
+        for i in range(candidates):
+
+            # Generate a candidate from this sample
+            a = uniform(0, 2 * np.pi)
+            r = uniform(radius, 2 * radius)
+            x, y = s_x + r * np.cos(a), s_y + r * np.sin(a)
+
+            # Check the three conditions to accept the candidate
+            in_array = (np.abs(x) < size / 2) & (np.abs(y) < size / 2)
+            in_ring = np.all(distance.cdist(samples, [(x, y)]) > radius)
+
+            if in_array and in_ring:
+                # Accept the candidate
+                samples.append((x, y))
+                queue.append((x, y))
+                break
+
+        if (i + 1) == candidates:
+            # We've exhausted the particular sample
+            queue.pop(s_idx)
+
+    return np.asarray(samples)
+
+
+class StimBox(object):
+
+    def __init__(self, exp, center, dist, size=8):
+
+        stim_sf = exp.p.stim_sf * 2
+        stim_size = exp.p.stim_size / 5
+        xy = poisson_disc_sample(size, stim_size)
+
+        xy[:, 0] += center[0]
+        xy[:, 1] += center[1]
+
+        self.box = Rect(exp.win,
+                        size + stim_size, size + stim_size,
+                        pos=center,
+                        fillColor=exp.win.color,
+                        lineColor="white")
+
+        self.patterns = patterns = []
+        for xy_i in xy:
+            pattern = Pattern(exp.win,
+                              n=exp.p.stim_gratings,
+                              elementTex=exp.p.stim_tex,
+                              elementMask=exp.p.stim_mask,
+                              sizes=stim_size,
+                              sfs=stim_sf,
+                              pos=xy_i)
+            patterns.append(pattern)
+
+        n = len(patterns)
+        qs = np.linspace(.05, .95, n)
+        m, s = exp.p.dist_means[dist], exp.p.dist_sds[dist]
+        cs = 10 ** stats.norm.ppf(qs, m, s)
+        for pat, c in zip(patterns, cs):
+            pat.contrast = c
+
+    def draw(self):
+        self.box.draw()
+        for p in self.patterns:
+            p.draw()
